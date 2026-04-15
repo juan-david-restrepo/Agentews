@@ -1,0 +1,16 @@
+{
+  "name": "asistente-decasa",
+  "version": "1.0.0",
+  "description": "Asistente WhatsApp con IA para DeCasa",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "openai": "^4.20.1",
+    "twilio": "^4.19.0"
+  }
+}

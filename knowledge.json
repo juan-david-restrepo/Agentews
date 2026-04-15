@@ -1,0 +1,15 @@
+{
+  "empresa": "DeCasa",
+  "descripcion": "Especialistas en decoración del hogar y mobiliario. Ofrecemos productos de alta calidad para hacer de tu casa un hogar.",
+  "servicios": [
+    "Decoración de casas",
+    "Fabricación de muebles",
+    "Comedores",
+    "Mesas",
+    "Sillas",
+    "Muebles personalizados bajo diseño del cliente"
+  ],
+  "horario": "Lunes a viernes de 8am a 5pm",
+  "ubicacion": "Disponible en la ciudad",
+  "contacto": "Escríbenos para más información o cotizaciones sin compromiso"
+}
