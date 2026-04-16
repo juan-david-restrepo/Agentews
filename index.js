@@ -10,6 +10,20 @@ app.use(express.json());
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const MODEL_NAME = 'gemini-2.5-flash-lite';
 
+const generarInventarioTexto = () => {
+  let texto = '\n\n=== INVENTARIO DE PRODUCTOS ===\n';
+
+  const categorias = Object.values(knowledge.inventario || {});
+  for (const categoria of categorias) {
+    texto += `\n${categoria.nombre}:\n`;
+    for (const producto of categoria.productos) {
+      texto += `- ${producto.nombre} | Material: ${producto.material} | Precio: ${producto.precio}\n`;
+    }
+  }
+
+  return texto;
+};
+
 const SYSTEM_PROMPT = `Eres un asistente virtual amable y profesional de ${knowledge.empresa}.
 Información del negocio:
 - Empresa: ${knowledge.empresa}
@@ -22,9 +36,12 @@ Información del negocio:
 Instrucciones:
 1. Responde de manera amable, breve y en español
 2. Solo proporciona información del negocio
-3. Si preguntan algo fuera del negocio, redirige amablemente diciendo que solo puedes ayudar con temas relacionados a ${knowledge.empresa}
-4. Menciona el horario de atención cuando sea relevante
-5. Ofrece ayuda para cotizaciones si parece interesados en productos`;
+3. Cuando preguntan por productos, precios o cotizaciones, consulta el inventario y muestra los productos relevantes
+4. Si preguntan algo fuera del negocio, redirige amablemente diciendo que solo puedes ayudar con temas relacionados a ${knowledge.empresa}
+5. Menciona el horario de atención cuando sea relevante
+6. Incluye el precio cuando menciones productos
+
+${generarInventarioTexto()}`;
 
 const conversationHistory = new Map();
 
