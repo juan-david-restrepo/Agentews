@@ -667,6 +667,41 @@
           "precio": "$980.000"
         }
       ]
+    },
+    "mesas_auxiliares": {
+      "nombre": "Mesas Auxiliares",
+      "productos": [
+        {
+          "nombre": "MESA AUXILIAR OSTEL",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$780.000"
+        },
+        {
+          "nombre": "MESA AUX CILINDRO",
+          "medidas": "Standard",
+          "material": "Base Metalica, Cubierta Flor Morado",
+          "precio": "$580.000"
+        },
+        {
+          "nombre": "MESA AUX CUBO",
+          "medidas": "Standard",
+          "material": "Base Metalica, Cubierta Flor Morado",
+          "precio": "$680.000"
+        },
+        {
+          "nombre": "MESA AUX TT",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$780.000"
+        },
+        {
+          "nombre": "MESA AUX REJILLA REDONDA",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$880.000"
+        }
+      ]
     }
   }
 }
