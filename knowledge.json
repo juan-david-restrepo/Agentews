@@ -10,7 +10,7 @@
     "Muebles personalizados bajo diseño del cliente"
   ],
   "horario": "Lunes a viernes de 8am a 5pm",
-  "ubicacion": "Disponible en la ciudad",
+  "ubicacion": "Disponible en Armenia",
   "contacto": "Escríbenos para más información o cotizaciones sin compromiso",
   "inventario": {
     "camas": {
@@ -20,31 +20,36 @@
           "nombre": "CAMA DINTEL",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Madera Flor Morado",
-          "precio": "$3.680.000"
+          "precio": "$3.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776369456/cama_dintel_wiyxq5.png"
         },
         {
           "nombre": "CAMA LINEAL",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Tapizada - Apliques Horizontal/Vertical (según solicitud del cliente)",
-          "precio": "$2.880.000"
+          "precio": "$2.880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776369466/cama_lineal_dmd7wk.jpg"
         },
         {
           "nombre": "CAMA BALI",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Tapizada",
-          "precio": "$2.880.000"
+          "precio": "$2.880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776369471/cama_bali_e0qbip.png"
         },
         {
           "nombre": "CAMA FIGY (Con Alerones)",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Madera Flor Morado",
-          "precio": "$5.780.000"
+          "precio": "$5.780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776370061/cama_figy_yulw9t.png"
         },
         {
           "nombre": "CAMA APLIQUES CENTRAL",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Madera Flor Morado",
-          "precio": "$2.680.000"
+          "precio": "$2.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776369476/cama_apliques_xfklg6.jpg"
         },
         {
           "nombre": "CAMA CHOCOLATINA",

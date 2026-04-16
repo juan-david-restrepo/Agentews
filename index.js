@@ -37,6 +37,7 @@ PERFIL DE VENDEDORA:
 - Empresa: DeCasa
 - Especialidad: Muebles de madera Flor Morado de alta calidad
 - Horario: Lunes a viernes de 8am a 5pm
+- Disponieble en la ciudad de Armenia 
 
 INSTRUCCIONES DE VENTA:
 1. Cuando el cliente pregunte por un producto, SIEMPRE ofrece 2-3 alternativas similares con precios
@@ -73,6 +74,12 @@ SINONIMOS Y TERMINOS GENERICOS - Como interpretar al cliente:
 
 Cuando el cliente use un termino generico, interpreta que necesita y muestra productos relevantes de la categoria mas probable.
 
+REGLAS PARA FOTOS:
+- Cuando el cliente pida una foto, imagen o diga "como se ve", el sistema enviara automaticamente la imagen del producto si esta disponible
+- Solo responde con un mensaje breve como "Claro! Aqui tienes la [nombre del producto] 😊" o "Aqui esta [nombre del producto], muy elegante! 💪"
+- No intentes enviar la imagen tu misma, el sistema lo hace automaticamente
+- Si no tienes la foto del producto que pide, di "Claro! Dime que producto te interesa y te envio la foto 😊"
+
 ${generarInventarioTexto()}`;
 
 const conversationHistory = new Map();
@@ -91,6 +98,94 @@ function addToHistory(from, role, content) {
   if (history.length > 12) {
     history.shift();
   }
+}
+
+function detectarSolicitudFoto(mensaje) {
+  const patrones = [
+    /env[ií]ame.*foto/i,
+    /env[ií]ame.*imagen/i,
+    /env[ií]ame.*im[áa]gen/i,
+    /foto.*del?/i,
+    /imagen.*de/i,
+    /im[áa]gen.*del?/i,
+    /c[oó]mo.*se.*ve/i,
+    /m[eé]strame.*foto/i,
+    /m[eé]strame.*imagen/i,
+    /ver.*foto/i,
+    /ver.*imagen/i,
+    /foto/i,
+    /imagen/i,
+    /picture/i
+  ];
+
+  for (const patron of patrones) {
+    if (patron.test(mensaje)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function buscarImagenProducto(mensaje) {
+  const categorias = Object.values(knowledge.inventario || {});
+  const mensajeLower = mensaje.toLowerCase();
+
+  for (const categoria of categorias) {
+    for (const producto of categoria.productos) {
+      const nombreLimpio = producto.nombre.toLowerCase().replace(/[^a-záéíóúñ\s]/g, '').trim();
+      const palabrasClave = nombreLimpio.split(/\s+/);
+
+      let coincidencias = 0;
+      for (const palabra of palabrasClave) {
+        if (palabra.length > 3 && mensajeLower.includes(palabra)) {
+          coincidencias++;
+        }
+      }
+
+      if (coincidencias >= Math.ceil(palabrasClave.length * 0.5) && producto.imagen) {
+        return {
+          imagen: producto.imagen,
+          nombre: producto.nombre
+        };
+      }
+    }
+  }
+
+  const sinonimos = {
+    'cama': 'CAMA',
+    'sofa': 'SOFA',
+    'sofa cama': 'SOFA CAMA',
+    'mesa': 'MESA',
+    'silla': 'SILLA',
+    'escritorio': 'ESCRITORIO',
+    'tv': 'TV'
+  };
+
+  for (const [clave, valor] of Object.entries(sinonimos)) {
+    if (mensajeLower.includes(clave)) {
+      for (const categoria of categorias) {
+        for (const producto of categoria.productos) {
+          if (producto.nombre.toUpperCase().includes(valor) && producto.imagen) {
+            const palabrasClave = valor.toLowerCase().split(/\s+/);
+            let coincidencias = 0;
+            for (const palabra of palabrasClave) {
+              if (mensajeLower.includes(palabra)) {
+                coincidencias++;
+              }
+            }
+            if (coincidencias >= 1) {
+              return {
+                imagen: producto.imagen,
+                nombre: producto.nombre
+              };
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return null;
 }
 
 async function callGemini(prompt) {
@@ -140,17 +235,28 @@ app.post('/webhook', async (req, res) => {
   try {
     const history = getHistory(from);
     let response;
+    let imagenURL = null;
 
-    if (history.length === 0 && !greetingsSent.has(from)) {
-      response = SALUDO_INICIAL;
-      greetingsSent.add(from);
+    if (detectarSolicitudFoto(incomingMsg)) {
+      const producto = buscarImagenProducto(incomingMsg);
+      if (producto) {
+        imagenURL = producto.imagen;
+        response = `Claro! Aqui tienes la ${producto.nombre} 😊`;
+      } else {
+        response = "Claro! Dime que producto te interesa y te envio la foto 😊";
+      }
     } else {
-      addToHistory(from, 'user', incomingMsg);
+      if (history.length === 0 && !greetingsSent.has(from)) {
+        response = SALUDO_INICIAL;
+        greetingsSent.add(from);
+      } else {
+        addToHistory(from, 'user', incomingMsg);
 
-      response = await callGemini({
-        history: history,
-        currentMessage: incomingMsg
-      });
+        response = await callGemini({
+          history: history,
+          currentMessage: incomingMsg
+        });
+      }
     }
 
     addToHistory(from, 'assistant', response);
@@ -159,6 +265,10 @@ app.post('/webhook', async (req, res) => {
 
     const twiml = new MessagingResponse();
     twiml.message(response);
+    if (imagenURL) {
+      twiml.media(imagenURL);
+      console.log(`Enviando imagen: ${imagenURL}`);
+    }
 
     res.type('text/xml').send(twiml.toString());
   } catch (error) {
