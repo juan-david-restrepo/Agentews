@@ -1,16 +1,16 @@
 {
   "name": "asistente-decasa",
   "version": "1.0.0",
-  "description": "Asistente WhatsApp con IA para DeCasa",
+  "description": "Asistente WhatsApp con IA (Gemini) para DeCasa",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "node index.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "dotenv": "^16.6.1",
     "express": "^4.18.2",
-    "openai": "^4.20.1",
     "twilio": "^4.19.0"
   }
 }

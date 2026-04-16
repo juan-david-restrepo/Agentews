@@ -1,14 +1,15 @@
 require('dotenv').config();
 const express = require('express');
 const { MessagingResponse } = require('twilio').twiml;
-const OpenAI = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const knowledge = require('./knowledge.json');
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 const SYSTEM_PROMPT = `Eres un asistente virtual amable y profesional de ${knowledge.empresa}.
 Información del negocio:
@@ -59,14 +60,15 @@ app.post('/webhook', async (req, res) => {
     const history = getHistory(from);
     addToHistory(from, 'user', incomingMsg);
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: history,
-      max_tokens: 500,
-      temperature: 0.7
-    });
+    const chatHistory = history.map(m => ({
+      role: m.role === 'assistant' ? 'model' : m.role,
+      parts: [m.content]
+    }));
 
-    const response = completion.choices[0].message.content;
+    const chat = model.startChat({ history: chatHistory.slice(0, -1) });
+    const result = await chat.sendMessage(incomingMsg);
+    const response = result.response.text();
+
     addToHistory(from, 'assistant', response);
 
     console.log(`Respuesta: ${response}`);
