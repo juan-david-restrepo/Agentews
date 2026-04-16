@@ -1160,6 +1160,59 @@
           "precio": "$2.900.000"
         }
       ]
+    },
+    "sofacamas": {
+      "nombre": "Sofás Camas",
+      "productos": [
+        {
+          "nombre": "SOFA CAMA SENSACION",
+          "medidas": "1.80 x 0.90",
+          "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
+          "precio": "$1.980.000"
+        },
+        {
+          "nombre": "SOFA CAMA ROMA",
+          "medidas": "1.80 x 0.90",
+          "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
+          "precio": "$3.000.000"
+        },
+        {
+          "nombre": "SOFA CAMA ROMA FAMILIAR",
+          "medidas": "Parte Externa: 2.30 x 1.60 / Parte Interna: 1.90 x 1.90",
+          "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
+          "precio": "$4.100.000"
+        },
+        {
+          "nombre": "SOFA CAMA ROMA 1P",
+          "medidas": "Parte Externa: 1.00 x 0.90 / Parte Interna: 0.80 x 1.90",
+          "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
+          "precio": "$2.040.000"
+        },
+        {
+          "nombre": "SOFA CAMA LINEAL",
+          "medidas": "1.80 x 0.90",
+          "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
+          "precio": "$3.380.000"
+        },
+        {
+          "nombre": "SOFA CAMA TORELLO TRES PUESTOS + PUFF",
+          "medidas": "2.00 x 0.90",
+          "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
+          "precio": "$3.880.000"
+        },
+        {
+          "nombre": "SOFA CAMA TORELLO DOS PUESTOS",
+          "medidas": "1.80 x 0.90",
+          "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
+          "precio": "$3.140.000"
+        },
+        {
+          "nombre": "SOFA CAMA TELAVID",
+          "medidas": "1.80 x 0.90",
+          "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
+          "precio": "$3.380.000"
+        }
+      ]
     }
   }
 }
