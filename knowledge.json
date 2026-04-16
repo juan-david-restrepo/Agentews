@@ -1302,7 +1302,26 @@
     },
     "colchones": {
       "nombre": "Colchones",
-      "productos": []
+      "productos": [
+        {
+          "nombre": "COLCHON SOPHIA",
+          "medidas": "1.00 x 1.80 / 1.00 x 1.90 / 1.20 x 1.90 / 1.40 x 1.90",
+          "material": "Standard",
+          "precio": "$720.000 - $920.000 (según medida)"
+        },
+        {
+          "nombre": "COLCHON MONTECARLO",
+          "medidas": "1.40 x 1.90 / 1.60 x 1.90 / 2.00 x 2.00",
+          "material": "Standard",
+          "precio": "$1.450.000 - $1.850.000 (según medida)"
+        },
+        {
+          "nombre": "COLCHON ATENAS",
+          "medidas": "1.40 x 1.90 / 1.60 x 1.90 / 2.00 x 2.00",
+          "material": "Standard",
+          "precio": "$2.080.000 - $2.580.000 (según medida)"
+        }
+      ]
     }
   }
 }
