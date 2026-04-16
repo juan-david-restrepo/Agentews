@@ -916,6 +916,119 @@
           "precio": "$2.780.000"
         }
       ]
+    },
+    "sillas_barra": {
+      "nombre": "Sillas de Barra",
+      "productos": [
+        {
+          "nombre": "SILLA DE BARRA JAPAN",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA DE BARRA MIMBRE",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA DE BARRA AMATISTA",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA DE BARRA LIOR",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA DE BARRA JJ",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA DIAMANTE",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA CURVA INDUSTRIAL",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA ICONO",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA CURVA",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$680.000"
+        },
+        {
+          "nombre": "SILLA VENECIA",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$780.000"
+        },
+        {
+          "nombre": "SILLA ZETA V",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$780.000"
+        },
+        {
+          "nombre": "SILLA DUBAI",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA GEMA FLOR",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA TAILANDIA",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$880.000"
+        },
+        {
+          "nombre": "SILLA TORINO",
+          "medidas": "Standard",
+          "material": "Pino",
+          "precio": "$780.000"
+        },
+        {
+          "nombre": "SILLA INDUSTRIAL",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA ROBLE",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$780.000"
+        },
+        {
+          "nombre": "SILLA FILIPHINA",
+          "medidas": "Standard",
+          "material": "Flor Morado Natural",
+          "precio": "$980.000"
+        }
+      ]
     }
   }
 }
