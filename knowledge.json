@@ -1260,6 +1260,49 @@
           "precio": "$2.980.000"
         }
       ]
+    },
+    "escritorios": {
+      "nombre": "Escritorios",
+      "productos": [
+        {
+          "nombre": "ESCRITORIO FLOR MORADO",
+          "medidas": "1.20 x 0.50",
+          "material": "Madera Flor Morado",
+          "precio": "$1.580.000"
+        },
+        {
+          "nombre": "ESCRITORIO OREGON",
+          "medidas": "1.20 x 0.50",
+          "material": "Pino / Flor Morado",
+          "precio": "$1.180.000"
+        },
+        {
+          "nombre": "ESCRITORIO NATURAL",
+          "medidas": "1.20 x 0.50",
+          "material": "Pino",
+          "precio": "$1.480.000"
+        },
+        {
+          "nombre": "NATURAL BASIC",
+          "medidas": "1.20 x 0.50",
+          "material": "Pino / Flor Morado",
+          "precio": "$1.480.000"
+        },
+        {
+          "nombre": "ESCRITORIO NORDICO",
+          "medidas": "1.20 x 0.50",
+          "material": "Cedro Rosado",
+          "precio": "$1.380.000"
+        }
+      ]
+    },
+    "bancas": {
+      "nombre": "Bancas",
+      "productos": []
+    },
+    "colchones": {
+      "nombre": "Colchones",
+      "productos": []
     }
   }
 }
