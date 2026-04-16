@@ -1029,6 +1029,137 @@
           "precio": "$980.000"
         }
       ]
+    },
+    "sofas_modulares": {
+      "nombre": "Sofás Modulares",
+      "productos": [
+        {
+          "nombre": "SOFA NUBE",
+          "medidas": "1.80 x 0.90",
+          "material": "Tapizado",
+          "precio": "$3.480.000"
+        },
+        {
+          "nombre": "SOFA MARBELLA",
+          "medidas": "2.00 x 0.90",
+          "material": "Tapizado",
+          "precio": "$3.040.000"
+        },
+        {
+          "nombre": "SOFA TELAVID",
+          "medidas": "2.00 x 0.90",
+          "material": "Tapizado",
+          "precio": "$3.040.000"
+        },
+        {
+          "nombre": "SOFA TERRA",
+          "medidas": "2.40 x 0.90",
+          "material": "Tapizado",
+          "precio": "$3.480.000"
+        },
+        {
+          "nombre": "SOFA AUSTRIA",
+          "medidas": "2.00 x 0.90",
+          "material": "Tapizado",
+          "precio": "$2.840.000"
+        },
+        {
+          "nombre": "SOFA SINGAPUR",
+          "medidas": "1.90 x 0.90",
+          "material": "Tapizado",
+          "precio": "$2.880.000"
+        },
+        {
+          "nombre": "SOFA ROMEO",
+          "medidas": "1.90 x 0.90",
+          "material": "Tapizado",
+          "precio": "$2.980.000"
+        },
+        {
+          "nombre": "SOFA TORELLO",
+          "medidas": "1.90 x 0.90",
+          "material": "Tapizado",
+          "precio": "$2.040.000"
+        },
+        {
+          "nombre": "SOFA CONFORT",
+          "medidas": "1.90 x 0.90",
+          "material": "Tapizado",
+          "precio": "$3.040.000"
+        },
+        {
+          "nombre": "SOFA BARILOCHE",
+          "medidas": "1.60 x 0.90",
+          "material": "Tapizado",
+          "precio": "$2.040.000"
+        },
+        {
+          "nombre": "SOFA SALAMANCA",
+          "medidas": "1.90 x 0.90",
+          "material": "Tapizado",
+          "precio": "$2.780.000"
+        },
+        {
+          "nombre": "SOFA PRADA",
+          "medidas": "1.60 x 0.90",
+          "material": "Tapizado",
+          "precio": "$2.040.000"
+        },
+        {
+          "nombre": "SOFA CHESTER",
+          "medidas": "2.20 x 0.90",
+          "material": "Tapizado",
+          "precio": "$3.380.000"
+        },
+        {
+          "nombre": "MODULAR CONFORT",
+          "medidas": "3.10 x 2.40",
+          "material": "Tapizado",
+          "precio": "$5.100.000"
+        },
+        {
+          "nombre": "MODULAR EVOLUTION",
+          "medidas": "2.20 x 0.90",
+          "material": "Tapizado",
+          "precio": "$4.100.000"
+        },
+        {
+          "nombre": "MODULAR ENZO",
+          "medidas": "2.00 x 0.90",
+          "material": "Tapizado",
+          "precio": "$3.780.000"
+        },
+        {
+          "nombre": "MODULAR ANGEL",
+          "medidas": "2.20 x 0.90",
+          "material": "Tapizado",
+          "precio": "$3.680.000"
+        },
+        {
+          "nombre": "MODULAR TERRA",
+          "medidas": "2.35 Brazo a Brazo",
+          "material": "Tapizado",
+          "precio": "$3.880.000"
+        },
+        {
+          "nombre": "MODULAR TORONTO",
+          "medidas": "2.50 x 2.50",
+          "material": "Tapizado",
+          "precio": "$4.100.000"
+        },
+        {
+          "nombre": "MODULAR TELAVID",
+          "medidas": "2.30 x 1.60",
+          "material": "Tapizado",
+          "precio": "$4.100.000"
+        },
+        {
+          "nombre": "MODULAR BARILOCHE",
+          "medidas": "2.10 x 1.40",
+          "material": "Tapizado",
+          "precio": "$2.900.000"
+        }
+      ]
     }
   }
 }
