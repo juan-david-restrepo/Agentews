@@ -52,6 +52,8 @@ EJEMPLOS DE RESPUESTA:
 Cliente: "tienen camas?"
 Elena: "Claro! Tenemos mas de 20 modelos de camas. Nuestra CAMA DINTEL en madera Flor Morado esta a $3.680.000, es muy resistente. Si buscas algo mas economico, la CAMA BARCELONETA esta a $2.880.000, excelente calidad-precio. Cual te llama la atencion? 😊"
 
+
+
 Cliente: "cuanto cuesta un sofa?"
 Elena: "Tenemos sofás desde $2.040.000 hasta $5.100.000. El SOFA NUBE a $3.480.000 es uno de los mas vendidos por su comodidad. Tambien te recomiendo el SOFA CHESTER a $3.380.000, super elegante. Quieres ver mas opciones? 💪"
 
@@ -84,6 +86,77 @@ ${generarInventarioTexto()}`;
 
 const conversationHistory = new Map();
 const greetingsSent = new Set();
+const conversacionesTransferidas = new Set();
+
+const TRIGGERS_ASESOR = [
+  'hablar con alguien', 'hablar con un asesor', 'asesor',
+  'hablar con humano', 'persona real', 'necesito ayuda',
+  'quiero comprar', 'lo quiero', 'como hago para pedir',
+  'cotizar', 'hacer un pedido', 'hablar con persona',
+  'hablar con alguien real', 'necesito un humano'
+];
+
+function detectarAsesor(mensaje) {
+  const msg = mensaje.toLowerCase();
+  return TRIGGERS_ASESOR.some(t => msg.includes(t));
+}
+
+function estaTransferida(from) {
+  return conversacionesTransferidas.has(from);
+}
+
+function marcarTransferida(from) {
+  conversacionesTransferidas.add(from);
+}
+
+async function enviarNotificacionTelegram(telefono, mensaje, historial) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!token || !chatId) {
+    console.log('Telegram no configurado - Transferencia ignorada');
+    console.log('Para activar: configura TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID');
+    return;
+  }
+
+  const historialTexto = historial.slice(-6).map(m => {
+    const rol = m.role === 'user' ? '👤 Cliente' : '🤖 Elena';
+    return `${rol}: ${m.content}`;
+  }).join('\n');
+
+  const texto = `
+🆘 <b>SOLICITUD DE ASESOR</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+📱 Cliente: ${telefono}
+💬 "${mensaje}"
+🕐 Hora: ${new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })}
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 <b>Últimos mensajes:</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+${historialTexto}
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 Responde directamente desde WhatsApp
+`;
+
+  const url = `https://api.telegram.org/bot${token}/sendMessage`;
+
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: texto,
+        parse_mode: 'HTML'
+      })
+    });
+    console.log('Notificación enviada a Telegram');
+  } catch (error) {
+    console.error('Error enviando a Telegram:', error.message);
+  }
+}
 
 function getHistory(from) {
   if (!conversationHistory.has(from)) {
@@ -215,7 +288,7 @@ async function callGemini(prompt) {
 }
 
 app.post('/webhook', async (req, res) => {
-  const incomingMsg = (req.body.Body || '').trim();
+  const incomingMsg = req.body.Body || '';
   const from = req.body.From || 'unknown';
 
   console.log(`Mensaje de ${from}: ${incomingMsg}`);
@@ -229,7 +302,28 @@ app.post('/webhook', async (req, res) => {
     let response;
     let imagenURL = null;
 
-    if (detectarSolicitudFoto(incomingMsg)) {
+    if (detectarAsesor(incomingMsg) && !estaTransferida(from)) {
+      const telefono = from.replace('whatsapp:', '');
+      
+      await enviarNotificacionTelegram(telefono, incomingMsg, history);
+      marcarTransferida(from);
+      
+      response = `Te transfiero con un asesor, espera un momento 😊
+Un asesor te atenderá personalmente para ayudarte con tu compra.`;
+      imagenURL = null;
+      
+      console.log(`Cliente ${telefono} transferido a asesor`);
+    } else if (estaTransferida(from)) {
+      const telefono = from.replace('whatsapp:', '');
+      console.log(`Conversación transferida - Cliente ${telefono} dice: ${incomingMsg}`);
+      
+      if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+        await enviarNotificacionTelegram(telefono, incomingMsg, []);
+      }
+      
+      res.status(200).send('');
+      return;
+    } else if (detectarSolicitudFoto(incomingMsg)) {
       const producto = buscarImagenProducto(incomingMsg);
       if (producto) {
         imagenURL = producto.imagen;
@@ -248,6 +342,33 @@ app.post('/webhook', async (req, res) => {
           history: history,
           currentMessage: incomingMsg
         });
+      }
+    }
+
+    addToHistory(from, 'assistant', response);
+
+    console.log(`Respuesta: ${response}`);
+
+    const twiml = new MessagingResponse();
+    if (imagenURL) {
+      twiml.message({
+        body: response,
+        mediaUrl: [imagenURL]
+      });
+      console.log(`Enviando imagen: ${imagenURL}`);
+    } else {
+      twiml.message(response);
+    }
+
+    res.type('text/xml').send(twiml.toString());
+  } catch (error) {
+    console.error('Error:', error.message);
+
+    const twiml = new MessagingResponse();
+    twiml.message('Disculpa, estoy teniendo problemas tecnicos. Por favor intenta mas tarde.');
+    res.type('text/xml').send(twiml.toString());
+  }
+});
       }
     }
 
