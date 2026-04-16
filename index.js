@@ -1,14 +1,14 @@
 require('dotenv').config();
 const express = require('express');
 const { MessagingResponse } = require('twilio').twiml;
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const knowledge = require('./knowledge.json');
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const MODEL_NAME = 'gemini-1.5-flash';
 
 const SYSTEM_PROMPT = `Eres un asistente virtual amable y profesional de ${knowledge.empresa}.
 Información del negocio:
@@ -25,11 +25,6 @@ Instrucciones:
 3. Si preguntan algo fuera del negocio, redirige amablemente diciendo que solo puedes ayudar con temas relacionados a ${knowledge.empresa}
 4. Menciona el horario de atención cuando sea relevante
 5. Ofrece ayuda para cotizaciones si parece interesados en productos`;
-
-const model = genAI.getGenerativeModel({
-  model: 'gemini-1.5-flash',
-  systemInstruction: SYSTEM_PROMPT
-});
 
 const conversationHistory = new Map();
 
@@ -48,6 +43,40 @@ function addToHistory(from, role, content) {
   }
 }
 
+async function callGemini(prompt) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
+
+  const contents = [];
+  for (const msg of prompt.history || []) {
+    contents.push({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    });
+  }
+  contents.push({ role: 'user', parts: [{ text: prompt.currentMessage }] });
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents,
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 500
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${error}`);
+  }
+
+  const data = await response.json();
+  return data.candidates[0].content.parts[0].text;
+}
+
 app.post('/webhook', async (req, res) => {
   const incomingMsg = (req.body.Body || '').trim();
   const from = req.body.From || 'unknown';
@@ -62,15 +91,10 @@ app.post('/webhook', async (req, res) => {
     const history = getHistory(from);
     addToHistory(from, 'user', incomingMsg);
 
-    let prompt = '';
-    for (const msg of history.slice(-6)) {
-      const role = msg.role === 'user' ? 'Usuario' : 'Asistente';
-      prompt += `${role}: ${msg.content}\n`;
-    }
-    prompt += 'Asistente:';
-
-    const result = await model.generateContent(prompt);
-    const response = result.response.text().trim();
+    const response = await callGemini({
+      history: history.slice(0, -1),
+      currentMessage: incomingMsg
+    });
 
     addToHistory(from, 'assistant', response);
 
