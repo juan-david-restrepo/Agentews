@@ -702,6 +702,65 @@
           "precio": "$880.000"
         }
       ]
+    },
+    "mesas_tv": {
+      "nombre": "Mesas de TV",
+      "productos": [
+        {
+          "nombre": "MESA TV PRISMA",
+          "medidas": "1.60 Largo",
+          "material": "Madera Flor Morado Natural",
+          "precio": "$1.980.000"
+        },
+        {
+          "nombre": "MESA TV SANTA MARTA",
+          "medidas": "1.60 Largo",
+          "material": "Madera Flor Morado Natural",
+          "precio": "$1.980.000"
+        },
+        {
+          "nombre": "MESA TV NATURAL ONE",
+          "medidas": "1.60 Largo",
+          "material": "Madera Flor Morado Natural, Chapilla Natural",
+          "precio": "$1.980.000"
+        },
+        {
+          "nombre": "MESA TV REJILLA",
+          "medidas": "1.60 Largo",
+          "material": "Madera Flor Morado Natural",
+          "precio": "$1.980.000"
+        },
+        {
+          "nombre": "MESA TV SAN DIEGO",
+          "medidas": "1.60 Largo",
+          "material": "Madera Flor Morado Natural",
+          "precio": "$1.980.000"
+        },
+        {
+          "nombre": "MESA TV ALISTONADA",
+          "medidas": "2.00",
+          "material": "Madera Flor Morado Natural",
+          "precio": "$2.380.000"
+        },
+        {
+          "nombre": "MESA TV NATURA",
+          "medidas": "1.20",
+          "material": "Cedro Rosado",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "MESA TV PARALELA",
+          "medidas": "1.60",
+          "material": "Madera Flor Morado Natural",
+          "precio": "$1.980.000"
+        },
+        {
+          "nombre": "MESA TV MIAMI CON CAJONES",
+          "medidas": "1.60",
+          "material": "Madera Flor Morado Natural",
+          "precio": "$1.980.000"
+        }
+      ]
     }
   }
 }
