@@ -128,64 +128,56 @@ function detectarSolicitudFoto(mensaje) {
 
 function buscarImagenProducto(mensaje) {
   const categorias = Object.values(knowledge.inventario || {});
-  const mensajeLower = mensaje.toLowerCase();
+  const mensajeLower = mensaje.toLowerCase().replace(/[^a-záéíóúñ\s]/g, ' ');
+
+  const productosConImagen = [];
 
   for (const categoria of categorias) {
     for (const producto of categoria.productos) {
-      const nombreLimpio = producto.nombre.toLowerCase().replace(/[^a-záéíóúñ\s]/g, '').trim();
-      const palabrasClave = nombreLimpio.split(/\s+/);
+      if (!producto.imagen) continue;
 
-      let coincidencias = 0;
+      const nombreLimpio = producto.nombre.toLowerCase().replace(/[^a-záéíóúñ\s]/g, ' ').replace(/\s+/g, ' ').trim();
+      const palabrasClave = nombreLimpio.split(' ').filter(p => p.length > 2);
+
+      let score = 0;
       for (const palabra of palabrasClave) {
-        if (palabra.length > 3 && mensajeLower.includes(palabra)) {
-          coincidencias++;
+        if (mensajeLower.includes(palabra)) {
+          score += palabra.length;
         }
       }
 
-      if (coincidencias >= Math.ceil(palabrasClave.length * 0.5) && producto.imagen) {
-        return {
+      if (score > 0) {
+        productosConImagen.push({
+          nombre: producto.nombre,
           imagen: producto.imagen,
-          nombre: producto.nombre
+          score: score,
+          nombreLimpio: nombreLimpio
+        });
+      }
+    }
+  }
+
+  if (productosConImagen.length === 0) return null;
+
+  productosConImagen.sort((a, b) => b.score - a.score);
+
+  const mejor = productosConImagen[0];
+
+  for (const p of productosConImagen) {
+    if (p.nombreLimpio.includes(mejor.nombreLimpio) && p.nombreLimpio !== mejor.nombreLimpio) {
+      if (p.score >= mejor.score * 0.8) {
+        return {
+          imagen: p.imagen,
+          nombre: p.nombre
         };
       }
     }
   }
 
-  const sinonimos = {
-    'cama': 'CAMA',
-    'sofa': 'SOFA',
-    'sofa cama': 'SOFA CAMA',
-    'mesa': 'MESA',
-    'silla': 'SILLA',
-    'escritorio': 'ESCRITORIO',
-    'tv': 'TV'
+  return {
+    imagen: mejor.imagen,
+    nombre: mejor.nombre
   };
-
-  for (const [clave, valor] of Object.entries(sinonimos)) {
-    if (mensajeLower.includes(clave)) {
-      for (const categoria of categorias) {
-        for (const producto of categoria.productos) {
-          if (producto.nombre.toUpperCase().includes(valor) && producto.imagen) {
-            const palabrasClave = valor.toLowerCase().split(/\s+/);
-            let coincidencias = 0;
-            for (const palabra of palabrasClave) {
-              if (mensajeLower.includes(palabra)) {
-                coincidencias++;
-              }
-            }
-            if (coincidencias >= 1) {
-              return {
-                imagen: producto.imagen,
-                nombre: producto.nombre
-              };
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return null;
 }
 
 async function callGemini(prompt) {
@@ -264,10 +256,14 @@ app.post('/webhook', async (req, res) => {
     console.log(`Respuesta: ${response}`);
 
     const twiml = new MessagingResponse();
-    twiml.message(response);
     if (imagenURL) {
-      twiml.media(imagenURL);
+      twiml.message({
+        body: response,
+        mediaUrl: [imagenURL]
+      });
       console.log(`Enviando imagen: ${imagenURL}`);
+    } else {
+      twiml.message(response);
     }
 
     res.type('text/xml').send(twiml.toString());
