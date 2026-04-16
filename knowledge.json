@@ -161,6 +161,149 @@
           "precio": "$980.000"
         }
       ]
+    },
+    "bases_comedores": {
+      "nombre": "Bases de Comedores",
+      "productos": [
+        {
+          "nombre": "BASE FIGY RECTA",
+          "medidas": "1.60 x 1.00 (6 Puestos)",
+          "material": "Cubierta en Chapilla Flor Morado, Base en Madera Flor Morado",
+          "precio": "$2.680.000"
+        },
+        {
+          "nombre": "BASE REJILLA",
+          "medidas": "1.60 x 1.00 (6 Puestos)",
+          "material": "Cubierta Lamina Flor Morado, Base Rejilla en Cedro",
+          "precio": "$2.980.000"
+        },
+        {
+          "nombre": "BASE FIRENZE",
+          "medidas": "1.60 x 1.00 (6 Puestos)",
+          "material": "Flor Morado Natural",
+          "precio": "$2.980.000"
+        },
+        {
+          "nombre": "BASE MAKANA",
+          "medidas": "Cubierta 120 Diametro (4 Puestos)",
+          "material": "Flor Morado Natural, Cubierta Tecnica Metalizada Gris",
+          "precio": "$1.980.000"
+        },
+        {
+          "nombre": "BASE FILLY OVALADA",
+          "medidas": "1.60 x 1.00 (6 Puestos)",
+          "material": "Lamina Flor Morado",
+          "precio": "$2.980.000"
+        },
+        {
+          "nombre": "BASE ONDARA",
+          "medidas": "1.35 x 0.90 (4 Puestos)",
+          "material": "Madera Flor Morado",
+          "precio": "$1.980.000"
+        },
+        {
+          "nombre": "BASE FIGY 2S",
+          "medidas": "1.60 x 0.80 Centro 0.90 (6 Puestos)",
+          "material": "Cubierta Sinterizada, Base Figy Recta Flor Morado",
+          "precio": "$4.980.000"
+        },
+        {
+          "nombre": "BASE SANTA MARIA",
+          "medidas": "1.60 x 1.00 (6 Puestos)",
+          "material": "Madera Flor Morado",
+          "precio": "$2.980.000"
+        },
+        {
+          "nombre": "BASE TESLA",
+          "medidas": "1.80 x 1.00 (6 Puestos)",
+          "material": "Madera Flor Morado",
+          "precio": "$2.980.000"
+        },
+        {
+          "nombre": "BASE ABANICA",
+          "medidas": "Cubierta 120 Diametro (4 Puestos)",
+          "material": "Cubierta Chapilla, Base Madera Flor Morado",
+          "precio": "$2.180.000"
+        },
+        {
+          "nombre": "BASE MARBELLA",
+          "medidas": "1.50 x 1.00 (6 Puestos)",
+          "material": "Cubierta Chapilla, Base Madera Flor Morado",
+          "precio": "$2.780.000"
+        },
+        {
+          "nombre": "BASE 2K",
+          "medidas": "1.20 x 0.90 (4 Puestos)",
+          "material": "Cubierta Vidrio 10mm, Base Flor Morado Natural",
+          "precio": "$1.480.000"
+        },
+        {
+          "nombre": "BASE MACARENA",
+          "medidas": "1.60 x 1.10 (6 Puestos)",
+          "material": "Cubierta Roble Flor Morado, Base Cedro Rosado",
+          "precio": "$3.380.000"
+        },
+        {
+          "nombre": "BASE ZENNA",
+          "medidas": "1.60 x 0.90 (6 Puestos)",
+          "material": "Roble Flor Morado",
+          "precio": "$2.980.000"
+        },
+        {
+          "nombre": "BASE DIAMANTE",
+          "medidas": "1.20 x 0.90 (4 Puestos)",
+          "material": "Lamina Flor Morado",
+          "precio": "$1.980.000"
+        },
+        {
+          "nombre": "BASE FIGY CURVA",
+          "medidas": "2.20 x 0.90 (8 Puestos)",
+          "material": "Cubierta Piedra Sinterizada, Base Figy Curva Flor Morado",
+          "precio": "$4.980.000"
+        },
+        {
+          "nombre": "BASE FIGY CURVA SS",
+          "medidas": "1.30 x 0.90 (4 Puestos)",
+          "material": "Cubierta Lamina Flor Morado, Base Figy Curva Flor Morado",
+          "precio": "$2.680.000"
+        },
+        {
+          "nombre": "BASE INDUSTRIAL",
+          "medidas": "Medida Irregular 2.80 x 1.10 (6 Puestos)",
+          "material": "Cubierta de Tronco Natural, Base Metal",
+          "precio": "Precio personalizado según medida"
+        },
+        {
+          "nombre": "BASE SINTERIZADA BRILLO (Linea Economica)",
+          "medidas": "1.40 x 0.80 (4 Puestos) / 1.60 x 0.90 (6 Puestos)",
+          "material": "Cubierta Sinterizada, Base Flor Morado Natural",
+          "precio": "4 puestos: $2.480.000 / 6 puestos: $2.680.000"
+        },
+        {
+          "nombre": "BASE SERENA",
+          "medidas": "1.60 Largo, 0.95 Centro, 0.90 Extremos (6 Puestos)",
+          "material": "Flor Morado Natural",
+          "precio": "$3.380.000"
+        },
+        {
+          "nombre": "BASE SAN DIEGO",
+          "medidas": "1.20 x 0.90 (4 Puestos)",
+          "material": "Flor Morado Natural",
+          "precio": "$2.480.000"
+        },
+        {
+          "nombre": "BASE CONICA",
+          "medidas": "1.60 x 1.00 (6 Puestos)",
+          "material": "Flor Morado Natural",
+          "precio": "$2.980.000"
+        },
+        {
+          "nombre": "BASE AHORRA ESPACIO",
+          "medidas": "Cubierta 1.00 Diametro (4 Puestos)",
+          "material": "Cedro / Flor Morado",
+          "precio": "$2.880.000"
+        }
+      ]
     }
   }
 }
