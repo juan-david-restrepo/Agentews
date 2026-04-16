@@ -8,7 +8,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const MODEL_NAME = 'gemini-1.5-flash';
+const MODEL_NAME = 'gemini-2.5-flash-lite';
 
 const SYSTEM_PROMPT = `Eres un asistente virtual amable y profesional de ${knowledge.empresa}.
 Información del negocio:
@@ -44,7 +44,7 @@ function addToHistory(from, role, content) {
 }
 
 async function callGemini(prompt) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
+  const url = `https://aiplatform.googleapis.com/v1/publishers/google/models/${MODEL_NAME}:streamGenerateContent?key=${GEMINI_API_KEY}`;
 
   const contents = [];
   for (const msg of prompt.history || []) {
