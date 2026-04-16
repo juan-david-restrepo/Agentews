@@ -761,6 +761,161 @@
           "precio": "$1.980.000"
         }
       ]
+    },
+    "sillas_auxiliares": {
+      "nombre": "Sillas Auxiliares",
+      "productos": [
+        {
+          "nombre": "SILLA AUX TOKIO",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.480.000"
+        },
+        {
+          "nombre": "SILLA AUX ROMEO",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.580.000"
+        },
+        {
+          "nombre": "SILLA AUX ATLANTIS",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.380.000"
+        },
+        {
+          "nombre": "SILLA AUX ALICIA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.380.000"
+        },
+        {
+          "nombre": "SILLA AUX PRADA LINEAL",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.480.000"
+        },
+        {
+          "nombre": "SILLA AUX SALAMANCA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.680.000"
+        },
+        {
+          "nombre": "SILLA AUX NIDO",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.180.000"
+        },
+        {
+          "nombre": "SILLA AUX MECEDORA SALAMANCA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.780.000"
+        },
+        {
+          "nombre": "SILLA AUX PERLA LEATHER",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.180.000"
+        },
+        {
+          "nombre": "SILLA AUX ZETA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.480.000"
+        },
+        {
+          "nombre": "SILLA AUX ZAFIRO",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.380.000"
+        },
+        {
+          "nombre": "SILLA AUX GEMINI",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.580.000"
+        },
+        {
+          "nombre": "SILLA AUX LIMA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.680.000"
+        },
+        {
+          "nombre": "SILLA AUX MARBELLA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado, Fibra Natural Tejida",
+          "precio": "$1.980.000"
+        },
+        {
+          "nombre": "SILLA AUX HONG KONG",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.680.000"
+        },
+        {
+          "nombre": "SILLA AUX GEMA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.680.000"
+        },
+        {
+          "nombre": "SILLA AUX CIRCON (Con descansa pies)",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.880.000"
+        },
+        {
+          "nombre": "SILLA AUX L",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.380.000"
+        },
+        {
+          "nombre": "SILLA AUX ZARA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.680.000"
+        },
+        {
+          "nombre": "SILLA AUX GALAXY",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$2.680.000"
+        },
+        {
+          "nombre": "SILLA AUX ARIA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.980.000"
+        },
+        {
+          "nombre": "SILLA AUX BELLA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.580.000"
+        },
+        {
+          "nombre": "SILLA AUX OCRE",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.480.000"
+        },
+        {
+          "nombre": "SILLA AUX TERRA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$1.580.000"
+        },
+        {
+          "nombre": "SILLA AUX MECEDORA LACTANCIA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado, Tapizado",
+          "precio": "$2.780.000"
+        }
+      ]
     }
   }
 }
