@@ -578,6 +578,95 @@
           "precio": "$1.280.000"
         }
       ]
+    },
+    "mesas_noche": {
+      "nombre": "Mesas de Noche",
+      "productos": [
+        {
+          "nombre": "MESA NOCHE BELMONTE",
+          "medidas": "0.50 x 0.40 aprox",
+          "material": "Flor Morado Natural",
+          "precio": "$780.000"
+        },
+        {
+          "nombre": "MESA NOCHE MIAMI UN CAJON",
+          "medidas": "0.50 x 0.40 aprox",
+          "material": "Flor Morado Natural",
+          "precio": "$780.000"
+        },
+        {
+          "nombre": "MESA NOCHE TV DUPLEX",
+          "medidas": "0.50 x 0.40 aprox",
+          "material": "Cedro, Flor Morado Natural",
+          "precio": "$780.000"
+        },
+        {
+          "nombre": "MESA NOCHE PIRAMIDE",
+          "medidas": "0.50 x 0.40 aprox",
+          "material": "Flor Morado Natural",
+          "precio": "$780.000"
+        },
+        {
+          "nombre": "MESA NOCHE MARGARITA",
+          "medidas": "0.50 x 0.40 aprox",
+          "material": "Flor Morado Natural (Pintado: $780.000 / Flor Morado: $880.000)",
+          "precio": "$780.000 - $880.000"
+        },
+        {
+          "nombre": "MESA NOCHE DIAMANTE",
+          "medidas": "0.50 x 0.40 aprox",
+          "material": "Flor Morado Natural",
+          "precio": "$880.000"
+        },
+        {
+          "nombre": "MESA NOCHE MACANA",
+          "medidas": "0.50 x 0.40 aprox",
+          "material": "Flor Morado Natural",
+          "precio": "$880.000"
+        },
+        {
+          "nombre": "MESA NOCHE SANTA MARTA",
+          "medidas": "0.50 x 0.40 aprox",
+          "material": "Lamina Flor Morado",
+          "precio": "$880.000"
+        },
+        {
+          "nombre": "MESA NOCHE TV UN CAJON",
+          "medidas": "0.50 x 0.40 aprox",
+          "material": "Flor Morado Natural",
+          "precio": "$780.000"
+        },
+        {
+          "nombre": "MESA NOCHE DELTA",
+          "medidas": "0.50 x 0.40 aprox",
+          "material": "Flor Morado Natural",
+          "precio": "$880.000"
+        },
+        {
+          "nombre": "MESA DE NOCHE AMIGABLE",
+          "medidas": "0.50 x 0.40 aprox",
+          "material": "Flor Morado Natural",
+          "precio": "$880.000"
+        },
+        {
+          "nombre": "MESA NOCHE BARCELONETA",
+          "medidas": "0.50 x 0.40 aprox",
+          "material": "Flor Morado Natural",
+          "precio": "$880.000"
+        },
+        {
+          "nombre": "MESA NOCHE DEKO",
+          "medidas": "0.50 x 0.40 aprox",
+          "material": "Flor Morado Natural",
+          "precio": "$880.000"
+        },
+        {
+          "nombre": "MESA DE NOCHE ESTOCOLMO",
+          "medidas": "0.50 x 0.40 aprox",
+          "material": "Flor Morado Natural",
+          "precio": "$980.000"
+        }
+      ]
     }
   }
 }
