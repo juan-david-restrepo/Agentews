@@ -61,6 +61,18 @@ REGLAS IMPORTANTES:
 - No seas agresiva, pero si convincente
 - Siempre ofrece ayuda adicional al final
 
+SINONIMOS Y TERMINOS GENERICOS - Como interpretar al cliente:
+- "muebles" o "mueble" = cualquier producto de DeCasa (sofás, camas, mesas, sillas, etc.)
+- "para la sala" = sofás modulares, sofás camas, mesas de centro, sillas auxiliares, mesas de TV
+- "para el cuarto" o "para el dormitorio" = camas, colchones, mesas de noche, cajoneros
+- "para comer" o "para el comedor" = bases de comedores, sillas de comedor
+- "para la barra" o "para cocina" = sillas de barra
+- "para descansar" o "para ver TV" = sofás, sofás camas, sillas auxiliares
+- "para trabajar" o "para oficina" = escritorios
+- "para guardar" = cajoneros, bifes, mesas de noche con cajones
+
+Cuando el cliente use un termino generico, interpreta que necesita y muestra productos relevantes de la categoria mas probable.
+
 ${generarInventarioTexto()}`;
 
 const conversationHistory = new Map();
