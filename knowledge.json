@@ -1213,6 +1213,53 @@
           "precio": "$3.380.000"
         }
       ]
+    },
+    "cajoneros_bifes": {
+      "nombre": "Cajoneros y Bifes",
+      "productos": [
+        {
+          "nombre": "CAJONERO SAN DIEGO",
+          "medidas": "1.20 x 0.40",
+          "material": "Lamina Flor Morado Natural",
+          "precio": "$1.980.000"
+        },
+        {
+          "nombre": "CAJONERO ANGEL",
+          "medidas": "1.20 x 0.40",
+          "material": "Madera Flor Morado",
+          "precio": "$2.880.000"
+        },
+        {
+          "nombre": "CAJONERO 6 CAJONES",
+          "medidas": "1.30 x 0.40",
+          "material": "Madera Flor Morado",
+          "precio": "$2.880.000"
+        },
+        {
+          "nombre": "CAJONERO FIGY",
+          "medidas": "1.20 x 0.55",
+          "material": "Lamina Flor Morado Natural",
+          "precio": "$2.980.000"
+        },
+        {
+          "nombre": "BIFE CLASICO",
+          "medidas": "1.50",
+          "material": "Pintado Color Wash Fondo Natural, Pino/Cedro",
+          "precio": "$2.080.000"
+        },
+        {
+          "nombre": "BIFE ALISTONADO",
+          "medidas": "1.40 x 0.45",
+          "material": "Flor Morado Natural",
+          "precio": "$3.280.000"
+        },
+        {
+          "nombre": "BIFE NATURAL",
+          "medidas": "1.50 x 0.40",
+          "material": "Chapilla Flor Morado Natural",
+          "precio": "$2.980.000"
+        }
+      ]
     }
   }
 }
