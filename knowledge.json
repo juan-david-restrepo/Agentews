@@ -304,6 +304,113 @@
           "precio": "$2.880.000"
         }
       ]
+    },
+    "sillas_comedor": {
+      "nombre": "Sillas de Comedor",
+      "productos": [
+        {
+          "nombre": "SILLA COMEDOR",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR DUBAI",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR GEMA 2",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR NATIVA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR LIMA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR FILIPHINA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR TURQUESA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR JAPAN",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR DIAMANTE",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$580.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR ROBLE",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$680.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR ESMERALDA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR RETIRO",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$580.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR ALEXA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$780.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR RETRO CURVA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$780.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR CLASICA",
+          "medidas": "Standard",
+          "material": "Cedro Rosado",
+          "precio": "$780.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR AMATISTA",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$980.000"
+        },
+        {
+          "nombre": "SILLA COMEDOR ORION",
+          "medidas": "Standard",
+          "material": "Madera Flor Morado",
+          "precio": "$980.000"
+        }
+      ]
     }
   }
 }
