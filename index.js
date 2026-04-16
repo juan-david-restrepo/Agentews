@@ -10,6 +10,12 @@ app.use(express.json());
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const MODEL_NAME = 'gemini-2.5-flash-lite';
 
+const SALUDO_INICIAL = `Hola! 👋 Soy Elena, tu asesora de DeCasa. Somos especialistas en muebles de alta calidad en madera Flor Morado, con mas de 206 productos para el hogar. 
+
+Horario de atencion: Lunes a viernes de 8am a 5pm.
+
+Como puedo ayudarte hoy? 😊`;
+
 const generarInventarioTexto = () => {
   let texto = '\n\n=== INVENTARIO DE PRODUCTOS ===\n';
 
@@ -24,26 +30,41 @@ const generarInventarioTexto = () => {
   return texto;
 };
 
-const SYSTEM_PROMPT = `Eres un asistente virtual amable y profesional de ${knowledge.empresa}.
-Información del negocio:
-- Empresa: ${knowledge.empresa}
-- Descripción: ${knowledge.descripcion}
-- Servicios: ${knowledge.servicios.join(', ')}
-- Horario de atención: ${knowledge.horario}
-- Ubicación: ${knowledge.ubicacion}
-- Contacto: ${knowledge.contacto}
+const SYSTEM_PROMPT = `Eres Elena, una vendedora amable y persuasiva de DeCasa. Tu objetivo es ayudar al cliente a encontrar el mueble perfecto y convencerlo de comprar.
 
-Instrucciones:
-1. Responde de manera amable, breve y en español
-2. Solo proporciona información del negocio
-3. Cuando preguntan por productos, precios o cotizaciones, consulta el inventario y muestra los productos relevantes
-4. Si preguntan algo fuera del negocio, redirige amablemente diciendo que solo puedes ayudar con temas relacionados a ${knowledge.empresa}
-5. Menciona el horario de atención cuando sea relevante
-6. Incluye el precio cuando menciones productos
+PERFIL DE VENDEDORA:
+- Nombre: Elena
+- Empresa: DeCasa
+- Especialidad: Muebles de madera Flor Morado de alta calidad
+- Horario: Lunes a viernes de 8am a 5pm
+
+INSTRUCCIONES DE VENTA:
+1. Cuando el cliente pregunte por un producto, SIEMPRE ofrece 2-3 alternativas similares con precios
+2. Destaca la calidad de nuestros productos: "Madera Flor Morado, resistencia y elegancia"
+3. Usa frases persuasivas: "Te recomiendo", "Es nuestra mejor opcion", "Excelente calidad-precio", "No te vas a arrepentir"
+4. Cuando menciones productos, incluye el precio y destaca si es buena oferta
+5. Si el cliente duda por el precio, enfoca en la calidad y durabilidad
+6. Cierra siempre con una pregunta: "Te puedo ayudar con algo mas?" o "Te interesa ver mas opciones?"
+
+EJEMPLOS DE RESPUESTA:
+
+Cliente: "tienen camas?"
+Elena: "Claro! Tenemos mas de 20 modelos de camas. Nuestra CAMA DINTEL en madera Flor Morado esta a $3.680.000, es muy resistente. Si buscas algo mas economico, la CAMA BARCELONETA esta a $2.880.000, excelente calidad-precio. Cual te llama la atencion? 😊"
+
+Cliente: "cuanto cuesta un sofa?"
+Elena: "Tenemos sofás desde $2.040.000 hasta $5.100.000. El SOFA NUBE a $3.480.000 es uno de los mas vendidos por su comodidad. Tambien te recomiendo el SOFA CHESTER a $3.380.000, super elegante. Quieres ver mas opciones? 💪"
+
+REGLAS IMPORTANTES:
+- Solo habla de productos de DeCasa
+- Si preguntan algo fuera del negocio, redirige amablemente
+- Mantén un tono amigable, profesional y persuasivo
+- No seas agresiva, pero si convincente
+- Siempre ofrece ayuda adicional al final
 
 ${generarInventarioTexto()}`;
 
 const conversationHistory = new Map();
+const greetingsSent = new Set();
 
 function getHistory(from) {
   if (!conversationHistory.has(from)) {
@@ -55,7 +76,7 @@ function getHistory(from) {
 function addToHistory(from, role, content) {
   const history = getHistory(from);
   history.push({ role, content });
-  if (history.length > 10) {
+  if (history.length > 12) {
     history.shift();
   }
 }
@@ -79,8 +100,8 @@ async function callGemini(prompt) {
       contents,
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
       generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 500
+        temperature: 0.8,
+        maxOutputTokens: 600
       }
     })
   });
@@ -106,12 +127,19 @@ app.post('/webhook', async (req, res) => {
 
   try {
     const history = getHistory(from);
-    addToHistory(from, 'user', incomingMsg);
+    let response;
 
-    const response = await callGemini({
-      history: history.slice(0, -1),
-      currentMessage: incomingMsg
-    });
+    if (history.length === 0 && !greetingsSent.has(from)) {
+      response = SALUDO_INICIAL;
+      greetingsSent.add(from);
+    } else {
+      addToHistory(from, 'user', incomingMsg);
+
+      response = await callGemini({
+        history: history,
+        currentMessage: incomingMsg
+      });
+    }
 
     addToHistory(from, 'assistant', response);
 
@@ -125,7 +153,7 @@ app.post('/webhook', async (req, res) => {
     console.error('Error:', error.message);
 
     const twiml = new MessagingResponse();
-    twiml.message('Disculpa, estoy teniendo problemas técnicos. Por favor intenta más tarde.');
+    twiml.message('Disculpa, estoy teniendo problemas tecnicos. Por favor intenta mas tarde.');
     res.type('text/xml').send(twiml.toString());
   }
 });
@@ -133,7 +161,7 @@ app.post('/webhook', async (req, res) => {
 app.get('/webhook', (req, res) => {
   res.json({
     status: 'ok',
-    message: 'Webhook activo',
+    message: 'Elena - Vendedora DeCasa',
     empresa: knowledge.empresa
   });
 });
@@ -146,7 +174,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`
 ╔══════════════════════════════════════════╗
-║   Asistente WhatsApp - ${knowledge.empresa.padEnd(26)}║
+║   Elena - Vendedora DeCasa 🎯            ║
 ╠══════════════════════════════════════════╣
 ║  Servidor corriendo en puerto ${PORT}       ║
 ║                                          ║
