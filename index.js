@@ -44,7 +44,7 @@ function addToHistory(from, role, content) {
 }
 
 async function callGemini(prompt) {
-  const url = `https://aiplatform.googleapis.com/v1/publishers/google/models/${MODEL_NAME}:streamGenerateContent?key=${GEMINI_API_KEY}`;
+  const url = `https://aiplatform.googleapis.com/v1/publishers/google/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
 
   const contents = [];
   for (const msg of prompt.history || []) {
