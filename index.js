@@ -9,7 +9,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 const SYSTEM_PROMPT = `Eres un asistente virtual amable y profesional de ${knowledge.empresa}.
 Información del negocio:
@@ -27,13 +26,16 @@ Instrucciones:
 4. Menciona el horario de atención cuando sea relevante
 5. Ofrece ayuda para cotizaciones si parece interesados en productos`;
 
+const model = genAI.getGenerativeModel({
+  model: 'gemini-1.5-flash',
+  systemInstruction: SYSTEM_PROMPT
+});
+
 const conversationHistory = new Map();
 
 function getHistory(from) {
   if (!conversationHistory.has(from)) {
-    conversationHistory.set(from, [
-      { role: 'system', content: SYSTEM_PROMPT }
-    ]);
+    conversationHistory.set(from, []);
   }
   return conversationHistory.get(from);
 }
@@ -41,8 +43,8 @@ function getHistory(from) {
 function addToHistory(from, role, content) {
   const history = getHistory(from);
   history.push({ role, content });
-  if (history.length > 20) {
-    history.splice(1, history.length - 21);
+  if (history.length > 10) {
+    history.shift();
   }
 }
 
@@ -60,14 +62,15 @@ app.post('/webhook', async (req, res) => {
     const history = getHistory(from);
     addToHistory(from, 'user', incomingMsg);
 
-    const chatHistory = history.map(m => ({
-      role: m.role === 'assistant' ? 'model' : m.role,
-      parts: [m.content]
-    }));
+    let prompt = '';
+    for (const msg of history.slice(-6)) {
+      const role = msg.role === 'user' ? 'Usuario' : 'Asistente';
+      prompt += `${role}: ${msg.content}\n`;
+    }
+    prompt += 'Asistente:';
 
-    const chat = model.startChat({ history: chatHistory.slice(0, -1) });
-    const result = await chat.sendMessage(incomingMsg);
-    const response = result.response.text();
+    const result = await model.generateContent(prompt);
+    const response = result.response.text().trim();
 
     addToHistory(from, 'assistant', response);
 
@@ -79,7 +82,7 @@ app.post('/webhook', async (req, res) => {
     res.type('text/xml').send(twiml.toString());
   } catch (error) {
     console.error('Error:', error.message);
-    
+
     const twiml = new MessagingResponse();
     twiml.message('Disculpa, estoy teniendo problemas técnicos. Por favor intenta más tarde.');
     res.type('text/xml').send(twiml.toString());
@@ -87,7 +90,7 @@ app.post('/webhook', async (req, res) => {
 });
 
 app.get('/webhook', (req, res) => {
-  res.json({ 
+  res.json({
     status: 'ok',
     message: 'Webhook activo',
     empresa: knowledge.empresa
