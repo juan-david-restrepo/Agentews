@@ -240,7 +240,13 @@ const TRIGGERS_COMPRA = [
   'confirmar compra', 'confirmar pedido',
   'me lo llevo ya', 'ya me lo llevo',
   'comprar ahora', 'finalizar compra',
-  'pedido confirmado', 'ordenar ya'
+  'pedido confirmado', 'ordenar ya',
+  'quiero comprar', 'me gustaría comprar',
+  'comprar', 'lo quiero comprar',
+  'si quiero', 'si quiero compr',
+  'sí quiero', 'sí, quiero',
+  'dámelo', 'me lo llevo',
+  'lo tomo', 'me quedo con'
 ];
 
 function detectarAsesor(mensaje) {
@@ -318,7 +324,7 @@ function estaTransferida(from) {
 }
 
 function marcarTransferida(from) {
-  conversacionesTransferidas.add(from);
+  conversacionesTransferidas.set(from, true);
 }
 
 async function enviarNotificacionTelegram(telefono, mensaje, historial, tipo = 'asesor') {
@@ -935,19 +941,21 @@ app.post('/webhook', async (req, res) => {
       } else {
         response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
       }
-    } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de')) {
-      let catalogo = buscarCatalogo(incomingMsg);
+    } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás')) {
       const categoriaGuardada = ultimoContextoCategoria.get(from);
+      let catalogo = null;
       
-      if (catalogo?.url) {
-        //Tiene PDF directo - usarlo
-      } else if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
-        //No tiene URL pero tiene contexto guardado - usar el contexto
+      if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
         catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
-      } else if (!catalogo?.url) {
-        //Intentar buscar categoría en el mensaje actual
+      }
+      
+      if (!catalogo) {
+        catalogo = buscarCatalogo(incomingMsg);
+      }
+      
+      if (!catalogo?.url) {
         const porCategoria = buscarProductosPorCategoria(incomingMsg);
-        if (porCategoria.productos.length > 0 && porCategoria.categoria) {
+        if (porCategoria.productos.length > 0 && porCategoria.categoria && knowledge.catalogos[porCategoria.categoria]) {
           catalogo = { categoria: porCategoria.categoria, url: knowledge.catalogos[porCategoria.categoria] };
         }
       }
