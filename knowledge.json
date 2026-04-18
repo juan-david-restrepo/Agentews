@@ -12,6 +12,20 @@
   "horario": "Lunes a viernes de 8am a 5pm",
   "ubicacion": "Disponible en Armenia",
   "contacto": "Escríbenos para más información o cotizaciones sin compromiso",
+  "catalogos": {
+    "cajoneros_bifes": "https://drive.google.com/uc?export=download&id=1gWU48EKvn21qLGVEbfbG9ztdUoP5WAeu",
+    "camas": "https://drive.google.com/uc?export=download&id=1HQQNkfFUyiyFrPJJhTrizdlqkQctgS_q",
+    "mesas_auxiliares": "https://drive.google.com/uc?export=download&id=1Y0MNc2eE9z095f46CfVs5j7fpnVW4UWl",
+    "mesas_centro": "https://drive.google.com/uc?export=download&id=1DO7aAWXlfnaa7SL9f_0sd0uRYnPHIEUU",
+    "mesas_noche": "https://drive.google.com/uc?export=download&id=16Zghf2D0GSv2Cq3X0D21rV3vEgqClM83",
+    "mesas_tv": "https://drive.google.com/uc?export=download&id=1S7rPC3CQzLvUXP2w6NWCMWBdkwSqGsC6",
+    "bases_comedores": "https://drive.google.com/uc?export=download&id=1y-jP31eh0c_1pAt26ie672mOaVJy3KGM",
+    "sillas_auxiliares": "https://drive.google.com/uc?export=download&id=1PeYDmSVxSiuReB_mnm3bsUC6YgOpvaNa",
+    "sillas_barra": "https://drive.google.com/uc?export=download&id=1zCLqZnRJXc7lsZBMsJrHcJ1duLSheDnG",
+    "sofas": "https://drive.google.com/uc?export=download&id=1Y9VXHrmzuAw_oIru-B8ywxgWPP9K-SCd",
+    "sofas_camas": "https://drive.google.com/uc?export=download&id=1SLEOyhsSOGBFGZUPhoyH-hE2_LgEiJgQ",
+    "sofas_modulares": "https://drive.google.com/uc?export=download&id=1Y9VXHrmzuAw_oIru-B8ywxgWPP9K-SCd"
+  },
   "inventario": {
     "camas": {
       "nombre": "Camas",
@@ -55,115 +69,134 @@
           "nombre": "CAMA CHOCOLATINA",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Triple Cedro Pintada",
-          "precio": "$1.580.000"
+          "precio": "$1.580.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776433506/cama_chocolatina_rw49qr.png"
         },
         {
           "nombre": "CAMA MACANA",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Madera Flor Morado",
-          "precio": "$3.780.000"
+          "precio": "$3.780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432950/cama_macana_qvsuty.png"
         },
         {
           "nombre": "CAMA ESTOCOLMO",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Pino",
-          "precio": "$3.780.000"
+          "precio": "$3.780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432951/cama_estocolmo_ndzygu.png"
         },
         {
           "nombre": "CAMA SAVANNA",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Tapizada Lineal Vertical",
-          "precio": "$3.380.000"
+          "precio": "$3.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432950/cama_savanna_gxbxt0.jpg"
         },
         {
           "nombre": "CAMA DIAMANTE",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Flor Morado Natural Lamina",
-          "precio": "$3.680.000"
+          "precio": "$3.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432979/cama_diamante_aa5vzs.png"
         },
         {
           "nombre": "CAMA BARCELONETA",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Flor Morado Natural Lamina",
-          "precio": "$2.880.000"
+          "precio": "$2.880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776433023/cama_barceloneta_r08xtc.jpg"
         },
         {
           "nombre": "CAMA VIENNA",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Tapizada Cuadros",
-          "precio": "$2.980.000"
+          "precio": "$2.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432951/cama_vienna_ns2vue.jpg"
         },
         {
           "nombre": "CAMA OSLO",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Flor Morado Natural Lamina",
-          "precio": "$2.680.000"
+          "precio": "$2.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432950/cama_oslo_wjdbez.jpg"
         },
         {
           "nombre": "CAMA ÉBANO",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Madera Flor Morado",
-          "precio": "$2.880.000"
+          "precio": "$2.880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432951/cama_ebano_svu3cf.png"
         },
         {
           "nombre": "CAMA BETHEL",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Tapizada",
-          "precio": "$3.380.000"
+          "precio": "$3.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432950/cama_bethel_wgkhcf.jpg"
         },
         {
           "nombre": "CAMA EDEN",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Tapizada",
-          "precio": "$3.380.000"
+          "precio": "$3.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432951/cama_eden_e4vxd7.jpg"
         },
         {
           "nombre": "CAMA SIENNA",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Tapizada",
-          "precio": "$3.380.000"
+          "precio": "$3.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432950/cama_sienna_v2tv2z.jpg"
         },
         {
           "nombre": "CAMA SIENNA DIVIDIDA (Cama Baul)",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Tapizada",
-          "precio": "$3.380.000"
+          "precio": "$3.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432950/cama_sienna_dividida_ishoo3.jpg"
         },
         {
           "nombre": "CAMA VERTICE",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Madera Flor Morado",
-          "precio": "$2.980.000"
+          "precio": "$2.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432951/cama_vertice_mdengv.jpg"
         },
         {
           "nombre": "CAMA MIAMI",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Madera Flor Morado y Chapilla",
-          "precio": "$2.680.000"
+          "precio": "$2.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432950/cama_miami_k6mitt.jpg"
         },
         {
           "nombre": "CAMA ALISTONADA",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Madera Flor Morado",
-          "precio": "$2.880.000"
+          "precio": "$2.880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776433303/cama_alistonada_tbjbim.jpg"
         },
         {
           "nombre": "CAMA MACARENA",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Madera Flor Morado",
-          "precio": "$2.980.000"
+          "precio": "$2.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432950/cama_macarena_toqzll.png"
         },
         {
           "nombre": "CAMA FLOR MORADO LISA",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Madera Flor Morado",
-          "precio": "$2.980.000"
+          "precio": "$2.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776432952/cama_flor_morado_usa_oegsyk.png"
         },
         {
           "nombre": "BASE CAMA",
           "medidas": "Puede ajustarse/fabricarse según gusto y necesidad del cliente",
           "material": "Tapizada",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776433205/base_cama_dslqx4.jpg"
         }
       ]
     },
@@ -174,139 +207,162 @@
           "nombre": "BASE FIGY RECTA",
           "medidas": "1.60 x 1.00 (6 Puestos)",
           "material": "Cubierta en Chapilla Flor Morado, Base en Madera Flor Morado",
-          "precio": "$2.680.000"
+          "precio": "$2.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434588/base_figy_recta_dweel1.jpg"
         },
         {
           "nombre": "BASE REJILLA",
           "medidas": "1.60 x 1.00 (6 Puestos)",
           "material": "Cubierta Lamina Flor Morado, Base Rejilla en Cedro",
-          "precio": "$2.980.000"
+          "precio": "$2.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434597/base_rejilla_ot3iaq.jpg"
         },
         {
           "nombre": "BASE FIRENZE",
           "medidas": "1.60 x 1.00 (6 Puestos)",
           "material": "Flor Morado Natural",
-          "precio": "$2.980.000"
+          "precio": "$2.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434591/base_firenze_abgsqi.jpg"
         },
         {
           "nombre": "BASE MAKANA",
           "medidas": "Cubierta 120 Diametro (4 Puestos)",
           "material": "Flor Morado Natural, Cubierta Tecnica Metalizada Gris",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434593/base_makana_exndzs.jpg"
         },
         {
           "nombre": "BASE FILLY OVALADA",
           "medidas": "1.60 x 1.00 (6 Puestos)",
           "material": "Lamina Flor Morado",
-          "precio": "$2.980.000"
+          "precio": "$2.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434589/base_filly_ovalada_ofy8js.jpg"
         },
         {
           "nombre": "BASE ONDARA",
           "medidas": "1.35 x 0.90 (4 Puestos)",
           "material": "Madera Flor Morado",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434596/base_ondara_lumjor.jpg"
         },
         {
           "nombre": "BASE FIGY 2S",
           "medidas": "1.60 x 0.80 Centro 0.90 (6 Puestos)",
           "material": "Cubierta Sinterizada, Base Figy Recta Flor Morado",
-          "precio": "$4.980.000"
+          "precio": "$4.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434612/base_figy_25_lrl8bc.jpg"
         },
         {
           "nombre": "BASE SANTA MARIA",
           "medidas": "1.60 x 1.00 (6 Puestos)",
           "material": "Madera Flor Morado",
-          "precio": "$2.980.000"
+          "precio": "$2.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434599/base_santa_maria_xkzp9p.jpg"
         },
         {
           "nombre": "BASE TESLA",
           "medidas": "1.80 x 1.00 (6 Puestos)",
           "material": "Madera Flor Morado",
-          "precio": "$2.980.000"
+          "precio": "$2.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434603/base_tesla_dk7e4c.jpg"
         },
         {
           "nombre": "BASE ABANICA",
           "medidas": "Cubierta 120 Diametro (4 Puestos)",
           "material": "Cubierta Chapilla, Base Madera Flor Morado",
-          "precio": "$2.180.000"
+          "precio": "$2.180.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434606/base_abanica_t29w0i.jpg"
         },
         {
           "nombre": "BASE MARBELLA",
           "medidas": "1.50 x 1.00 (6 Puestos)",
           "material": "Cubierta Chapilla, Base Madera Flor Morado",
-          "precio": "$2.780.000"
+          "precio": "$2.780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434594/base_marbella_djsfjv.jpg"
         },
         {
           "nombre": "BASE 2K",
           "medidas": "1.20 x 0.90 (4 Puestos)",
           "material": "Cubierta Vidrio 10mm, Base Flor Morado Natural",
-          "precio": "$1.480.000"
+          "precio": "$1.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434605/base_2k_raixja.jpg"
         },
         {
           "nombre": "BASE MACARENA",
           "medidas": "1.60 x 1.10 (6 Puestos)",
           "material": "Cubierta Roble Flor Morado, Base Cedro Rosado",
-          "precio": "$3.380.000"
+          "precio": "$3.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434592/base_macarena_qglc6c.jpg"
         },
         {
           "nombre": "BASE ZENNA",
           "medidas": "1.60 x 0.90 (6 Puestos)",
           "material": "Roble Flor Morado",
-          "precio": "$2.980.000"
+          "precio": "$2.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434604/base_zenna_d69ukg.jpg"
         },
         {
           "nombre": "BASE DIAMANTE",
           "medidas": "1.20 x 0.90 (4 Puestos)",
           "material": "Lamina Flor Morado",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434610/base_diamante_xtl65a.jpg"
         },
         {
           "nombre": "BASE FIGY CURVA",
           "medidas": "2.20 x 0.90 (8 Puestos)",
           "material": "Cubierta Piedra Sinterizada, Base Figy Curva Flor Morado",
-          "precio": "$4.980.000"
+          "precio": "$4.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434613/base_figy_curva_tazuuk.jpg"
         },
         {
           "nombre": "BASE FIGY CURVA SS",
           "medidas": "1.30 x 0.90 (4 Puestos)",
           "material": "Cubierta Lamina Flor Morado, Base Figy Curva Flor Morado",
-          "precio": "$2.680.000"
+          "precio": "$2.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434587/base_figy_curva_ss_qi0dvo.jpg"
         },
         {
           "nombre": "BASE INDUSTRIAL",
           "medidas": "Medida Irregular 2.80 x 1.10 (6 Puestos)",
           "material": "Cubierta de Tronco Natural, Base Metal",
-          "precio": "Precio personalizado según medida"
+          "precio": "Precio personalizado según medida",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434590/base_industrial_od6kyt.jpg"
         },
         {
           "nombre": "BASE SINTERIZADA BRILLO (Linea Economica)",
           "medidas": "1.40 x 0.80 (4 Puestos) / 1.60 x 0.90 (6 Puestos)",
           "material": "Cubierta Sinterizada, Base Flor Morado Natural",
-          "precio": "4 puestos: $2.480.000 / 6 puestos: $2.680.000"
+          "precio": "4 puestos: $2.480.000 / 6 puestos: $2.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434602/base_sinterizada_brillo_yyby2n.jpg"
         },
         {
           "nombre": "BASE SERENA",
           "medidas": "1.60 Largo, 0.95 Centro, 0.90 Extremos (6 Puestos)",
           "material": "Flor Morado Natural",
-          "precio": "$3.380.000"
+          "precio": "$3.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434601/base_serena_oklrhb.jpg"
         },
         {
           "nombre": "BASE SAN DIEGO",
           "medidas": "1.20 x 0.90 (4 Puestos)",
           "material": "Flor Morado Natural",
-          "precio": "$2.480.000"
+          "precio": "$2.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434598/base_san_diego_n7xzbz.jpg"
         },
         {
           "nombre": "BASE CONICA",
           "medidas": "1.60 x 1.00 (6 Puestos)",
           "material": "Flor Morado Natural",
-          "precio": "$2.980.000"
+          "precio": "$2.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434609/base_conica_gh4pfe.jpg"
         },
         {
           "nombre": "BASE AHORRA ESPACIO",
           "medidas": "Cubierta 1.00 Diametro (4 Puestos)",
           "material": "Cedro / Flor Morado",
-          "precio": "$2.880.000"
+          "precio": "$2.880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776434608/base_ahorra_espacio_j6ahbc.jpg"
         }
       ]
     },
@@ -317,103 +373,120 @@
           "nombre": "SILLA COMEDOR",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435768/silla_comedor_mtm71a.jpg"
         },
         {
           "nombre": "SILLA COMEDOR DUBAI",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435753/silla_comedor_dubai_fchhkf.jpg"
         },
         {
           "nombre": "SILLA COMEDOR GEMA 2",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435767/silla_cmedor_gema_2_zvr8i2.jpg"
         },
         {
           "nombre": "SILLA COMEDOR NATIVA",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435759/silla_comedor_nativa_cqan2q.jpg"
         },
         {
           "nombre": "SILLA COMEDOR LIMA",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435757/silla_comedor_lima_cx61vw.jpg"
         },
         {
           "nombre": "SILLA COMEDOR FILIPHINA",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435754/silla_comedor_filiphina_uv7yvz.jpg"
         },
         {
           "nombre": "SILLA COMEDOR TURQUESA",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435766/silla_comedor_turquesa_phmrld.jpg"
         },
         {
           "nombre": "SILLA COMEDOR JAPAN",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435756/silla_comedor_japan_fjdhaj.jpg"
         },
         {
           "nombre": "SILLA COMEDOR DIAMANTE",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$580.000"
+          "precio": "$580.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435775/silla_comedor_diamante_pqnfqo.jpg"
         },
         {
           "nombre": "SILLA COMEDOR ROBLE",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$680.000"
+          "precio": "$680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435764/silla_comedor_roble_yjt2ey.jpg"
         },
         {
           "nombre": "SILLA COMEDOR ESMERALDA",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435754/silla_comedor_esmeeralda_r6ckg8.png"
         },
         {
           "nombre": "SILLA COMEDOR RETIRO",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$580.000"
+          "precio": "$580.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435762/silla_comedor_retiro_g75q7g.png"
         },
         {
           "nombre": "SILLA COMEDOR ALEXA",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$780.000"
+          "precio": "$780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435771/silla_comedor_alexa_gsqyjj.png"
         },
         {
           "nombre": "SILLA COMEDOR RETRO CURVA",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$780.000"
+          "precio": "$780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435763/silla_comedor_retro_curva_etvp1c.png"
         },
         {
           "nombre": "SILLA COMEDOR CLASICA",
           "medidas": "Standard",
           "material": "Cedro Rosado",
-          "precio": "$780.000"
+          "precio": "$780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435774/silla_comedor_clasica_xk5wqq.png"
         },
         {
           "nombre": "SILLA COMEDOR AMATISTA",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435772/silla_comedor_amatista_qretvx.png"
         },
         {
           "nombre": "SILLA COMEDOR ORION",
           "medidas": "Standard",
           "material": "Madera Flor Morado",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776435760/silla_comedor_orion_vpx6nx.png"
         }
       ]
     },
@@ -424,163 +497,190 @@
           "nombre": "MESA DE CENTRO CILINDRO",
           "medidas": "Standard",
           "material": "Chapilla Flor Morado Natural",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437421/mesa_centro_cilindro_wia5vj.jpg"
         },
         {
           "nombre": "MESAS DE CENTRO TREBOL",
           "medidas": "Standard",
           "material": "Chapilla Flor Morado Natural",
-          "precio": "$1.380.000"
+          "precio": "$1.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437410/mesa_centro_trebol_cwgizu.jpg"
         },
         {
           "nombre": "MESAS DE CENTRO ATLAS DUO",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437419/mesa_centro_atlas_duo_wdbgvv.jpg"
         },
         {
           "nombre": "MESA DE CENTRO FIRENZE",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.480.000"
+          "precio": "$1.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437435/mesa_centro_firenze_k5vjbx.jpg"
         },
         {
           "nombre": "MESA DE CENTRO INDUSTRIAL GEO",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.480.000"
+          "precio": "$1.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437436/mesa_centro_industrilal_geo_nguslw.jpg"
         },
         {
           "nombre": "MESA DE CENTRO ELIPSE",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.280.000"
+          "precio": "$1.280.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437399/mesa_centro_mesa_eclipse_dhfqra.jpg"
         },
         {
           "nombre": "MESA DE CENTRO 2T",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.480.000"
+          "precio": "$1.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437416/mesa_centro_2t_gqg6zv.jpg"
         },
         {
           "nombre": "MESA DE CENTRO ARCA",
           "medidas": "Standard",
           "material": "Chapilla Flor Morado Natural",
-          "precio": "$1.280.000"
+          "precio": "$1.280.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437418/mesa_centro_arca_vellee.jpg"
         },
         {
           "nombre": "MESA DE CENTRO SAN DIEGO",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.380.000"
+          "precio": "$1.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437405/mesa_centro_san_diego_kglniz.jpg"
         },
         {
           "nombre": "MESA DE CENTRO SANTA MARIA",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.380.000"
+          "precio": "$1.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437407/mesa_centro_santa_maria_jdgge3.jpg"
         },
         {
           "nombre": "MESA DE CENTRO EXAGONAL",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.280.000"
+          "precio": "$1.280.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437431/mesa_centro_exagonal_hz458y.jpg"
         },
         {
           "nombre": "MESAS DE CENTRO GOTA",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$880.000"
+          "precio": "$880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437414/mesas_centro_gota_hyugej.jpg"
         },
         {
           "nombre": "MESA DE CENTRO MIAMI",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.680.000"
+          "precio": "$1.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437400/mesa_centro_miami_b9kvcg.jpg"
         },
         {
           "nombre": "MESA DE CENTRO OVALADA REJILLA",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.280.000"
+          "precio": "$1.280.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437402/mesa_centro_ovalada_rejilla_cqd3bj.jpg"
         },
         {
           "nombre": "MESAS DE CENTRO KONO",
           "medidas": "Standard",
           "material": "Cubierta Piedra Sinterizada, Base Chapilla Flor Morado Natural",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437395/mesa_centro_kono_qakq0e.jpg"
         },
         {
           "nombre": "MESA DE CENTRO LUNA",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437397/mesa_centro_luna_w2fjkk.jpg"
         },
         {
           "nombre": "MESA DE CENTRO TETRIS",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Cubierta de Vidrio",
-          "precio": "$1.280.000"
+          "precio": "$1.280.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437409/mesa_centro_tetris_qd1jzf.jpg"
         },
         {
           "nombre": "MESA DE CENTRO K",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Cubierta de Vidrio",
-          "precio": "$1.280.000"
+          "precio": "$1.280.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437438/mesa_centro_k_hsjeaj.jpg"
         },
         {
           "nombre": "MESA DE CENTRO DOBLE P",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.480.000"
+          "precio": "$1.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437429/mesa_centro_doble_p_ijal8o.jpg"
         },
         {
           "nombre": "MESA DE CENTRO KUBIK",
           "medidas": "Standard",
           "material": "Roble Flor Morado, Cubierta Vidrio",
-          "precio": "$880.000"
+          "precio": "$880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437395/mesa_centro_kubik_pw44vv.jpg"
         },
         {
           "nombre": "MESA DE CENTRO CRUZ",
           "medidas": "Standard",
           "material": "Chapilla Flor Morado Natural",
-          "precio": "$1.180.000"
+          "precio": "$1.180.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437424/mesa_centro_cruz_qffv0d.jpg"
         },
         {
           "nombre": "MESA DE CENTRO COUNTRY",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.380.000"
+          "precio": "$1.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437423/mesa_centro_country_tddqon.jpg"
         },
         {
           "nombre": "MESA DE CENTRO REJILLA REDONDA",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.180.000"
+          "precio": "$1.180.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437403/mesa_centro_rejilla_redonda_lirkwx.jpg"
         },
         {
           "nombre": "MESA DE CENTRO COFFE",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.480.000"
+          "precio": "$1.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437428/mesa_centro_doble_coffe_hloipw.jpg"
         },
         {
           "nombre": "MESA DE CENTRO FIGY REDONDA",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.280.000"
+          "precio": "$1.280.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437433/mesa_centro_figy_redonde_ww5mkf.jpg"
         },
         {
           "nombre": "MESA DE CENTRO X REDONDA",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.280.000"
+          "precio": "$1.280.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437412/mesa_centro_x_redonda_hoxkom.jpg"
         },
         {
           "nombre": "MESA DE CENTRO DOBLE C",
           "medidas": "Standard",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.280.000"
+          "precio": "$1.280.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776437426/mesa_centro_doble_c_qbkpii.jpg"
         }
       ]
     },
@@ -591,85 +691,99 @@
           "nombre": "MESA NOCHE BELMONTE",
           "medidas": "0.50 x 0.40 aprox",
           "material": "Flor Morado Natural",
-          "precio": "$780.000"
+          "precio": "$780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438249/mesa_noche_belmonte_h1jgg6.jpg"
         },
         {
           "nombre": "MESA NOCHE MIAMI UN CAJON",
           "medidas": "0.50 x 0.40 aprox",
           "material": "Flor Morado Natural",
-          "precio": "$780.000"
+          "precio": "$780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438235/mesa_noche_miami_un_cajon_u7xkoo.jpg"
         },
         {
           "nombre": "MESA NOCHE TV DUPLEX",
           "medidas": "0.50 x 0.40 aprox",
           "material": "Cedro, Flor Morado Natural",
-          "precio": "$780.000"
+          "precio": "$780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438241/mesa_noche_tv_duplex_rjezct.jpg"
         },
         {
           "nombre": "MESA NOCHE PIRAMIDE",
           "medidas": "0.50 x 0.40 aprox",
           "material": "Flor Morado Natural",
-          "precio": "$780.000"
+          "precio": "$780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438237/mesa_noche_piramide_we8vg6.jpg"
         },
         {
           "nombre": "MESA NOCHE MARGARITA",
           "medidas": "0.50 x 0.40 aprox",
           "material": "Flor Morado Natural (Pintado: $780.000 / Flor Morado: $880.000)",
-          "precio": "$780.000 - $880.000"
+          "precio": "$780.000 - $880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438231/mesa_noche_margarita_ftwkdo.jpg"
         },
         {
           "nombre": "MESA NOCHE DIAMANTE",
           "medidas": "0.50 x 0.40 aprox",
           "material": "Flor Morado Natural",
-          "precio": "$880.000"
+          "precio": "$880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438255/mesa_noche_diamante_qel8ie.jpg"
         },
         {
           "nombre": "MESA NOCHE MACANA",
           "medidas": "0.50 x 0.40 aprox",
           "material": "Flor Morado Natural",
-          "precio": "$880.000"
+          "precio": "$880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438233/mesa_noche_macana_kbx9oz.jpg"
         },
         {
           "nombre": "MESA NOCHE SANTA MARTA",
           "medidas": "0.50 x 0.40 aprox",
           "material": "Lamina Flor Morado",
-          "precio": "$880.000"
+          "precio": "$880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438239/mesa_noche_santa_marta_ajcmcv.jpg"
         },
         {
           "nombre": "MESA NOCHE TV UN CAJON",
           "medidas": "0.50 x 0.40 aprox",
           "material": "Flor Morado Natural",
-          "precio": "$780.000"
+          "precio": "$780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438243/mesa_noche_tv_un_cajon_hxlt3r.jpg"
         },
         {
           "nombre": "MESA NOCHE DELTA",
           "medidas": "0.50 x 0.40 aprox",
           "material": "Flor Morado Natural",
-          "precio": "$880.000"
+          "precio": "$880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438253/mesa_noche_delta_slpmdf.jpg"
         },
         {
           "nombre": "MESA DE NOCHE AMIGABLE",
           "medidas": "0.50 x 0.40 aprox",
           "material": "Flor Morado Natural",
-          "precio": "$880.000"
+          "precio": "$880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438245/mesa_noche_amigable_bzwh8p.jpg"
         },
         {
           "nombre": "MESA NOCHE BARCELONETA",
           "medidas": "0.50 x 0.40 aprox",
           "material": "Flor Morado Natural",
-          "precio": "$880.000"
+          "precio": "$880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438247/mesa_noche_barceloneta_o7wqkv.jpg"
         },
         {
           "nombre": "MESA NOCHE DEKO",
           "medidas": "0.50 x 0.40 aprox",
           "material": "Flor Morado Natural",
-          "precio": "$880.000"
+          "precio": "$880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438251/mesa_noche_deko_ciydzk.jpg"
         },
         {
           "nombre": "MESA DE NOCHE ESTOCOLMO",
           "medidas": "0.50 x 0.40 aprox",
           "material": "Flor Morado Natural",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438257/mesa_noche_estocolmo_ki5rhn.jpg"
         }
       ]
     },
@@ -680,31 +794,36 @@
           "nombre": "MESA AUXILIAR OSTEL",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$780.000"
+          "precio": "$780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438678/mesa_aux_ostel_jzkrlo.jpg"
         },
         {
           "nombre": "MESA AUX CILINDRO",
           "medidas": "Standard",
           "material": "Base Metalica, Cubierta Flor Morado",
-          "precio": "$580.000"
+          "precio": "$580.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438674/mesa_aux_cilindro_bcq30w.jpg"
         },
         {
           "nombre": "MESA AUX CUBO",
           "medidas": "Standard",
           "material": "Base Metalica, Cubierta Flor Morado",
-          "precio": "$680.000"
+          "precio": "$680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438676/mesa_aux_cubo_ulhjrg.jpg"
         },
         {
           "nombre": "MESA AUX TT",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$780.000"
+          "precio": "$780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438673/mesa_aux_tt_uprgpq.jpg"
         },
         {
           "nombre": "MESA AUX REJILLA REDONDA",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$880.000"
+          "precio": "$880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438680/mesa_aux_rejilla_redonda_gnguwu.jpg"
         }
       ]
     },
@@ -715,49 +834,57 @@
           "nombre": "MESA TV PRISMA",
           "medidas": "1.60 Largo",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442776/mesa_tv_prisma_tkfcjk.jpg"
         },
         {
           "nombre": "MESA TV SANTA MARTA",
           "medidas": "1.60 Largo",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442754/mesa_tv_santa_marta_fbupwe.jpg"
         },
         {
           "nombre": "MESA TV NATURAL ONE",
           "medidas": "1.60 Largo",
           "material": "Madera Flor Morado Natural, Chapilla Natural",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442768/mesa_tv_natural_one_dog9r5.jpg"
         },
         {
           "nombre": "MESA TV REJILLA",
           "medidas": "1.60 Largo",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442780/mesa_tv_rejilla_d8fjqo.jpg"
         },
         {
           "nombre": "MESA TV SAN DIEGO",
           "medidas": "1.60 Largo",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442784/mesa_tv_san_diego_qzuzlj.jpg"
         },
         {
           "nombre": "MESA TV ALISTONADA",
           "medidas": "2.00",
           "material": "Madera Flor Morado Natural",
-          "precio": "$2.380.000"
+          "precio": "$2.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442758/mesa_tv_alistonada_twvmvh.jpg"
         },
         {
           "nombre": "MESA TV NATURA",
           "medidas": "1.20",
           "material": "Cedro Rosado",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442764/mesa_tv_natura_evhfir.jpg"
         },
         {
           "nombre": "MESA TV PARALELA",
           "medidas": "1.60",
           "material": "Madera Flor Morado Natural",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442773/mesa_tv_paralela_mdavdy.jpg"
         },
         {
           "nombre": "MESA TV MIAMI CON CAJONES",
@@ -774,151 +901,176 @@
           "nombre": "SILLA AUX TOKIO",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.480.000"
+          "precio": "$1.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439396/silla_aux_tokio_tam4uk.jpg"
         },
         {
           "nombre": "SILLA AUX ROMEO",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.580.000"
+          "precio": "$1.580.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439390/silla_aux_romeo_n87vn7.jpg"
         },
         {
           "nombre": "SILLA AUX ATLANTIS",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.380.000"
+          "precio": "$1.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439484/silla_aux_atlantis_hcroxk.jpg"
         },
         {
           "nombre": "SILLA AUX ALICIA",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.380.000"
+          "precio": "$1.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439405/silla_aux_alicia_elvbjf.jpg"
         },
         {
           "nombre": "SILLA AUX PRADA LINEAL",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.480.000"
+          "precio": "$1.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439387/silla_aux_prada_lineal_cntmjt.jpg"
         },
         {
           "nombre": "SILLA AUX SALAMANCA",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.680.000"
+          "precio": "$1.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439391/silla_aux_salamanca_u980iu.jpg"
         },
         {
           "nombre": "SILLA AUX NIDO",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.180.000"
+          "precio": "$1.180.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439524/silla_aux_nido_vlw6ex.jpg"
         },
         {
           "nombre": "SILLA AUX MECEDORA SALAMANCA",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.780.000"
+          "precio": "$1.780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439522/silla_aux_mecedora_salamanca_ru74d0.jpg"
         },
         {
           "nombre": "SILLA AUX PERLA LEATHER",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.180.000"
+          "precio": "$1.180.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439386/silla_aux_perla_leather_joakga.jpg"
         },
         {
           "nombre": "SILLA AUX ZETA",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.480.000"
+          "precio": "$1.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439403/silla_aux_zeta_sk2blv.jpg"
         },
         {
           "nombre": "SILLA AUX ZAFIRO",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.380.000"
+          "precio": "$1.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439398/silla_aux_zafiro_w6ercs.jpg"
         },
         {
           "nombre": "SILLA AUX GEMINI",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.580.000"
+          "precio": "$1.580.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439508/silla_aux_gemini_si8no0.png"
         },
         {
           "nombre": "SILLA AUX LIMA",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.680.000"
+          "precio": "$1.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439516/silla_aux_lima_zr3qce.png"
         },
         {
           "nombre": "SILLA AUX MARBELLA",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado, Fibra Natural Tejida",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439517/silla_aux_marbella_ohsxrj.png"
         },
         {
           "nombre": "SILLA AUX HONG KONG",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.680.000"
+          "precio": "$1.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439510/silla_aux_hong_kong_r4f63i.jpg"
         },
         {
           "nombre": "SILLA AUX GEMA",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.680.000"
+          "precio": "$1.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439493/silla_aux_gema_kbyb0d.jpg"
         },
         {
           "nombre": "SILLA AUX CIRCON (Con descansa pies)",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.880.000"
+          "precio": "$1.880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439488/silla_aux_circon_con_descansapies_fgvjyz.jpg"
         },
         {
           "nombre": "SILLA AUX L",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.380.000"
+          "precio": "$1.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439512/silla_aux_L_fnox1m.png"
         },
         {
           "nombre": "SILLA AUX ZARA",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.680.000"
+          "precio": "$1.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439401/silla_aux_zara_kdf2ie.png"
         },
         {
           "nombre": "SILLA AUX GALAXY",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$2.680.000"
+          "precio": "$2.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439491/silla_aux_galaxy_cfc5u0.png"
         },
         {
           "nombre": "SILLA AUX ARIA",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439481/silla_aux_aria_xp8koi.png"
         },
         {
           "nombre": "SILLA AUX BELLA",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.580.000"
+          "precio": "$1.580.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439486/silla_aux_bella_holnjj.png"
         },
         {
           "nombre": "SILLA AUX OCRE",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.480.000"
+          "precio": "$1.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439385/silla_aux_orce_the8gp.png"
         },
         {
           "nombre": "SILLA AUX TERRA",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$1.580.000"
+          "precio": "$1.580.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439394/silla_aux_tierra_x0vceu.png"
         },
         {
           "nombre": "SILLA AUX MECEDORA LACTANCIA",
           "medidas": "Standard",
           "material": "Madera Flor Morado, Tapizado",
-          "precio": "$2.780.000"
+          "precio": "$2.780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776439519/silla_aux_mecedora_lactancia_u4rb48.png"
         }
       ]
     },
@@ -929,103 +1081,120 @@
           "nombre": "SILLA DE BARRA JAPAN",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440153/silla_barra_japan_kojh9o.jpg"
         },
         {
           "nombre": "SILLA DE BARRA MIMBRE",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440163/silla_barra_mimbre_u5elnn.jpg"
         },
         {
           "nombre": "SILLA DE BARRA AMATISTA",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440130/silla_barra_amatista_jka4fu.jpg"
         },
         {
           "nombre": "SILLA DE BARRA LIOR",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440158/silla_barra_lior_yvqsfr.jpg"
         },
         {
           "nombre": "SILLA DE BARRA JJ",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440156/silla_barra_JJ_fwvm17.jpg"
         },
         {
           "nombre": "SILLA DIAMANTE",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440136/silla_barra_diamante_wamsti.jpg"
         },
         {
           "nombre": "SILLA CURVA INDUSTRIAL",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440146/silla_barra_Icono_puufix.jpg"
         },
         {
           "nombre": "SILLA ICONO",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440148/silla_barra_industrial_bk7ipv.jpg"
         },
         {
           "nombre": "SILLA CURVA",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$680.000"
+          "precio": "$680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440134/silla_barra_curva_zrean7.png"
         },
         {
           "nombre": "SILLA VENECIA",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$780.000"
+          "precio": "$780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440128/silla_barra_venecia_zc4ahm.jpg"
         },
         {
           "nombre": "SILLA ZETA V",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$780.000"
+          "precio": "$780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440128/silla_barra_zeta_V_d1iqd0.jpg"
         },
         {
           "nombre": "SILLA DUBAI",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440139/silla_barra_dubai_ggtbpo.jpg"
         },
         {
           "nombre": "SILLA GEMA FLOR",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440143/silla_barra_gema_flor_ldcly9.jpg"
         },
         {
           "nombre": "SILLA TAILANDIA",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$880.000"
+          "precio": "$880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440166/silla_barra_tailandia_vggkc0.png"
         },
         {
           "nombre": "SILLA TORINO",
           "medidas": "Standard",
           "material": "Pino",
-          "precio": "$780.000"
+          "precio": "$780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776441019/silla_barra_torino_yodg7u.png"
         },
         {
           "nombre": "SILLA INDUSTRIAL",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$980.000"
+          "precio": "$980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440151/silla_barra_industrial_xf4f4r.png"
         },
         {
           "nombre": "SILLA ROBLE",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
-          "precio": "$780.000"
+          "precio": "$780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776440161/silla_barra_roble_w2lvqh.png"
         },
         {
           "nombre": "SILLA FILIPHINA",
@@ -1035,134 +1204,160 @@
         }
       ]
     },
-    "sofas_modulares": {
-      "nombre": "Sofás Modulares",
+    "sofas": {
+      "nombre": "Sofás",
       "productos": [
         {
           "nombre": "SOFA NUBE",
           "medidas": "1.80 x 0.90",
           "material": "Tapizado",
-          "precio": "$3.480.000"
+          "precio": "$3.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442003/sofa_nube_qqemc7.png"
         },
         {
           "nombre": "SOFA MARBELLA",
           "medidas": "2.00 x 0.90",
           "material": "Tapizado",
-          "precio": "$3.040.000"
+          "precio": "$3.040.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442014/sofa_marbella_q7yulr.jpg"
         },
         {
           "nombre": "SOFA TELAVID",
           "medidas": "2.00 x 0.90",
           "material": "Tapizado",
-          "precio": "$3.040.000"
+          "precio": "$3.040.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442017/sofa_telavid_b9kbzi.jpg"
         },
         {
           "nombre": "SOFA TERRA",
           "medidas": "2.40 x 0.90",
           "material": "Tapizado",
-          "precio": "$3.480.000"
+          "precio": "$3.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442026/sofa_terra_bc8goq.png"
         },
         {
           "nombre": "SOFA AUSTRIA",
           "medidas": "2.00 x 0.90",
           "material": "Tapizado",
-          "precio": "$2.840.000"
+          "precio": "$2.840.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442050/sofa_austria_wyf5xd.jpg"
         },
         {
           "nombre": "SOFA SINGAPUR",
           "medidas": "1.90 x 0.90",
           "material": "Tapizado",
-          "precio": "$2.880.000"
+          "precio": "$2.880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442067/sofa_singapur_ods8md.jpg"
         },
         {
           "nombre": "SOFA ROMEO",
           "medidas": "1.90 x 0.90",
           "material": "Tapizado",
-          "precio": "$2.980.000"
+          "precio": "$2.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442071/sofa_romeo_cniuuz.jpg"
         },
         {
           "nombre": "SOFA TORELLO",
           "medidas": "1.90 x 0.90",
           "material": "Tapizado",
-          "precio": "$2.040.000"
+          "precio": "$2.040.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442090/sofa_torello_mhie2i.jpg"
         },
         {
           "nombre": "SOFA CONFORT",
           "medidas": "1.90 x 0.90",
           "material": "Tapizado",
-          "precio": "$3.040.000"
+          "precio": "$3.040.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442100/sofa_confort_mag8s5.jpg"
         },
         {
           "nombre": "SOFA BARILOCHE",
           "medidas": "1.60 x 0.90",
           "material": "Tapizado",
-          "precio": "$2.040.000"
+          "precio": "$2.040.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442115/sofa_bariloche_ig1le1.png"
         },
         {
           "nombre": "SOFA SALAMANCA",
           "medidas": "1.90 x 0.90",
           "material": "Tapizado",
-          "precio": "$2.780.000"
+          "precio": "$2.780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776441976/sofa_salamanca_aghpre.png"
         },
         {
           "nombre": "SOFA PRADA",
           "medidas": "1.60 x 0.90",
           "material": "Tapizado",
-          "precio": "$2.040.000"
+          "precio": "$2.040.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776441988/sofa_prada_o9resy.png"
         },
         {
           "nombre": "SOFA CHESTER",
           "medidas": "2.20 x 0.90",
           "material": "Tapizado",
-          "precio": "$3.380.000"
-        },
+          "precio": "$3.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442789/chester_wf66q3.jpg"
+        }
+      ]
+    },
+    "sofas_modulares": {
+      "nombre": "Sofás Modulares",
+      "productos": [
         {
           "nombre": "MODULAR CONFORT",
           "medidas": "3.10 x 2.40",
           "material": "Tapizado",
-          "precio": "$5.100.000"
+          "precio": "$5.100.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442265/modular_confort_wqzwzi.jpg"
         },
         {
           "nombre": "MODULAR EVOLUTION",
           "medidas": "2.20 x 0.90",
           "material": "Tapizado",
-          "precio": "$4.100.000"
+          "precio": "$4.100.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442287/sofa_evolution_imcdvu.jpg"
         },
         {
           "nombre": "MODULAR ENZO",
           "medidas": "2.00 x 0.90",
           "material": "Tapizado",
-          "precio": "$3.780.000"
+          "precio": "$3.780.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442272/sofa_enzo_hwhpeb.png"
         },
         {
           "nombre": "MODULAR ANGEL",
           "medidas": "2.20 x 0.90",
           "material": "Tapizado",
-          "precio": "$3.680.000"
+          "precio": "$3.680.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442276/sofa_angel_eknkz1.png"
         },
         {
           "nombre": "MODULAR TERRA",
           "medidas": "2.35 Brazo a Brazo",
           "material": "Tapizado",
-          "precio": "$3.880.000"
+          "precio": "$3.880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442249/sofa_terra2_vi3xhm.jpg"
         },
         {
           "nombre": "MODULAR TORONTO",
           "medidas": "2.50 x 2.50",
           "material": "Tapizado",
-          "precio": "$4.100.000"
+          "precio": "$4.100.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442243/sofa_toronto_wlpxfr.jpg"
         },
         {
           "nombre": "MODULAR TELAVID",
           "medidas": "2.30 x 1.60",
           "material": "Tapizado",
-          "precio": "$4.100.000"
+          "precio": "$4.100.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442254/sofa_telavid2_etmggr.jpg"
         },
         {
           "nombre": "MODULAR BARILOCHE",
           "medidas": "2.10 x 1.40",
           "material": "Tapizado",
-          "precio": "$2.900.000"
+          "precio": "$2.900.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776442258/sofa_bariloche2_qw7ze7.jpg"
         }
       ]
     },
@@ -1173,49 +1368,57 @@
           "nombre": "SOFA CAMA SENSACION",
           "medidas": "1.80 x 0.90",
           "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443183/sofa_cama_sensacion_tzmpsk.png"
         },
         {
           "nombre": "SOFA CAMA ROMA",
           "medidas": "1.80 x 0.90",
           "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
-          "precio": "$3.000.000"
+          "precio": "$3.000.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443170/sofa_cama_roma_bmfpqv.jpg"
         },
         {
           "nombre": "SOFA CAMA ROMA FAMILIAR",
           "medidas": "Parte Externa: 2.30 x 1.60 / Parte Interna: 1.90 x 1.90",
           "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
-          "precio": "$4.100.000"
+          "precio": "$4.100.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443179/sofa_cama_roma_familiar_rpwuxs.jpg"
         },
         {
           "nombre": "SOFA CAMA ROMA 1P",
           "medidas": "Parte Externa: 1.00 x 0.90 / Parte Interna: 0.80 x 1.90",
           "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
-          "precio": "$2.040.000"
+          "precio": "$2.040.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443174/sofa_cama_roma_1p_n1elpg.png"
         },
         {
           "nombre": "SOFA CAMA LINEAL",
           "medidas": "1.80 x 0.90",
           "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
-          "precio": "$3.380.000"
+          "precio": "$3.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443165/sofa_cama_lineal_crxz9y.jpg"
         },
         {
           "nombre": "SOFA CAMA TORELLO TRES PUESTOS + PUFF",
           "medidas": "2.00 x 0.90",
           "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
-          "precio": "$3.880.000"
+          "precio": "$3.880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443162/sofa_cama_torello_tres_puestos_puff_vp7e3l.jpg"
         },
         {
           "nombre": "SOFA CAMA TORELLO DOS PUESTOS",
           "medidas": "1.80 x 0.90",
           "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
-          "precio": "$3.140.000"
+          "precio": "$3.140.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443191/sofa_cama_torello_dos_puestos_j3jijz.jpg"
         },
         {
           "nombre": "SOFA CAMA TELAVID",
           "medidas": "1.80 x 0.90",
           "material": "Tapizado (Tela Antifluido), Patas Flor Morado Natural",
-          "precio": "$3.380.000"
+          "precio": "$3.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443187/sofa_cama_telavid_b29w8x.jpg"
         }
       ]
     },
@@ -1226,84 +1429,52 @@
           "nombre": "CAJONERO SAN DIEGO",
           "medidas": "1.20 x 0.40",
           "material": "Lamina Flor Morado Natural",
-          "precio": "$1.980.000"
+          "precio": "$1.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443619/cajonero_san_diego_v8j5gc.jpg"
         },
         {
           "nombre": "CAJONERO ANGEL",
           "medidas": "1.20 x 0.40",
           "material": "Madera Flor Morado",
-          "precio": "$2.880.000"
+          "precio": "$2.880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443657/cajonero_angel_s0fo4b.jpg"
         },
         {
           "nombre": "CAJONERO 6 CAJONES",
           "medidas": "1.30 x 0.40",
           "material": "Madera Flor Morado",
-          "precio": "$2.880.000"
+          "precio": "$2.880.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443645/cajonero_6_cajones_w5pl6i.png"
         },
         {
           "nombre": "CAJONERO FIGY",
           "medidas": "1.20 x 0.55",
           "material": "Lamina Flor Morado Natural",
-          "precio": "$2.980.000"
+          "precio": "$2.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443668/cajonero_figy_knukdk.png"
         },
         {
           "nombre": "BIFE CLASICO",
           "medidas": "1.50",
           "material": "Pintado Color Wash Fondo Natural, Pino/Cedro",
-          "precio": "$2.080.000"
+          "precio": "$2.080.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443663/cajonero_clasico_frulnn.jpg"
         },
         {
           "nombre": "BIFE ALISTONADO",
           "medidas": "1.40 x 0.45",
           "material": "Flor Morado Natural",
-          "precio": "$3.280.000"
+          "precio": "$3.280.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443651/cajonero_alistonado_ibyztx.png"
         },
         {
           "nombre": "BIFE NATURAL",
           "medidas": "1.50 x 0.40",
           "material": "Chapilla Flor Morado Natural",
-          "precio": "$2.980.000"
+          "precio": "$2.980.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443675/cajonero_natural_x3bbqw.png"
         }
       ]
-    },
-    "escritorios": {
-      "nombre": "Escritorios",
-      "productos": [
-        {
-          "nombre": "ESCRITORIO FLOR MORADO",
-          "medidas": "1.20 x 0.50",
-          "material": "Madera Flor Morado",
-          "precio": "$1.580.000"
-        },
-        {
-          "nombre": "ESCRITORIO OREGON",
-          "medidas": "1.20 x 0.50",
-          "material": "Pino / Flor Morado",
-          "precio": "$1.180.000"
-        },
-        {
-          "nombre": "ESCRITORIO NATURAL",
-          "medidas": "1.20 x 0.50",
-          "material": "Pino",
-          "precio": "$1.480.000"
-        },
-        {
-          "nombre": "NATURAL BASIC",
-          "medidas": "1.20 x 0.50",
-          "material": "Pino / Flor Morado",
-          "precio": "$1.480.000"
-        },
-        {
-          "nombre": "ESCRITORIO NORDICO",
-          "medidas": "1.20 x 0.50",
-          "material": "Cedro Rosado",
-          "precio": "$1.380.000"
-        }
-      ]
-    },
-    "bancas": {
-      "nombre": "Bancas",
-      "productos": []
     },
     "colchones": {
       "nombre": "Colchones",
@@ -1312,19 +1483,22 @@
           "nombre": "COLCHON SOPHIA",
           "medidas": "1.00 x 1.80 / 1.00 x 1.90 / 1.20 x 1.90 / 1.40 x 1.90",
           "material": "Standard",
-          "precio": "$720.000 - $920.000 (según medida)"
+          "precio": "$760.000 - $960.000 (según medida)",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776444232/colchon_sophia_cq6ybk.jpg"
         },
         {
           "nombre": "COLCHON MONTECARLO",
           "medidas": "1.40 x 1.90 / 1.60 x 1.90 / 2.00 x 2.00",
           "material": "Standard",
-          "precio": "$1.450.000 - $1.850.000 (según medida)"
+          "precio": "$1.490.000 - $1.890.000 (según medida)",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776444265/colchon_montecarlo_v7kanu.jpg"
         },
         {
           "nombre": "COLCHON ATENAS",
           "medidas": "1.40 x 1.90 / 1.60 x 1.90 / 2.00 x 2.00",
           "material": "Standard",
-          "precio": "$2.080.000 - $2.580.000 (según medida)"
+          "precio": "$2.120.000 - $2.620.000 (según medida)",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776444240/colchon_atenas_y8zrpy.jpg"
         }
       ]
     }
