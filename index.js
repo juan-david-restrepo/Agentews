@@ -392,6 +392,34 @@ function detectarSolicitudFoto(mensaje) {
   return false;
 }
 
+function detectarConsultaPrecio(mensaje) {
+  const patrones = [
+    /cu[áa]nto.*cuesta/i,
+    /cu[áa]nto.*vale/i,
+    /cu[áa]nto.* cuest[áa]/i,
+    /cu[áa]nto.* val[é]e/i,
+    /cu[áa]l.*precio/i,
+    /precio.*del/i,
+    /precio.*de/i,
+    /cu[áa]l.*es.*el.*precio/i,
+    /cu[áa]nto.*(vale|cuesta)/i,
+    /valor.*del/i,
+    /valor.*de/i,
+    /cu[áa]l.*es.*el.*valor/i,
+    /\bprecio\b/i,
+    /\bvalores\b/i,
+    /\bcuesta\b/i,
+    /\bvale\b/i
+  ];
+
+  for (const patron of patrones) {
+    if (patron.test(mensaje)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function buscarImagenProducto(mensaje) {
   const categorias = Object.values(knowledge.inventario || {});
   const mensajeLower = mensaje.toLowerCase().replace(/[^a-záéíóúñ\s]/g, ' ');
@@ -648,34 +676,12 @@ app.post('/webhook', async (req, res) => {
       } else {
         response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
       }
-    } else if (buscarCatalogo(incomingMsg)) {
-      const ambiguo = detectarCategoriaAmbigua(incomingMsg);
-      if (ambiguo) {
-        response = ambiguo;
+    } else if (detectarConsultaPrecio(incomingMsg)) {
+      const producto = buscarProductoPorNombre(incomingMsg);
+      if (producto) {
+        response = `${producto.nombre} tiene un precio de ${producto.precio}. ¿Te interesa? 😊`;
       } else {
-        const catalogo = buscarCatalogo(incomingMsg);
-        if (catalogo && catalogo.todos) {
-          const catalogos = knowledge.catalogos || {};
-          let mensajeCatalogos = "Nuestras categorias con catalogo PDF:\n\n";
-          for (const [nombre, url] of Object.entries(catalogos)) {
-            mensajeCatalogos += `• ${formatearNombreCategoria(nombre)}\n`;
-          }
-          mensajeCatalogos += "\nSi quieres ver una imagen de algún producto en especifico o el catálogo completo, dime cual! 😊";
-          response = mensajeCatalogos;
-        } else if (catalogo && catalogo.url) {
-          imagenURL = catalogo.url;
-          let nombreCat = formatearNombreCategoria(catalogo.categoria);
-          if (catalogo.categoria === 'bases_comedores') {
-            response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊. Las sillas y el base del comedor vienen por separados. Si quieres ver algo específico, dime!`;
-          } else {
-            response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊 Si quieres ver una imagen de algún producto o el catálogo completo, dime cual!`;
-          }
-        } else if (catalogo && catalogo.sinPdf) {
-          const prod = formatearNombreCategoria(catalogo.categoria);
-          response = `Tenemos ${prod} en nuestro inventario. Si quieres ver una imagen de algún producto en especifico o el catálogo completo, dimelo y con gusto te lo envìo! 😊`;
-        } else {
-          response = "Consulta nuestros productos y con gusto te ayudo! 😊";
-        }
+        response = "Dime qué producto específico te interesa y te indico el precio 😊";
       }
     } else if (detectarCompra(incomingMsg) && !estaTransferida(from)) {
       const pendiente = getProductoPendiente(from);
@@ -761,12 +767,12 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`
 ╔══════════════════════════════════════════╗
-║   Elena - Vendedora DeCasa 🎯            ║
+║   Elena - Vendedora DeCasa               ║
 ╠══════════════════════════════════════════╣
-║  Servidor corriendo en puerto ${PORT}       ║
+║  Servidor corriendo en puerto ${PORT}    ║
 ║                                          ║
 ║  Endpoints:                              ║
-║  - POST /webhook (Recibir mensajes)       ║
+║  - POST /webhook (Recibir mensajes)      ║
 ║  - GET  /webhook (Verificar)             ║
 ║  - GET  /health (Estado)                 ║
 ╚══════════════════════════════════════════╝
