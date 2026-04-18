@@ -715,35 +715,9 @@ app.post('/webhook', async (req, res) => {
 
     const twiml = new MessagingResponse();
     twiml.message('Disculpa, estoy teniendo problemas tecnicos. Por favor intenta mas tarde.');
-    res.type('text/xml').send(twiml.toString());
+res.type('text/xml').send(twiml.toString());
   }
 });
-      
-    
-
-    addToHistory(from, 'assistant', response);
-
-    console.log(`Respuesta: ${response}`);
-
-    const twiml = new MessagingResponse();
-      if (imagenURL) {
-        twiml.message({
-          body: response,
-          mediaUrl: [imagenURL]
-        });
-        console.log(`Enviando imagen: ${imagenURL}`);
-      } else {
-        twiml.message(response);
-      }
-    try{
-      res.type('text/xml').send(twiml.toString());
-    } catch (error) {
-    console.error('Error:', error.message);
-
-    const twiml = new MessagingResponse();
-    twiml.message('Disculpa, estoy teniendo problemas tecnicos. Por favor intenta mas tarde.');
-    res.type('text/xml').send(twiml.toString());
-  }
 
 app.get('/webhook', (req, res) => {
   res.json({
