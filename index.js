@@ -1038,11 +1038,10 @@ app.post('/webhook', async (req, res) => {
           response += "\n\n¿Te gustaría que te transferiera a un asesor para aclarar tu duda? 😊";
         }
       }
-    } else if (detectarCompra(incomingMsg) && !estaTransferida(from)) {
+    } else if (!estaTransferida(from)) {
       const pendiente = getProductoPendiente(from);
-      const productoDetectado = buscarProductoPorNombre(incomingMsg) || buscarProductoEnHistorial(history, incomingMsg);
       
-      if (pendiente && /si|sí|confirmo|confirmar|ok|perfecto|yes|si claro/i.test(incomingMsg)) {
+      if (pendiente && /si|sí|confirmo|confirmar|ok|perfecto|yes|si claro|así|asiprocede|está bien/i.test(incomingMsg)) {
         agregarAlCarrito(from, pendiente.producto, pendiente.precio);
         clearProductoPendiente(from);
         
@@ -1055,23 +1054,22 @@ app.post('/webhook', async (req, res) => {
         
         const categoriaBase = ultimoContextoCategoria.get(from);
         let mensajeSugerencia = "";
-        if (categoriaBase && (categoriaBase.includes('comedor') || categoriaBase.includes('base') || categoriaBase.includes('silla') || categoriaBase === 'bases_comedores')) {
-          mensajeSugerencia = "\n\n¿Te gustaría agregar sillas a tu pedido? Tenemos modelos desde $580.000 😊";
+        if (categoriaBase && (categoriaBase.includes('comedor') || categoriaBase.includes('base') || categoriaBase.includes('silla') || categoriaBase.includes('cama'))) {
+          mensajeSugerencia = "\n\nUn asesor te contactará pronto para coordinar entrega y pago. 😊";
         }
         
-        response = `Perfecto! Tu pedido ha sido registrado:\n\n${mensaje}\n\nUn asesor te contactará pronto para coordinar entrega y pago.${mensajeSugerencia}`;
+        response = `✅ Tu pedido ha sido confirmado:\n\n${mensaje}\n\n¡Gracias por tu compra!${mensajeSugerencia}`;
         
         console.log(`Cliente ${telefono} confirmó pedido: $${total}`);
         marcarTransferida(from);
-      } else if (productoDetectado) {
-        guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
-        response = `Producto: ${productoDetectado.nombre}\nValor: ${productoDetectado.precio}\n\n¿Confirmas este pedido? Responde "si" para confirmar 😊`;
-      } else if (detectarCompra(incomingMsg) && !estaTransferida(from) && buscarProductoPorNombre(incomingMsg)) {
-        const nuevoProducto = buscarProductoPorNombre(incomingMsg);
-        guardarProductoPendiente(from, nuevoProducto.nombre, nuevoProducto.precio);
-        response = `Producto: ${nuevoProducto.nombre}\nValor: ${nuevoProducto.precio}\n\n¿Confirmas este pedido? Responde "si" para confirmar 😊`;
       } else {
-        response = "Para hacer un pedido, primero dime qué producto te interesa! 😊";
+        const productoDetectado = buscarProductoPorNombre(incomingMsg) || buscarProductoEnHistorial(history, incomingMsg);
+        if (productoDetectado) {
+          guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
+          response = `Producto: ${productoDetectado.nombre}\nValor: ${productoDetectado.precio}\n\n¿Confirmas este pedido? Responde "si" para confirmar 😊`;
+        } else if (detectarCompra(incomingMsg)) {
+          response = "Para hacer un pedido, dime qué producto te interesa! 😊";
+        }
       }
     } else {
       if (history.length === 0 && !greetingsSent.has(from)) {
