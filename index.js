@@ -48,14 +48,24 @@ PERFIL DE VENDEDORA:
 - Horario: Lunes a viernes de 8am a 5pm
 - Disponieble en la ciudad de Armenia 
 
+INSTRUCCIONES IMPORTANTES - PRIORIDAD ABSOLUTA:
+1. NUNCA inventest información sobre productos, precios o disponibilidad. Si no tienes la información EXACTA del inventario, DEBES decir: "No tengo esa información específica disponible."
+2. Cuando no sepas algo,问 immediately ofrece: "¿Te gustaría que te transferiera a un asesor para aclarar tu duda?"
+3. SOLO menciona productos con precios si estás SEGURA de que existen en el inventario.
+
+REGLAS DE CONSULTA:
+- Siempre consulta el inventario primero
+- Si el producto NO está en el inventario, no lo menciones como disponible
+- Si no sabes el precio exacto, no especules - ofrece transferir al asesor
+
 INSTRUCCIONES DE VENTA:
 1. Cuando el cliente pregunte por un producto, SIEMPRE ofrece 2-3 alternativas similares con precios
 2. Destaca la calidad de nuestros productos: "Madera Flor Morado, resistencia y elegancia"
 3. Usa frases persuasivas: "Te recomiendo", "Es nuestra mejor opcion", "Excelente calidad-precio", "No te vas a arrepentir"
 4. Cuando menciones productos, incluye el precio y destaca si es buena oferta
 5. Si el cliente duda por el precio, enfoca en la calidad y durabilidad
-6. Cierra siempre con una pregunta: "Te puedo ayudar con algo mas?" o "Te interesa ver mas opciones?"
-7. SOLO pregunta "¿Confirmas?" o "¿Quieres proceder?" cuando el usuario muestre intención de compra usando palabras como: "me lo llevo", "lo quiero", "compro esto", "si", "confirmo", "esta", "me gusta", "perfecto". Si el usuario solo pregunta o consulta, NO preguntes confirmación, solo ofrece ayuda adicional.
+6. Cierra siempre con una pregunta: "¿Te puedo ayudar con algo más?" o "¿Te interesa ver más opciones?"
+7. SOLO pregunta "¿Confirmas?" o "¿Quieres proceder?" cuando el usuario muestre intención clara de compra.
 
 EJEMPLOS DE RESPUESTA:
 
@@ -96,7 +106,9 @@ ${generarInventarioTexto()}`;
 
 const conversationHistory = new Map();
 const greetingsSent = new Set();
-const conversacionesTransferidas = new Set();
+const conversacionesTransferidas = new Map();
+const ultimoContextoCategoria = new Map();
+
 const carritoUsuario = new Map();
 const productosPendientes = new Map();
 
@@ -484,18 +496,26 @@ function detectarConsultaPrecio(mensaje) {
 
 function detectarSolicitudCatalogo(mensaje) {
   const patrones = [
-    /\bcat[áa]logo\b/i,
+    /\bcat[áa]logos?\b/i,
     /ver.*el.*cat[áa]logo/i,
+    /ver.*los.*cat[áa]logo/i,
     /cat[áa]logo.*de/i,
+    /el.*cat[áa]logo\b/i,
     /d[áa]me.*el.*cat[áa]logo/i,
+    /d[áa]me.*cat[áa]logo/i,
     /m[áa]ndame.*el.*cat[áa]logo/i,
     /env[ií]ame.*el.*cat[áa]logo/i,
+    /env[ií]ame.*cat[áa]logo/i,
     /ver.*PDF/i,
     /ver.*pdf/i,
-    /el.*PDF/i,
-    /el.*pdf/i,
+    /el.*PDF\b/i,
+    /el.*pdf\b/i,
     /cat[áa]logo.*completo/i,
-    /mostrar.*cat[áa]logo/i
+    /mostrar.*cat[áa]logo/i,
+    /^cat[áa]logo$/i,
+    /^dame el cat/i,
+    /m[é]strame el cat/i,
+    /el pdf/i
   ];
 
   for (const patron of patrones) {
@@ -556,32 +576,39 @@ function buscarProductosPorCategoria(mensaje) {
   };
 
   const inventario = knowledge.inventario || {};
-  const mensajePalabras = mensajeLimpio.split(' ').filter(p => p.length > 2);
 
   for (const [palabra, clave] of Object.entries(mapeoCategorias)) {
     if (mensajeLimpio.includes(palabra)) {
       const categoria = inventario[clave];
       if (categoria && categoria.productos) {
-        return categoria.productos.map(p => ({ nombre: p.nombre, precio: p.precio, material: p.material }));
+        return {
+          categoria: clave,
+          productos: categoria.productos.map(p => ({ nombre: p.nombre, precio: p.precio, material: p.material }))
+        };
       }
     }
   }
 
-  return [];
+  return { categoria: null, productos: [] };
 }
 
-function formatearProductos(precios) {
+function formatearProductos(precios, limite = 5) {
   if (!precios || precios.length === 0) return null;
   
-  let mensaje = "Aquí tienes nuestras opciones:\n\n";
+  const limitados = precios.slice(0, limite);
+  const total = precios.length;
   
-  precios.forEach((p, i) => {
+  let mensaje = "Aquí tienes algunas opciones:\n\n";
+  
+  limitados.forEach((p, i) => {
     mensaje += `${i + 1}. ${p.nombre} - ${p.precio}\n`;
-    if (p.material) mensaje += `   Material: ${p.material}\n`;
-    mensaje += "\n";
   });
   
-  mensaje += "¿Cuál te interesa? 😊";
+  if (total > limite) {
+    mensaje += `\n(${limite} de ${total}) Tenemos más opciones. ¿Quieres ver más o prefieres el catálogo completo en PDF? 😊`;
+  } else {
+    mensaje += "\n¿Cuál te interesa? 😊";
+  }
   
   return mensaje;
 }
@@ -843,7 +870,15 @@ app.post('/webhook', async (req, res) => {
         response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
       }
     } else if (detectarSolicitudCatalogo(incomingMsg)) {
-      const catalogo = buscarCatalogo(incomingMsg);
+      let catalogo = buscarCatalogo(incomingMsg);
+      
+      if (!catalogo || (!catalogo.url && !catalogo.todos)) {
+        const categoriaGuardada = ultimoContextoCategoria.get(from);
+        if (categoriaGuardada) {
+          catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
+        }
+      }
+      
       if (catalogo && catalogo.url) {
         imagenURL = catalogo.url;
         let nombreCat = formatearNombreCategoria(catalogo.categoria);
@@ -864,16 +899,24 @@ app.post('/webhook', async (req, res) => {
       if (producto) {
         response = `${producto.nombre} tiene un precio de ${producto.precio}. ¿Te interesa? 😊`;
       } else {
-        const porCategoria = buscarProductosPorCategoria(incomingMsg);
+        const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
+        const porCategoria = resultadoCategoria.productos;
         if (porCategoria.length > 0) {
+          if (resultadoCategoria.categoria) {
+            ultimoContextoCategoria.set(from, resultadoCategoria.categoria);
+          }
           response = formatearProductos(porCategoria);
         } else {
           response = "No encontré ese producto específico. ¿Te interesan las sillas de compositor o las bases de compositor? 😊";
         }
       }
     } else if (detectarConsultaInfo(incomingMsg)) {
-      const porCategoria = buscarProductosPorCategoria(incomingMsg);
+      const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
+      const porCategoria = resultadoCategoria.productos;
       if (porCategoria.length > 0) {
+        if (resultadoCategoria.categoria) {
+          ultimoContextoCategoria.set(from, resultadoCategoria.categoria);
+        }
         response = formatearProductos(porCategoria);
       } else {
         addToHistory(from, 'user', incomingMsg);
@@ -881,6 +924,15 @@ app.post('/webhook', async (req, res) => {
           history: history,
           currentMessage: incomingMsg
         });
+        
+        const pareceNoSabe = !response.includes('$') && 
+          (response.includes('no tengo') || response.includes('no estoy segura') || 
+           response.includes('posiblemente') || response.includes('creo que') ||
+           response.length < 30);
+        
+        if (pareceNoSabe) {
+          response += "\n\n¿Te gustaría que te transferiera a un asesor para aclarar tu duda? 😊";
+        }
       }
     } else if (detectarCompra(incomingMsg) && !estaTransferida(from)) {
       const pendiente = getProductoPendiente(from);
