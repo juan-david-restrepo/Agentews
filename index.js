@@ -98,6 +98,7 @@ const conversationHistory = new Map();
 const greetingsSent = new Set();
 const conversacionesTransferidas = new Set();
 const carritoUsuario = new Map();
+const productosPendientes = new Map();
 
 function agregarAlCarrito(from, producto, precio) {
   if (!carritoUsuario.has(from)) {
@@ -106,6 +107,18 @@ function agregarAlCarrito(from, producto, precio) {
   const items = carritoUsuario.get(from);
   items.push({ producto, precio });
   carritoUsuario.set(from, items);
+}
+
+function guardarProductoPendiente(from, producto, precio) {
+  productosPendientes.set(from, { producto, precio });
+}
+
+function getProductoPendiente(from) {
+  return productosPendientes.get(from);
+}
+
+function clearProductoPendiente(from) {
+  return productosPendientes.delete(from);
 }
 
 function verCarrito(from) {
@@ -649,15 +662,30 @@ app.post('/webhook', async (req, res) => {
           }
           mensajeCatalogos += "\nSi quieres ver una imagen de algún producto en especifico o el catálogo completo, dime cual! 😊";
           response = mensajeCatalogos;
-        } else if (detectarCompra(incomingMsg) && !estaTransferida(from)) {
-      const productoPendiente = buscarProductoPorNombre(incomingMsg) || buscarProductoEnHistorial(history, incomingMsg);
-      
-      if (productoPendiente) {
-        agregarAlCarrito(from, productoPendiente.nombre, productoPendiente.precio);
+        } else if (catalogo && catalogo.url) {
+          imagenURL = catalogo.url;
+          let nombreCat = formatearNombreCategoria(catalogo.categoria);
+          if (catalogo.categoria === 'bases_comedores') {
+            response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊. Las sillas y el base del comedor vienen por separados. Si quieres ver algo específico, dime!`;
+          } else {
+            response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊 Si quieres ver una imagen de algún producto o el catálogo completo, dime cual!`;
+          }
+        } else if (catalogo && catalogo.sinPdf) {
+          const prod = formatearNombreCategoria(catalogo.categoria);
+          response = `Tenemos ${prod} en nuestro inventario. Si quieres ver una imagen de algún producto en especifico o el catálogo completo, dimelo y con gusto te lo envìo! 😊`;
+        } else {
+          response = "Consulta nuestros productos y con gusto te ayudo! 😊";
+        }
       }
+    } else if (detectarCompra(incomingMsg) && !estaTransferida(from)) {
+      const pendiente = getProductoPendiente(from);
+      const productoDetectado = buscarProductoPorNombre(incomingMsg) || buscarProductoEnHistorial(history, incomingMsg);
       
-      const catalogoItems = verCarrito(from);
-      if (catalogoItems.length > 0) {
+      if (pendiente && /^(si|sí|confirmo|confirmar|si quiero|si me lo llevo|esta bien|ok|perfecto|yes)$/i.test(incomingMsg.trim())) {
+        agregarAlCarrito(from, pendiente.producto, pendiente.precio);
+        clearProductoPendiente(from);
+        
+        const catalogoItems = verCarrito(from);
         const telefono = from.replace('whatsapp:', '');
         
         await enviarNotificacionPedido(telefono, catalogoItems, history);
@@ -668,23 +696,11 @@ app.post('/webhook', async (req, res) => {
         
         limpiarCarrito(from);
         marcarTransferida(from);
+      } else if (productoDetectado) {
+        guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
+        response = `Perfecto! ${productoDetectado.nombre} - ${productoDetectado.precio}\n\n¿Confirmas este producto? Responde "si" para confirmar o dime si quieres otro 😊`;
       } else {
         response = "Para hacer un pedido, primero dime qué producto te interesa! 😊";
-      }
-    } else if (catalogo && catalogo.url) {
-          imagenURL = catalogo.url;
-          let nombreCat = formatearNombreCategoria(catalogo.categoria);
-          if (catalogo.categoria === 'bases_comedores') {
-            response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊. Las sillas y el base del comedor vienen por separado. Si quieres ver algo específico, dime!`;
-          } else {
-            response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊 Si quieres ver una imagen de algún producto o el catálogo completo, dime cual!`;
-          }
-        } else if (catalogo && catalogo.sinPdf) {
-          const prod = formatearNombreCategoria(catalogo.categoria);
-          response = `Tenemos ${prod} en nuestro inventario. Si quieres ver una imagen de algún producto en especifico o el catálogo completo, dimelo y con gusto te lo envìo! 😊`;
-        } else {
-          response = "Consulta nuestros productos y con gusto te ayudo! 😊";
-        }
       }
     } else {
       if (history.length === 0 && !greetingsSent.has(from)) {
