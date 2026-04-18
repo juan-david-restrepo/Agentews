@@ -204,13 +204,10 @@ const TRIGGERS_ASESOR = [
 
 const TRIGGERS_COMPRA = [
   'si lo compro', 'confirmo compra', 'este me lo llevo',
-  'esta es la que quiero', 'me decide', 'ya me decide',
-  'si', 'confirmar', 'confirmo', 'quiero este',
-  'me lo llevo', 'perfecto', 'esta bien',
-  'esta es', 'esta me gusta', 'elige este',
-  'me llevo', 'compro', 'lo quiero', 'dámelo',
-  'esta bien', 'además', 'también', 'quiero comprar',
-  'me gusta este', 'me gusta la', 'me gusta el'
+  'confirmar compra', 'confirmar pedido',
+  'me lo llevo ya', 'ya me lo llevo',
+  'comprar ahora', 'finalizar compra',
+  'pedido confirmado', 'ordenar ya'
 ];
 
 function detectarAsesor(mensaje) {
@@ -221,6 +218,66 @@ function detectarAsesor(mensaje) {
 function detectarCompra(mensaje) {
   const msg = mensaje.toLowerCase();
   return TRIGGERS_COMPRA.some(t => msg.includes(t));
+}
+
+function detectarConsultaInfo(mensaje) {
+  if (detectarAsesor(mensaje)) return false;
+  if (detectarCompra(mensaje)) return false;
+  
+  const msg = mensaje.toLowerCase();
+  const patronesInfo = [
+    /^qui[é]iera ver/i,
+    /^quiero ver/i,
+    /^ver el cat[á]logo/i,
+    /^ver productos/i,
+    /^mostrarme/i,
+    /^ver fotos/i,
+    /^ver im[á]genes/i,
+    /viene con/i,
+    /viene incluido/i,
+    /incluye las sillas/i,
+    /incluye las bases/i,
+    /cu[á]ndo vale/i,
+    /cu[á]nto vale/i,
+    /cu[á]nto cuesta/i,
+    /precio del/i,
+    /precio de la/i,
+    /cu[á]l es el precio/i,
+    /qu[é] incluye/i,
+    /qu[é] trae/i,
+    /c[ó]mo funciona/i,
+    /son separad/i,
+    /se vende por separad/i,
+    /hay modelos/i,
+    /hay dise[ñ]os/i,
+    /qu[é] modelos/i,
+    /qu[é] estilos/i,
+    /me puede mostrar/i,
+    /quisiera ver/i,
+    /dame ver/i,
+    /mu[é]strame/i,
+    /est[á] hechos/i,
+    /de qu[é] material/i,
+    /son de/i,
+    /hfabricad/i,
+    /hay en/i,
+    /tiene en/i,
+    /tienen en/i
+  ];
+  
+  for (const patron of patronesInfo) {
+    if (patron.test(msg)) {
+      return true;
+    }
+  }
+  
+  const palabrasVer = ['ver', 'mostrar', 'ver fotos', 'ver imágenes', 'quisiera', 'quiero'];
+  const tienePalabraVer = palabrasVer.some(p => msg.includes(p));
+  const tieneCategoria = msg.includes('silla') || msg.includes('comedor') || msg.includes('base') || 
+                        msg.includes('cama') || msg.includes('mesa') || msg.includes('sof') ||
+                        msg.includes('catálogo') || msg.includes('precio');
+  
+  return tienePalabraVer && tieneCategoria;
 }
 
 function estaTransferida(from) {
@@ -811,8 +868,19 @@ app.post('/webhook', async (req, res) => {
         if (porCategoria.length > 0) {
           response = formatearProductos(porCategoria);
         } else {
-          response = "No encontré ese producto específico. ¿Te interesan las sillas de comedor o las bases de comedor? 😊";
+          response = "No encontré ese producto específico. ¿Te interesan las sillas de compositor o las bases de compositor? 😊";
         }
+      }
+    } else if (detectarConsultaInfo(incomingMsg)) {
+      const porCategoria = buscarProductosPorCategoria(incomingMsg);
+      if (porCategoria.length > 0) {
+        response = formatearProductos(porCategoria);
+      } else {
+        addToHistory(from, 'user', incomingMsg);
+        response = await callGemini({
+          history: history,
+          currentMessage: incomingMsg
+        });
       }
     } else if (detectarCompra(incomingMsg) && !estaTransferida(from)) {
       const pendiente = getProductoPendiente(from);
