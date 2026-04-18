@@ -519,7 +519,14 @@ function detectarSolicitudCatalogo(mensaje) {
     /mostrar.*cat[áa]logo/i,
     /^cat[áa]logo$/i,
     /^dame el cat/i,
-    /m[é]strame el cat/i
+    /m[é]strame el cat/i,
+    /solo\s+pdf/i,
+    /solo\s+cat/i,
+    /\bel\s+pdf\b/i,
+    /\bver\s+pdf\b/i,
+    /\bdame\s+pdf\b/i,
+    /\bel\s+cat/i,
+    /\bver\s+cat/i
   ];
 
   for (const patron of patrones) {
@@ -900,11 +907,18 @@ app.post('/webhook', async (req, res) => {
       }
     } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de')) {
       let catalogo = buscarCatalogo(incomingMsg);
+      const categoriaGuardada = ultimoContextoCategoria.get(from);
       
-      if ((!catalogo || !catalogo.url) && !catalogo?.todos) {
-        const categoriaGuardada = ultimoContextoCategoria.get(from);
-        if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
-          catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
+      if (catalogo?.url) {
+        //Tiene PDF directo - usarlo
+      } else if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
+        //No tiene URL pero tiene contexto guardado - usar el contexto
+        catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
+      } else if (!catalogo?.url) {
+        //Intentar buscar categoría en el mensaje actual
+        const porCategoria = buscarProductosPorCategoria(incomingMsg);
+        if (porCategoria.productos.length > 0 && porCategoria.categoria) {
+          catalogo = { categoria: porCategoria.categoria, url: knowledge.catalogos[porCategoria.categoria] };
         }
       }
       
@@ -920,7 +934,7 @@ app.post('/webhook', async (req, res) => {
           }
           response = formatearProductosVenta(porCategoria.productos);
         } else {
-          response = "Dime qué categoría te interesa (comedores, sillas, camas, etc.) y te envío el catálogo 😊";
+          response = "Dime qué categoría te interesa (comedores, sillas, camas, sofás, etc.) y te envío el catálogo 😊";
         }
       }
     } else if (detectarConsultaPrecio(incomingMsg)) {
