@@ -510,12 +510,16 @@ function detectarSolicitudCatalogo(mensaje) {
     /ver.*pdf/i,
     /el.*PDF\b/i,
     /el.*pdf\b/i,
+    /\bPDF\b/i,
+    /\bpdf\b/i,
+    /el pdf\b/i,
+    /ver pdf\b/i,
+    /dame pdf\b/i,
     /cat[áa]logo.*completo/i,
     /mostrar.*cat[áa]logo/i,
     /^cat[áa]logo$/i,
     /^dame el cat/i,
-    /m[é]strame el cat/i,
-    /el pdf/i
+    /m[é]strame el cat/i
   ];
 
   for (const patron of patrones) {
@@ -894,10 +898,10 @@ app.post('/webhook', async (req, res) => {
       } else {
         response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
       }
-    } else if (detectarSolicitudCatalogo(incomingMsg)) {
+    } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de')) {
       let catalogo = buscarCatalogo(incomingMsg);
       
-      if (!catalogo || (!catalogo.url && !catalogo.todos)) {
+      if ((!catalogo || !catalogo.url) && !catalogo?.todos) {
         const categoriaGuardada = ultimoContextoCategoria.get(from);
         if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
           catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
