@@ -941,22 +941,26 @@ app.post('/webhook', async (req, res) => {
       } else {
         response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
       }
-    } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás')) {
+    } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon')) {
       const categoriaGuardada = ultimoContextoCategoria.get(from);
       let catalogo = null;
+      let tienePDF = false;
       
       if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
         catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
+        tienePDF = true;
       }
       
       if (!catalogo) {
         catalogo = buscarCatalogo(incomingMsg);
+        if (catalogo?.url) tienePDF = true;
       }
       
       if (!catalogo?.url) {
         const porCategoria = buscarProductosPorCategoria(incomingMsg);
         if (porCategoria.productos.length > 0 && porCategoria.categoria && knowledge.catalogos[porCategoria.categoria]) {
           catalogo = { categoria: porCategoria.categoria, url: knowledge.catalogos[porCategoria.categoria] };
+          tienePDF = true;
         }
       }
       
@@ -1038,7 +1042,7 @@ app.post('/webhook', async (req, res) => {
       const pendiente = getProductoPendiente(from);
       const productoDetectado = buscarProductoPorNombre(incomingMsg) || buscarProductoEnHistorial(history, incomingMsg);
       
-      if (pendiente && /^(si|sí|confirmo|confirmar|si quiero|si me lo llevo|esta bien|ok|perfecto|yes)$/i.test(incomingMsg.trim())) {
+      if (pendiente && /si|sí|confirmo|confirmar|ok|perfecto|yes|si claro/i.test(incomingMsg)) {
         agregarAlCarrito(from, pendiente.producto, pendiente.precio);
         clearProductoPendiente(from);
         
@@ -1051,17 +1055,21 @@ app.post('/webhook', async (req, res) => {
         
         const categoriaBase = ultimoContextoCategoria.get(from);
         let mensajeSugerencia = "";
-        if (categoriaBase && (categoriaBase.includes('comedor') || categoriaBase === 'bases_comedores')) {
-          mensajeSugerencia = "\n\n¿Te gustaría agregar sillas de comedor a tu pedido?Tenemos modelos desde $580.000 😊";
-          response = `Perfecto! Tu pedido ha sido registrado:\n\n${mensaje}\n\nUn asesor te contactará pronto para coordinar entrega y pago.${mensajeSugerencia}`;
-        } else {
-          response = `Perfecto! Tu pedido ha sido registrado:\n\n${mensaje}\n\nUn asesor te contactará pronto para coordinar entrega y pago. 😊`;
-          marcarTransferida(from);
+        if (categoriaBase && (categoriaBase.includes('comedor') || categoriaBase.includes('base') || categoriaBase.includes('silla') || categoriaBase === 'bases_comedores')) {
+          mensajeSugerencia = "\n\n¿Te gustaría agregar sillas a tu pedido? Tenemos modelos desde $580.000 😊";
         }
+        
+        response = `Perfecto! Tu pedido ha sido registrado:\n\n${mensaje}\n\nUn asesor te contactará pronto para coordinar entrega y pago.${mensajeSugerencia}`;
+        
         console.log(`Cliente ${telefono} confirmó pedido: $${total}`);
+        marcarTransferida(from);
       } else if (productoDetectado) {
         guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
         response = `Producto: ${productoDetectado.nombre}\nValor: ${productoDetectado.precio}\n\n¿Confirmas este pedido? Responde "si" para confirmar 😊`;
+      } else if (detectarCompra(incomingMsg) && !estaTransferida(from) && buscarProductoPorNombre(incomingMsg)) {
+        const nuevoProducto = buscarProductoPorNombre(incomingMsg);
+        guardarProductoPendiente(from, nuevoProducto.nombre, nuevoProducto.precio);
+        response = `Producto: ${nuevoProducto.nombre}\nValor: ${nuevoProducto.precio}\n\n¿Confirmas este pedido? Responde "si" para confirmar 😊`;
       } else {
         response = "Para hacer un pedido, primero dime qué producto te interesa! 😊";
       }
