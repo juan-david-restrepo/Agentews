@@ -163,26 +163,31 @@ function buscarProductoEnHistorial(history, mensaje) {
 }
 
 function buscarProductoPorNombre(mensaje) {
-  const mensajeLower = mensaje.toLowerCase();
-  const categorias = Object.values(knowledge.inventario || {});
+  const mensajeLimpio = mensaje.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   
-  const prefijos = ['cama ', 'silla ', 'mesa ', 'base ', 'sofa ', 'mueble '];
+  const categorias = Object.values(knowledge.inventario || {});
   
   for (const categoria of categorias) {
     for (const producto of categoria.productos) {
-      const nombreLimpio = producto.nombre.toLowerCase();
+      const nombreLimpio = producto.nombre.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
       
-      for (const prefijo of prefijos) {
-        if (nombreLimpio.startsWith(prefijo)) {
-          const nombreSinPrefijo = nombreLimpio.substring(prefijo.length);
-          if (mensajeLower.includes(nombreSinPrefijo) || mensajeLower.includes(nombreLimpio.substring(0, 12))) {
-            return { nombre: producto.nombre, precio: producto.precio };
-          }
-        }
+      if (mensajeLimpio.includes(nombreLimpio)) {
+        return { nombre: producto.nombre, precio: producto.precio };
       }
       
-      if (mensajeLower.includes(nombreLimpio.substring(0, 10))) {
-        return { nombre: producto.nombre, precio: producto.precio };
+      const palabrasNombre = nombreLimpio.split(' ').filter(p => p.length > 3);
+      for (const palabra of palabrasNombre) {
+        if (palabra.length > 3 && mensajeLimpio.includes(palabra)) {
+          return { nombre: producto.nombre, precio: producto.precio };
+        }
       }
     }
   }
@@ -418,6 +423,110 @@ function detectarConsultaPrecio(mensaje) {
     }
   }
   return false;
+}
+
+function detectarSolicitudCatalogo(mensaje) {
+  const patrones = [
+    /\bcat[áa]logo\b/i,
+    /ver.*el.*cat[áa]logo/i,
+    /cat[áa]logo.*de/i,
+    /d[áa]me.*el.*cat[áa]logo/i,
+    /m[áa]ndame.*el.*cat[áa]logo/i,
+    /env[ií]ame.*el.*cat[áa]logo/i,
+    /ver.*PDF/i,
+    /ver.*pdf/i,
+    /el.*PDF/i,
+    /el.*pdf/i,
+    /cat[áa]logo.*completo/i,
+    /mostrar.*cat[áa]logo/i
+  ];
+
+  for (const patron of patrones) {
+    if (patron.test(mensaje)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function buscarProductosPorCategoria(mensaje) {
+  const mensajeLimpio = mensaje.toLowerCase().replace(/[^a-záéíóúñ\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  
+  const mapeoCategorias = {
+    'cajoneros': 'cajoneros_bifes',
+    'cajones': 'cajoneros_bifes',
+    'bifes': 'cajoneros_bifes',
+    'cama': 'camas',
+    'camas': 'camas',
+    'escritorio': 'escritorios',
+    'escritorios': 'escritorios',
+    'colchon': 'colchones',
+    'colchones': 'colchones',
+    'mesa auxiliar': 'mesas_auxiliares',
+    'mesas auxiliar': 'mesas_auxiliares',
+    'auxiliar': 'mesas_auxiliares',
+    'mesa centro': 'mesas_centro',
+    'mesas centro': 'mesas_centro',
+    'mesa de centro': 'mesas_centro',
+    'mesa sala': 'mesas_centro',
+    'mesa de sala': 'mesas_centro',
+    'mesa noche': 'mesas_noche',
+    'mesas noche': 'mesas_noche',
+    'mesa de noche': 'mesas_noche',
+    'mesa tv': 'mesas_tv',
+    'mesas tv': 'mesas_tv',
+    'mesa de tv': 'mesas_tv',
+    'base': 'bases_comedores',
+    'bases': 'bases_comedores',
+    'base comedor': 'bases_comedores',
+    'bases de comedor': 'bases_comedores',
+    'comedor': 'bases_comedores',
+    'comedores': 'bases_comedores',
+    'silla': 'sillas_comedor',
+    'sillas': 'sillas_comedor',
+    'silla comedor': 'sillas_comedor',
+    'sillas de comedor': 'sillas_comedor',
+    'silla auxiliar': 'sillas_auxiliares',
+    'sillas auxiliar': 'sillas_auxiliares',
+    'silla barra': 'sillas_barra',
+    'sillas barra': 'sillas_barra',
+    'sofa': 'sofas',
+    'sofas': 'sofas',
+    'sofa cama': 'sofas_camas',
+    'sofas cama': 'sofas_camas',
+    'sofa modular': 'sofas_modulares',
+    'sofas modulares': 'sofas_modulares'
+  };
+
+  const inventario = knowledge.inventario || {};
+  const mensajePalabras = mensajeLimpio.split(' ').filter(p => p.length > 2);
+
+  for (const [palabra, clave] of Object.entries(mapeoCategorias)) {
+    if (mensajeLimpio.includes(palabra)) {
+      const categoria = inventario[clave];
+      if (categoria && categoria.productos) {
+        return categoria.productos.map(p => ({ nombre: p.nombre, precio: p.precio, material: p.material }));
+      }
+    }
+  }
+
+  return [];
+}
+
+function formatearProductos(precios) {
+  if (!precios || precios.length === 0) return null;
+  
+  let mensaje = "Aquí tienes nuestras opciones:\n\n";
+  
+  precios.forEach((p, i) => {
+    mensaje += `${i + 1}. ${p.nombre} - ${p.precio}\n`;
+    if (p.material) mensaje += `   Material: ${p.material}\n`;
+    mensaje += "\n";
+  });
+  
+  mensaje += "¿Cuál te interesa? 😊";
+  
+  return mensaje;
 }
 
 function buscarImagenProducto(mensaje) {
@@ -676,12 +785,34 @@ app.post('/webhook', async (req, res) => {
       } else {
         response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
       }
+    } else if (detectarSolicitudCatalogo(incomingMsg)) {
+      const catalogo = buscarCatalogo(incomingMsg);
+      if (catalogo && catalogo.url) {
+        imagenURL = catalogo.url;
+        let nombreCat = formatearNombreCategoria(catalogo.categoria);
+        response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊. Las sillas y el base del comedor vienen por separados. Si quieres ver algo específico, dime!`;
+      } else if (catalogo && catalogo.todos) {
+        const catalogos = knowledge.catalogos || {};
+        let mensajeCatalogos = "Nuestras categorias con catalogo PDF:\n\n";
+        for (const [nombre, url] of Object.entries(catalogos)) {
+          mensajeCatalogos += `• ${formatearNombreCategoria(nombre)}\n`;
+        }
+        mensajeCatalogos += "\nSi quieres ver una imagen de algún producto en especifico o el catálogo completo, dime cual! 😊";
+        response = mensajeCatalogos;
+      } else {
+        response = "Dime qué categoría de producto te interesa y te envío el catálogo 😊";
+      }
     } else if (detectarConsultaPrecio(incomingMsg)) {
       const producto = buscarProductoPorNombre(incomingMsg);
       if (producto) {
         response = `${producto.nombre} tiene un precio de ${producto.precio}. ¿Te interesa? 😊`;
       } else {
-        response = "Dime qué producto específico te interesa y te indico el precio 😊";
+        const porCategoria = buscarProductosPorCategoria(incomingMsg);
+        if (porCategoria.length > 0) {
+          response = formatearProductos(porCategoria);
+        } else {
+          response = "No encontré ese producto específico. ¿Te interesan las sillas de comedor o las bases de comedor? 😊";
+        }
       }
     } else if (detectarCompra(incomingMsg) && !estaTransferida(from)) {
       const pendiente = getProductoPendiente(from);
