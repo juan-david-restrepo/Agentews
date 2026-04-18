@@ -133,6 +133,27 @@ function clearProductoPendiente(from) {
   return productosPendientes.delete(from);
 }
 
+function buscarMasBarato(categoria) {
+  const inventario = knowledge.inventario || {};
+  const productos = inventario[categoria]?.productos;
+  if (!productos || productos.length === 0) return null;
+  
+  const sorted = [...productos].sort((a, b) => {
+    const precioA = parseInt(a.precio.replace(/[^0-9]/g, '')) || 0;
+    const precioB = parseInt(b.precio.replace(/[^0-9]/g, '')) || 0;
+    return precioA - precioB;
+  });
+  
+  return sorted[0];
+}
+
+function buscarProductosRelacionados(categoria, limite = 3) {
+  const inventario = knowledge.inventario || {};
+  const productos = inventario[categoria]?.productos;
+  if (!productos || productos.length === 0) return [];
+  return productos.slice(0, limite);
+}
+
 function verCarrito(from) {
   return carritoUsuario.get(from) || [];
 }
@@ -492,6 +513,15 @@ function detectarConsultaPrecio(mensaje) {
     }
   }
   return false;
+}
+
+function detectarMasBarato(mensaje) {
+  const msg = mensaje.toLowerCase();
+  return msg.includes('barato') || msg.includes('barata') || 
+         msg.includes('económico') || msg.includes('economica') ||
+         msg.includes('más barato') || msg.includes('mas barato') ||
+         msg.includes('más económico') || msg.includes('mas economico') ||
+         msg.includes('menor precio') || msg.includes('menor costo');
 }
 
 function detectarSolicitudCatalogo(mensaje) {
@@ -937,6 +967,25 @@ app.post('/webhook', async (req, res) => {
           response = "Dime qué categoría te interesa (comedores, sillas, camas, sofás, etc.) y te envío el catálogo 😊";
         }
       }
+    } else if (detectarMasBarato(incomingMsg)) {
+      const categoria = ultimoContextoCategoria.get(from);
+      if (categoria && knowledge.inventario[categoria]) {
+        const masBarato = buscarMasBarato(categoria);
+        if (masBarato) {
+          response = `La opción más económica es ${masBarato.nombre} | ${masBarato.precio}. ¿Te interesa? 😊`;
+        }
+      } else {
+        const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
+        if (resultadoCategoria.categoria) {
+          const masBarato = buscarMasBarato(resultadoCategoria.categoria);
+          if (masBarato) {
+            ultimoContextoCategoria.set(from, resultadoCategoria.categoria);
+            response = `La opción más económica es ${masBarato.nombre} | ${masBarato.precio}. ¿Te interesa? 😊`;
+          }
+        } else {
+          response = "¿De qué categoría quieres la opción más económica? 😊";
+        }
+      }
     } else if (detectarConsultaPrecio(incomingMsg)) {
       const producto = buscarProductoPorNombre(incomingMsg);
       if (producto) {
@@ -991,14 +1040,20 @@ app.post('/webhook', async (req, res) => {
         await enviarNotificacionPedido(telefono, catalogoItems, history);
         
         const { mensaje, total } = formatearCarrito(from);
-        response = `Perfecto! Este es tu pedido:\n\n${mensaje}\n\nUn asesor te contactará pronto para coordinar entrega y pago. Gracias por tu compra! 😊`;
-        console.log(`Cliente ${telefono} confirmó pedido: $${total}`);
         
-        limpiarCarrito(from);
-        marcarTransferida(from);
+        const categoriaBase = ultimoContextoCategoria.get(from);
+        let mensajeSugerencia = "";
+        if (categoriaBase && (categoriaBase.includes('comedor') || categoriaBase === 'bases_comedores')) {
+          mensajeSugerencia = "\n\n¿Te gustaría agregar sillas de comedor a tu pedido?Tenemos modelos desde $580.000 😊";
+          response = `Perfecto! Tu pedido ha sido registrado:\n\n${mensaje}\n\nUn asesor te contactará pronto para coordinar entrega y pago.${mensajeSugerencia}`;
+        } else {
+          response = `Perfecto! Tu pedido ha sido registrado:\n\n${mensaje}\n\nUn asesor te contactará pronto para coordinar entrega y pago. 😊`;
+          marcarTransferida(from);
+        }
+        console.log(`Cliente ${telefono} confirmó pedido: $${total}`);
       } else if (productoDetectado) {
         guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
-        response = `Perfecto! ${productoDetectado.nombre} - ${productoDetectado.precio}\n\n¿Confirmas este producto? Responde "si" para confirmar o dime si quieres otro 😊`;
+        response = `Producto: ${productoDetectado.nombre}\nValor: ${productoDetectado.precio}\n\n¿Confirmas este pedido? Responde "si" para confirmar 😊`;
       } else {
         response = "Para hacer un pedido, primero dime qué producto te interesa! 😊";
       }
