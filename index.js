@@ -552,11 +552,13 @@ function buscarProductosPorCategoria(mensaje) {
     'mesa de noche': 'mesas_noche',
     'mesa tv': 'mesas_tv',
     'mesas tv': 'mesas_tv',
-    'mesa de tv': 'mesas_tv',
+'mesa de tv': 'mesas_tv',
     'base': 'bases_comedores',
     'bases': 'bases_comedores',
-    'base comedor': 'bases_comedores',
-    'bases de comedor': 'bases_comedores',
+    'base compositor': 'bases_comedores',
+    'bases de compositor': 'bases_comedores',
+    'el de comedores': 'bases_comedores',
+    'las bases de comedores': 'bases_comedores',
     'comedor': 'bases_comedores',
     'comedores': 'bases_comedores',
     'silla': 'sillas_comedor',
@@ -608,6 +610,29 @@ function formatearProductos(precios, limite = 5) {
     mensaje += `\n(${limite} de ${total}) Tenemos más opciones. ¿Quieres ver más o prefieres el catálogo completo en PDF? 😊`;
   } else {
     mensaje += "\n¿Cuál te interesa? 😊";
+  }
+  
+  return mensaje;
+}
+
+function formatearProductosVenta(productos, limite = 5) {
+  if (!productos || productos.length === 0) return null;
+  
+  const limitados = productos.slice(0, limite);
+  const total = productos.length;
+  
+  let mensaje = "OPIONES DISPONIBLES:\n\n";
+  
+  limitados.forEach((p, i) => {
+    mensaje += `${i + 1}. ${p.nombre}\n   Valor: ${p.precio}\n`;
+    if (p.material) mensaje += `   Material: ${p.material}\n`;
+    mensaje += "\n";
+  });
+  
+  if (total > limite) {
+    mensaje += `(${limite} de ${total}) ¿Te interesa alguno o prefieres el PDF completo? 😊`;
+  } else {
+    mensaje += "¿Cuál te interesa? 😊";
   }
   
   return mensaje;
@@ -874,7 +899,7 @@ app.post('/webhook', async (req, res) => {
       
       if (!catalogo || (!catalogo.url && !catalogo.todos)) {
         const categoriaGuardada = ultimoContextoCategoria.get(from);
-        if (categoriaGuardada) {
+        if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
           catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
         }
       }
@@ -882,22 +907,22 @@ app.post('/webhook', async (req, res) => {
       if (catalogo && catalogo.url) {
         imagenURL = catalogo.url;
         let nombreCat = formatearNombreCategoria(catalogo.categoria);
-        response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊. Las sillas y el base del comedor vienen por separados. Si quieres ver algo específico, dime!`;
-      } else if (catalogo && catalogo.todos) {
-        const catalogos = knowledge.catalogos || {};
-        let mensajeCatalogos = "Nuestras categorias con catalogo PDF:\n\n";
-        for (const [nombre, url] of Object.entries(catalogos)) {
-          mensajeCatalogos += `• ${formatearNombreCategoria(nombre)}\n`;
-        }
-        mensajeCatalogos += "\nSi quieres ver una imagen de algún producto en especifico o el catálogo completo, dime cual! 😊";
-        response = mensajeCatalogos;
+        response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊`;
       } else {
-        response = "Dime qué categoría de producto te interesa y te envío el catálogo 😊";
+        const porCategoria = buscarProductosPorCategoria(incomingMsg);
+        if (porCategoria.productos.length > 0) {
+          if (porCategoria.categoria) {
+            ultimoContextoCategoria.set(from, porCategoria.categoria);
+          }
+          response = formatearProductosVenta(porCategoria.productos);
+        } else {
+          response = "Dime qué categoría te interesa (comedores, sillas, camas, etc.) y te envío el catálogo 😊";
+        }
       }
     } else if (detectarConsultaPrecio(incomingMsg)) {
       const producto = buscarProductoPorNombre(incomingMsg);
       if (producto) {
-        response = `${producto.nombre} tiene un precio de ${producto.precio}. ¿Te interesa? 😊`;
+        response = `${producto.nombre} | ${producto.precio}. ¿Te interesa? 😊`;
       } else {
         const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
         const porCategoria = resultadoCategoria.productos;
@@ -905,9 +930,9 @@ app.post('/webhook', async (req, res) => {
           if (resultadoCategoria.categoria) {
             ultimoContextoCategoria.set(from, resultadoCategoria.categoria);
           }
-          response = formatearProductos(porCategoria);
+          response = formatearProductosVenta(porCategoria);
         } else {
-          response = "No encontré ese producto específico. ¿Te interesan las sillas de compositor o las bases de compositor? 😊";
+          response = "No encontré ese producto. ¿Te interesan las bases de compositor o las sillas de compositor? 😊";
         }
       }
     } else if (detectarConsultaInfo(incomingMsg)) {
@@ -917,7 +942,7 @@ app.post('/webhook', async (req, res) => {
         if (resultadoCategoria.categoria) {
           ultimoContextoCategoria.set(from, resultadoCategoria.categoria);
         }
-        response = formatearProductos(porCategoria);
+        response = formatearProductosVenta(porCategoria);
       } else {
         addToHistory(from, 'user', incomingMsg);
         response = await callGemini({
