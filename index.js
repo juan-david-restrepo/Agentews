@@ -1089,6 +1089,10 @@ app.post('/webhook', async (req, res) => {
       }
     }
 
+    if (!response || response === 'undefined' || response === 'null') {
+      response = SALUDO_INICIAL;
+    }
+
     addToHistory(from, 'assistant', response);
 
     console.log(`Respuesta: ${response}`);
