@@ -250,7 +250,7 @@ ${historialTexto}
   const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
   try {
-    await fetch(url, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -260,7 +260,12 @@ ${historialTexto}
         disable_web_page_preview: true
       })
     });
-    console.log(`Notificación ${tipo} enviada a Telegram`);
+    const result = await response.json();
+    if (!response.ok) {
+      console.error('Error Telegram:', response.status, JSON.stringify(result));
+    } else {
+      console.log(`Notificación ${tipo} enviada a Telegram`);
+    }
   } catch (error) {
     console.error('Error enviando a Telegram:', error.message);
   }
@@ -312,7 +317,7 @@ ${historialTexto}
   const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
   try {
-    await fetch(url, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -322,7 +327,12 @@ ${historialTexto}
         disable_web_page_preview: true
       })
     });
-    console.log('Notificación de pedido enviada a Telegram');
+    const result = await response.json();
+    if (!response.ok) {
+      console.error('Error Telegram pedido:', response.status, JSON.stringify(result));
+    } else {
+      console.log('Notificación de pedido enviada a Telegram');
+    }
   } catch (error) {
     console.error('Error enviando pedido a Telegram:', error.message);
   }
