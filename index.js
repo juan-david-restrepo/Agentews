@@ -336,7 +336,11 @@ function detectarAsesor(mensaje) {
     'humano', 'humana',
     'persona real', 'persona de verdad',
     'que me atienda', 'derivame', 'transferirme',
-    'atencion humana', 'atención humana'
+    'atencion humana', 'atención humana',
+    'mándame con el', 'pasame con el', 'envíame con el',
+    'comunico con', 'que me comunique', 'hablar con el asesor',
+    'transfiéreme', 'pásame al', 'envíame al',
+    'mándame directamente', 'pásame al asesor'
   ];
   if (triggers_exactos.some(t => msg.includes(t))) {
     return true;
@@ -347,6 +351,21 @@ function detectarAsesor(mensaje) {
     /\bllamar\s+a\b/,
     /\bpersona\b/,
     /\bhumano\b/
+  ];
+  return patrones.some(p => p.test(msg));
+}
+
+function detectarAgregarProducto(mensaje) {
+  const msg = mensaje.toLowerCase();
+  const patrones = [
+    /agregarle/i,
+    /agregar/i,
+    /añadirle/i,
+    /también la/i,
+    /y también/i,
+    /y agrégale/i,
+    /agregame/i,
+    /añade/i
   ];
   return patrones.some(p => p.test(msg));
 }
@@ -784,7 +803,19 @@ function detectarIntentionAddCarrito(mensaje) {
     /\bcomprar\b\s+es[oe]/i,
     /comprar\s+el\s+nube/i,
     /comprar\s+el\s+sofa/i,
-    /Comprar\s+ese/i
+    /Comprar\s+ese/i,
+    /agregarle/i,
+    /agregar/i,
+    /y también la/i,
+    /y también el/i,
+    /también la/i,
+    /también el/i,
+    /agrégale/i,
+    /agregame/i,
+    /y agrégale/i,
+    /add\s+.*al\s+carrito/i,
+    /ponle/i,
+    /me\h+completa/i
   ];
   return patrones.some(p => p.test(msg));
 }
@@ -1196,17 +1227,46 @@ app.post('/webhook', async (req, res) => {
     let intencionClasificada = null;
     let debeTransferir = esAsesorDetectado;
     
-    if (debeTransferir && !(await estaTransferidaDB(from))) {
+if (debeTransferir && !(await estaTransferidaDB(from))) {
       const telefono = from.replace('whatsapp:', '');
+      const itemsCarrito = await db.verCarrito(from);
       
-      await enviarNotificacionTelegram(telefono, incomingMsg, history, 'asesor');
-      await marcarTransferidaDB(from);
-      
-      response = `Te transfiero con un asesor, espera un momento 😊
-      Un asesor te atenderá personalmente para ayudarte con tu compra.`;
+      if (itemsCarrito.length > 0) {
+        let productosTxt = '';
+        let total = 0;
+        itemsCarrito.forEach((item, i) => {
+          const cant = item.cantidad || 1;
+          const precio = parseInt(item.precio.replace(/[^0-9]/g, '')) || 0;
+          productosTxt += `${i + 1}. ${item.producto} - ${item.precio}`;
+          if (cant > 1) productosTxt += ` (${cant} unidades)`;
+          productosTxt += '\n';
+          total += precio * cant;
+        });
+        productosTxt += `\n─────────────────\n💰 Total: $${total.toLocaleString()}`;
+        
+        for (const item of itemsCarrito) {
+          await db.guardarPedido(telefono, item.producto, item.precio, item.cantidad || 1);
+        }
+        
+        await db.limpiarConversaciones(from);
+        await db.setCategoriaActual(from, null);
+        await db.limpiarCarrito(from);
+        
+        await enviarNotificacionTelegram(telefono, incomingMsg, history, 'pedido');
+        
+        response = `📦 Tu pedido ha sido derivado a un asesor:\n\n${productosTxt}\n\nUn asesor te contactará pronto para confirmar entrega y pago. 🎉`;
+        
+        console.log(`Cliente ${telefono} transferido con pedido: $${total}`);
+      } else {
+        await enviarNotificacionTelegram(telefono, incomingMsg, history, 'asesor');
+        await marcarTransferidaDB(from);
+        
+        response = `Te transfiero con un asesor, espera un momento 😊
+Un asesor te atenderá personalmente para ayudarte con tu compra.`;
+        
+        console.log(`Cliente ${telefono} transferido a asesor sin pedido`);
+      }
       imagenURL = null;
-      
-      console.log(`Cliente ${telefono} transferido a asesor`);
     } else if (await estaTransferidaDB(from)) {
       const telefono = from.replace('whatsapp:', '');
       console.log(`Conversación transferida - Cliente ${telefono} dice: ${incomingMsg}`);
@@ -1451,7 +1511,7 @@ app.post('/webhook', async (req, res) => {
         const productoDetectado = buscarProductoPorNombre(incomingMsg);
         const cantidadDetectada = detectarCantidad(incomingMsg);
         
-        if (productoDetectado && (detectarCompra(incomingMsg) || detectarIntentionAddCarrito(incomingMsg) || incomingMsg.toLowerCase().includes('comprar'))) {
+        if (productoDetectado && (detectarCompra(incomingMsg) || detectarIntentionAddCarrito(incomingMsg) || incomingMsg.toLowerCase().includes('comprar') || incomingMsg.toLowerCase().includes('agregar') || incomingMsg.toLowerCase().includes('agregarle') || incomingMsg.toLowerCase().includes('nido'))) {
           const cat = buscarProductosPorCategoria(incomingMsg);
           if (cat.categoria) {
             await db.setCategoriaActual(from, cat.categoria);
