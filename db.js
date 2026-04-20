@@ -206,8 +206,15 @@ async function updateEstado(telefono, datos) {
 async function agregarAlCarrito(telefono, producto, precio) {
   const estado = await getEstado(telefono);
   const carrito = estado.carrito || [];
+  
+  const yaExiste = carrito.some(item => item.producto === producto);
+  if (yaExiste) {
+    return false;
+  }
+  
   carrito.push({ producto, precio });
   await updateEstado(telefono, { carrito });
+  return true;
 }
 
 async function verCarrito(telefono) {

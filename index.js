@@ -185,6 +185,8 @@ function buscarProductoPorNombre(mensaje) {
   
   const categorias = Object.values(knowledge.inventario || {});
   
+  let mejoresCoincidencias = [];
+  
   for (const categoria of categorias) {
     for (const producto of categoria.productos) {
       const nombreLimpio = producto.nombre.toLowerCase()
@@ -193,18 +195,36 @@ function buscarProductoPorNombre(mensaje) {
         .replace(/\s+/g, ' ')
         .trim();
       
+      let score = 0;
+      
       if (mensajeLimpio.includes(nombreLimpio)) {
-        return { nombre: producto.nombre, precio: producto.precio };
+        score = 100;
+      } else if (nombreLimpio.includes(mensajeLimpio)) {
+        score = 90;
+      } else {
+        const palabrasMsj = mensajeLimpio.split(' ').filter(p => p.length > 2);
+        const palabrasProd = nombreLimpio.split(' ').filter(p => p.length > 2);
+        
+        for (const pm of palabrasMsj) {
+          for (const pp of palabrasProd) {
+            if (pp.includes(pm) || pm.includes(pp)) {
+              score += 20;
+            }
+          }
+        }
       }
       
-      const palabrasNombre = nombreLimpio.split(' ').filter(p => p.length > 3);
-      for (const palabra of palabrasNombre) {
-        if (palabra.length > 3 && mensajeLimpio.includes(palabra)) {
-          return { nombre: producto.nombre, precio: producto.precio };
-        }
+      if (score > 0) {
+        mejoresCoincidencias.push({ producto, score, nombre: producto.nombre, precio: producto.precio });
       }
     }
   }
+  
+  if (mejoresCoincidencias.length > 0) {
+    mejoresCoincidencias.sort((a, b) => b.score - a.score);
+    return { nombre: mejoresCoincidencias[0].nombre, precio: mejoresCoincidencias[0].precio };
+  }
+  
   return null;
 }
 
@@ -1055,26 +1075,19 @@ app.post('/webhook', async (req, res) => {
         response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
       }
     } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon')) {
-      const categoriaGuardada = await db.getCategoriaActual(from);
+      const porCategoria = buscarProductosPorCategoria(incomingMsg);
       let catalogo = null;
       let tienePDF = false;
       
-      if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
-        catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
+      if (porCategoria.productos.length > 0 && porCategoria.categoria && knowledge.catalogos[porCategoria.categoria]) {
+        catalogo = { categoria: porCategoria.categoria, url: knowledge.catalogos[porCategoria.categoria] };
         tienePDF = true;
+        await db.setCategoriaActual(from, porCategoria.categoria);
       }
       
       if (!catalogo) {
         catalogo = buscarCatalogo(incomingMsg);
         if (catalogo?.url) tienePDF = true;
-      }
-      
-      if (!catalogo?.url) {
-        const porCategoria = buscarProductosPorCategoria(incomingMsg);
-        if (porCategoria.productos.length > 0 && porCategoria.categoria && knowledge.catalogos[porCategoria.categoria]) {
-          catalogo = { categoria: porCategoria.categoria, url: knowledge.catalogos[porCategoria.categoria] };
-          tienePDF = true;
-        }
       }
       
       if (catalogo && catalogo.url) {
