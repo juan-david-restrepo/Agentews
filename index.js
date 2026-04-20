@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const { MessagingResponse } = require('twilio').twiml;
 const knowledge = require('./knowledge.json');
+const { initDB } = require('./init-db');
+const db = require('./db');
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
@@ -104,33 +106,12 @@ REGLAS PARA FOTOS:
 
 ${generarInventarioTexto()}`;
 
-const conversationHistory = new Map();
-const greetingsSent = new Set();
-const conversacionesTransferidas = new Map();
-const ultimoContextoCategoria = new Map();
-
-const carritoUsuario = new Map();
-const productosPendientes = new Map();
-
-function agregarAlCarrito(from, producto, precio) {
-  if (!carritoUsuario.has(from)) {
-    carritoUsuario.set(from, []);
-  }
-  const items = carritoUsuario.get(from);
-  items.push({ producto, precio });
-  carritoUsuario.set(from, items);
-}
-
-function guardarProductoPendiente(from, producto, precio) {
-  productosPendientes.set(from, { producto, precio });
-}
-
-function getProductoPendiente(from) {
-  return productosPendientes.get(from);
-}
-
-function clearProductoPendiente(from) {
-  return productosPendientes.delete(from);
+async function callGeminiWithHistory(from, currentMessage) {
+  const history = await db.getHistorial(from, 12);
+  return callGemini({
+    history: history,
+    currentMessage: currentMessage
+  });
 }
 
 function buscarMasBarato(categoria) {
@@ -154,12 +135,12 @@ function buscarProductosRelacionados(categoria, limite = 3) {
   return productos.slice(0, limite);
 }
 
-function verCarrito(from) {
-  return carritoUsuario.get(from) || [];
+async function verCarritoDB(from) {
+  return await db.verCarrito(from);
 }
 
-function limpiarCarrito(from) {
-  return carritoUsuario.delete(from);
+async function limpiarCarritoDB(from) {
+  return await db.limpiarCarrito(from);
 }
 
 function formatearCarrito(from) {
@@ -319,8 +300,12 @@ function detectarConsultaInfo(mensaje) {
   return tienePalabraVer && tieneCategoria;
 }
 
-function estaTransferida(from) {
-  return conversacionesTransferidas.has(from);
+async function estaTransferidaDB(from) {
+  return await db.estaTransferida(from);
+}
+
+async function marcarTransferidaDB(from) {
+  return await db.marcarTransferida(from);
 }
 
 function marcarTransferida(from) {
@@ -452,19 +437,12 @@ ${historialTexto}
   }
 }
 
-function getHistory(from) {
-  if (!conversationHistory.has(from)) {
-    conversationHistory.set(from, []);
-  }
-  return conversationHistory.get(from);
+async function getHistoryDB(from) {
+  return await db.getHistorial(from, 12);
 }
 
-function addToHistory(from, role, content) {
-  const history = getHistory(from);
-  history.push({ role, content });
-  if (history.length > 12) {
-    history.shift();
-  }
+async function addToHistoryDB(from, role, content) {
+  return await db.addMensaje(from, role, content);
 }
 
 function detectarSolicitudFoto(mensaje) {
@@ -908,22 +886,23 @@ app.post('/webhook', async (req, res) => {
   }
 
   try {
-    const history = getHistory(from);
+    await db.getOrCreateUsuario(from);
+    const history = await getHistoryDB(from);
     let response;
     let imagenURL = null;
 
-    if (detectarAsesor(incomingMsg) && !estaTransferida(from)) {
+    if (detectarAsesor(incomingMsg) && !(await estaTransferidaDB(from))) {
       const telefono = from.replace('whatsapp:', '');
       
       await enviarNotificacionTelegram(telefono, incomingMsg, history, 'asesor');
-      marcarTransferida(from);
+      await marcarTransferidaDB(from);
       
       response = `Te transfiero con un asesor, espera un momento 😊
       Un asesor te atenderá personalmente para ayudarte con tu compra.`;
       imagenURL = null;
       
       console.log(`Cliente ${telefono} transferido a asesor`);
-    } else if (estaTransferida(from)) {
+    } else if (await estaTransferidaDB(from)) {
       const telefono = from.replace('whatsapp:', '');
       console.log(`Conversación transferida - Cliente ${telefono} dice: ${incomingMsg}`);
       
@@ -942,7 +921,7 @@ app.post('/webhook', async (req, res) => {
         response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
       }
     } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon')) {
-      const categoriaGuardada = ultimoContextoCategoria.get(from);
+      const categoriaGuardada = await db.getCategoriaActual(from);
       let catalogo = null;
       let tienePDF = false;
       
@@ -972,15 +951,15 @@ app.post('/webhook', async (req, res) => {
         const porCategoria = buscarProductosPorCategoria(incomingMsg);
         if (porCategoria.productos.length > 0) {
           if (porCategoria.categoria) {
-            ultimoContextoCategoria.set(from, porCategoria.categoria);
+            await db.setCategoriaActual(from, porCategoria.categoria);
           }
           response = formatearProductosVenta(porCategoria.productos);
         } else {
           response = "Dime qué categoría te interesa (comedores, sillas, camas, sofás, etc.) y te envío el catálogo 😊";
         }
       }
-    } else if (detectarMasBarato(incomingMsg)) {
-      const categoria = ultimoContextoCategoria.get(from);
+} else if (detectarMasBarato(incomingMsg)) {
+      const categoria = await db.getCategoriaActual(from);
       if (categoria && knowledge.inventario[categoria]) {
         const masBarato = buscarMasBarato(categoria);
         if (masBarato) {
@@ -991,7 +970,7 @@ app.post('/webhook', async (req, res) => {
         if (resultadoCategoria.categoria) {
           const masBarato = buscarMasBarato(resultadoCategoria.categoria);
           if (masBarato) {
-            ultimoContextoCategoria.set(from, resultadoCategoria.categoria);
+            await db.setCategoriaActual(from, resultadoCategoria.categoria);
             response = `La opción más económica es ${masBarato.nombre} | ${masBarato.precio}. ¿Te interesa? 😊`;
           }
         } else {
@@ -1007,7 +986,7 @@ app.post('/webhook', async (req, res) => {
         const porCategoria = resultadoCategoria.productos;
         if (porCategoria.length > 0) {
           if (resultadoCategoria.categoria) {
-            ultimoContextoCategoria.set(from, resultadoCategoria.categoria);
+            await db.setCategoriaActual(from, resultadoCategoria.categoria);
           }
           response = formatearProductosVenta(porCategoria);
         } else {
@@ -1019,11 +998,11 @@ app.post('/webhook', async (req, res) => {
       const porCategoria = resultadoCategoria.productos;
       if (porCategoria.length > 0) {
         if (resultadoCategoria.categoria) {
-          ultimoContextoCategoria.set(from, resultadoCategoria.categoria);
+          await db.setCategoriaActual(from, resultadoCategoria.categoria);
         }
         response = formatearProductosVenta(porCategoria);
       } else {
-        addToHistory(from, 'user', incomingMsg);
+        await addToHistoryDB(from, 'user', incomingMsg);
         response = await callGemini({
           history: history,
           currentMessage: incomingMsg
@@ -1038,21 +1017,21 @@ app.post('/webhook', async (req, res) => {
           response += "\n\n¿Te gustaría que te transferiera a un asesor para aclarar tu duda? 😊";
         }
       }
-    } else if (!estaTransferida(from)) {
-      const pendiente = getProductoPendiente(from);
+    } else if (!(await db.estaTransferida(from))) {
+      const pendiente = await db.getProductoPendiente(from);
       
       if (pendiente && /si|sí|confirmo|confirmar|ok|perfecto|yes|si claro|así|asiprocede|está bien/i.test(incomingMsg)) {
-        agregarAlCarrito(from, pendiente.producto, pendiente.precio);
-        clearProductoPendiente(from);
+        await db.agregarAlCarrito(from, pendiente.producto, pendiente.precio);
+        await db.clearProductoPendiente(from);
         
-        const catalogoItems = verCarrito(from);
+        const catalogoItems = await db.verCarrito(from);
         const telefono = from.replace('whatsapp:', '');
         
         await enviarNotificacionPedido(telefono, catalogoItems, history);
         
         const { mensaje, total } = formatearCarrito(from);
         
-        const categoriaBase = ultimoContextoCategoria.get(from);
+        const categoriaBase = await db.getCategoriaActual(from);
         let mensajeSugerencia = "";
         if (categoriaBase && (categoriaBase.includes('comedor') || categoriaBase.includes('base') || categoriaBase.includes('silla') || categoriaBase.includes('cama'))) {
           mensajeSugerencia = "\n\nUn asesor te contactará pronto para coordinar entrega y pago. 😊";
@@ -1061,22 +1040,22 @@ app.post('/webhook', async (req, res) => {
         response = `✅ Tu pedido ha sido confirmado:\n\n${mensaje}\n\n¡Gracias por tu compra!${mensajeSugerencia}`;
         
         console.log(`Cliente ${telefono} confirmó pedido: $${total}`);
-        marcarTransferida(from);
+        await db.marcarTransferida(from);
       } else {
         const productoDetectado = buscarProductoPorNombre(incomingMsg) || buscarProductoEnHistorial(history, incomingMsg);
         if (productoDetectado) {
-          guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
+          await db.guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
           response = `Producto: ${productoDetectado.nombre}\nValor: ${productoDetectado.precio}\n\n¿Confirmas este pedido? Responde "si" para confirmar 😊`;
         } else if (detectarCompra(incomingMsg)) {
           response = "Para hacer un pedido, dime qué producto te interesa! 😊";
         }
       }
     } else {
-      if (history.length === 0 && !greetingsSent.has(from)) {
+      if (history.length === 0 && !(await db.haEnviadoSaludo(from))) {
         response = SALUDO_INICIAL;
-        greetingsSent.add(from);
+        await db.marcarSaludoEnviado(from);
       } else {
-        addToHistory(from, 'user', incomingMsg);
+        await addToHistoryDB(from, 'user', incomingMsg);
 
         response = await callGemini({
           history: history,
@@ -1093,7 +1072,7 @@ app.post('/webhook', async (req, res) => {
       response = SALUDO_INICIAL;
     }
 
-    addToHistory(from, 'assistant', response);
+    await addToHistoryDB(from, 'assistant', response);
 
     console.log(`Respuesta: ${response}`);
 
@@ -1126,13 +1105,30 @@ app.get('/webhook', (req, res) => {
   });
 });
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', activeConversations: conversationHistory.size });
+app.get('/health', async (req, res) => {
+  let activeUsers = 0;
+  try {
+    const [rows] = await db.pool.execute('SELECT COUNT(*) as count FROM usuarios');
+    activeUsers = rows[0].count;
+  } catch (e) {
+    activeUsers = 0;
+  }
+  res.json({ status: 'ok', activeUsers });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`
+
+async function startServer() {
+  try {
+    await initDB();
+    console.log('✅ Base de datos conectada');
+  } catch (error) {
+    console.error('❌ Error conectando a la base de datos:', error.message);
+    process.exit(1);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`
 ╔══════════════════════════════════════════╗
 ║   Elena - Vendedora DeCasa               ║
 ╠══════════════════════════════════════════╣
@@ -1143,5 +1139,8 @@ app.listen(PORT, () => {
 ║  - GET  /webhook (Verificar)             ║
 ║  - GET  /health (Estado)                 ║
 ╚══════════════════════════════════════════╝
-  `);
-});
+    `);
+  });
+}
+
+startServer();
