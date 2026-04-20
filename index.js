@@ -638,6 +638,35 @@ function detectarSolicitudCatalogo(mensaje) {
   return false;
 }
 
+function detectarCantidad(mensaje) {
+  const patrones = [
+    /(\d+)\s*(?:unidades?|unds?|uds?|u\.?)?\s*(?:de\s+)?es[ae]s/i,
+    /(\d+)\s*(?:sillas?|compras?|por\s+ favor)?/i,
+    /quiero\s*(\d+)/i,
+    /necesito\s*(\d+)/i,
+    /me\s*llevo\s*(\d+)/i,
+    /(\d+)\s*de\s*(?:es[ae]s[ae]?s?)/i
+  ];
+  
+  for (const patron of patrones) {
+    const match = patron.exec(mensaje.toLowerCase());
+    if (match) {
+      const cantidad = parseInt(match[1]);
+      if (cantidad > 0 && cantidad <= 100) {
+        return cantidad;
+      }
+    }
+  }
+  
+  if (/\b(?:5|cinco)\b/i.test(mensaje)) return 5;
+  if (/\b(?:4|cuatro)\b/i.test(mensaje)) return 4;
+  if (/\b(?:3|tres)\b/i.test(mensaje)) return 3;
+  if (/\b(?:2|dos)\b/i.test(mensaje)) return 2;
+  if (/\b(?:1|una?)\b/i.test(mensaje)) return 1;
+  
+  return null;
+}
+
 function buscarProductosPorCategoria(mensaje) {
   const mensajeLimpio = mensaje.toLowerCase().replace(/[^a-záéíóúñ\s]/g, ' ').replace(/\s+/g, ' ').trim();
   
@@ -1086,8 +1115,11 @@ app.post('/webhook', async (req, res) => {
       }
       
       if (!catalogo) {
-        catalogo = buscarCatalogo(incomingMsg);
-        if (catalogo?.url) tienePDF = true;
+        const catalogoBuscado = buscarCatalogo(incomingMsg);
+        if (catalogoBuscado?.url && catalogoBuscado.categoria === porCategoria.categoria) {
+          catalogo = catalogoBuscado;
+          tienePDF = true;
+        }
       }
       
       if (catalogo && catalogo.url) {
@@ -1155,7 +1187,7 @@ app.post('/webhook', async (req, res) => {
         if (es_buscar_info) {
           response = `${productoInfo.nombre}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n💰 Precio: ${productoInfo.precio}\n\nEsta pieza estáurada en ${productoInfo.material.split(',')[0].toLowerCase()}, lo que garantiza resistencia y durabilidad.¿Te gustaría verlo en persona o saber más? 😊`;
         } else {
-          response = `${productoInfo.nombre}\n💰 Precio: ${productoInfo.precio}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n\n¡Excelente opción! Esta pieza está feita en ${productoInfo.material.split(',')[0].toLowerCase()}, muy resistente y elegante. ¿Te gustaría más información o coordinar una cita para verlo? 😊`;
+          response = `${productoInfo.nombre}\n💰 Precio: ${productoInfo.precio}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n\n¡Excelente opción! Esta pieza está hecha en ${productoInfo.material.split(',')[0].toLowerCase()}, muy resistente y elegante. ¿Te gustaría más información o coordinar una cita para verlo? 😊`;
         }
       } else {
         const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
@@ -1178,7 +1210,12 @@ app.post('/webhook', async (req, res) => {
              response.length < 30);
           
           if (pareceNoSabe) {
-            response += "\n\n¿Te gustaría que te transferiera a un asesor para aclarar tu duda? 😊";
+            const catActual = await db.getCategoriaActual(from);
+            if (catActual && knowledge.inventario[catActual]) {
+              response = `Tenemos varios modelos disponibles. ¿Cuál te interesa? 😊`;
+            } else {
+              response += "\n\n¿Te gustaría que te transferiera a un asesor para aclarar tu duda? 😊";
+            }
           }
         }
       }
@@ -1199,24 +1236,40 @@ app.post('/webhook', async (req, res) => {
         }
       }
       
-      if (pendiente && (esConfirmacionExplicita || intencionClasificada?.intencion === 'CONFIRMAR_COMPRA')) {
-        await db.agregarAlCarrito(from, pendiente.producto, pendiente.precio);
-        await db.clearProductoPendiente(from);
+if (pendiente && (esConfirmacionExplicita || intencionClasificada?.intencion === 'CONFIRMAR_COMPRA')) {
+        const cantidad = detectarCantidad(incomingMsg) || 1;
         
-        const catalogoItems = await db.verCarrito(from);
-        const telefono = from.replace('whatsapp:', '');
-        
-        await enviarNotificacionPedido(telefono, catalogoItems, history);
-        
-        const { mensaje, total } = await formatearCarrito(from);
-        
-        response = `✅ Tu pedido ha sido confirmado:\n\n${mensaje}\n\n¡Gracias por tu compra!\n\nUn asesor te contactará pronto para coordinar entrega y pago. 😊`;
-        
-        console.log(`Cliente ${telefono} confirmó pedido: $${total}`);
+        if (cantidad > 1) {
+          const telefono = from.replace('whatsapp:', '');
+          const itemsConCantidad = [{
+            producto: `(${cantidad} unidades) ${pendiente.producto}`,
+            precio: pendiente.precio
+          }];
+          
+          await enviarNotificacionPedido(telefono, itemsConCantidad, history);
+          
+          response = `✅ Tu solicitud de compra ha sido recibida:\n\n📦 ${cantidad} unidades de ${pendiente.producto}\n💰 Precio unitario: ${pendiente.precio}\n\nUn asesor te contactará pronto para confirmar la compra y coordinar entrega y pago. 😊`;
+          
+          console.log(`Cliente ${telefono} solicitó ${cantidad} unidades: ${pendiente.producto}`);
+        } else {
+          await db.agregarAlCarrito(from, pendiente.producto, pendiente.precio);
+          await db.clearProductoPendiente(from);
+          
+          const catalogoItems = await db.verCarrito(from);
+          const telefono = from.replace('whatsapp:', '');
+          
+          await enviarNotificacionPedido(telefono, catalogoItems, history);
+          
+          const { mensaje, total } = await formatearCarrito(from);
+          
+          response = `✅ Tu pedido ha sido confirmado:\n\n${mensaje}\n\n¡Gracias por tu compra!\n\nUn asesor te contactará pronto para coordinar entrega y pago. 😊`;
+          
+          console.log(`Cliente ${telefono} confirmó pedido: $${total}`);
+        }
       } else if (pendiente && intencionClasificada?.intencion === 'CONSULTA') {
         const info = buscarInfoProducto(pendiente.producto);
         if (info) {
-          response = `${info.nombre}\n📏 Medidas: ${info.medidas}\n🪵 Material: ${info.material}\n💰 Precio: ${info.precio}\n\nEsta pieza está feita em ${info.material.split(',')[0].toLowerCase()}, muito resistente e elegante. ¿Te gustaría mais información ou coordinar uma visita? 😊`;
+          response = `${info.nombre}\n📏 Medidas: ${info.medidas}\n🪵 Material: ${info.material}\n💰 Precio: ${info.precio}\n\nEsta pieza está hecha en ${info.material.split(',')[0].toLowerCase()}, muy resistente y elegante. ¿Te gustaría más información o coordinar una visita? 😊`;
         } else {
           response = SALUDO_INICIAL;
         }
