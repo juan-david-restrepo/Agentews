@@ -208,6 +208,50 @@ function buscarProductoPorNombre(mensaje) {
   return null;
 }
 
+function buscarInfoProducto(nombreProducto) {
+  const nombreBuscado = nombreProducto.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const categorias = Object.values(knowledge.inventario || {});
+
+  for (const categoria of categorias) {
+    for (const producto of categoria.productos) {
+      const nombreLimpio = producto.nombre.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (nombreBuscado.includes(nombreLimpio) || nombreLimpio.includes(nombreBuscado)) {
+        return {
+          nombre: producto.nombre,
+          precio: producto.precio,
+          medidas: producto.medidas || 'No disponible',
+          material: producto.material || 'No disponible',
+          imagen: producto.imagen || null
+        };
+      }
+
+      const palabras = nombreLimpio.split(' ').filter(p => p.length > 3);
+      for (const palabra of palabras) {
+        if (palabra.length > 3 && nombreBuscado.includes(palabra)) {
+          return {
+            nombre: producto.nombre,
+            precio: producto.precio,
+            medidas: producto.medidas || 'No disponible',
+            material: producto.material || 'No disponible',
+            imagen: producto.imagen || null
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
 const TRIGGERS_ASESOR = [
   'hablar con alguien', 'hablar con un asesor', 'asesor',
   'hablar con humano', 'persona real', 'necesito ayuda',
@@ -998,13 +1042,18 @@ app.post('/webhook', async (req, res) => {
         }
       }
     } else if (detectarConsultaInfo(incomingMsg)) {
-      const productoEspecifico = buscarProductoPorNombre(incomingMsg);
-      if (productoEspecifico) {
+      const productoInfo = buscarInfoProducto(incomingMsg);
+      if (productoInfo) {
         const cat = buscarProductosPorCategoria(incomingMsg);
         if (cat.categoria) {
           await db.setCategoriaActual(from, cat.categoria);
         }
-        response = `${productoEspecifico.nombre}\nValor: ${productoEspecifico.precio}\n\n¿Te interesa este producto? 😊`;
+        const es_buscar_info = /medidas|material|de qué|características|es de|es de qué|que trae|viene/i.test(incomingMsg);
+        if (es_buscar_info) {
+          response = `${productoInfo.nombre}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n💰 Precio: ${productoInfo.precio}\n\nEsta pieza está elaborada en ${productoInfo.material.split(',')[0].toLowerCase()}, lo que garantiza resistencia y durabilidad.¿Te gustaría verlo en persona o saber más? 😊`;
+        } else {
+          response = `${productoInfo.nombre}\n💰 Precio: ${productoInfo.precio}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n\n¡Excelente opción! Esta pieza está feita en ${productoInfo.material.split(',')[0].toLowerCase()}, muy resistente y elegante. ¿Te gustaría más información o coordinar una cita para verlo? 😊`;
+        }
       } else {
         const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
         const porCategoria = resultadoCategoria.productos;
@@ -1044,19 +1093,12 @@ app.post('/webhook', async (req, res) => {
         
         const { mensaje, total } = await formatearCarrito(from);
         
-        const categoriaBase = await db.getCategoriaActual(from);
-        let mensajeSugerencia = "";
-        if (categoriaBase && (categoriaBase.includes('comedor') || categoriaBase.includes('base') || categoriaBase.includes('silla') || categoriaBase.includes('cama'))) {
-          mensajeSugerencia = "\n\nUn asesor te contactará pronto para coordinar entrega y pago. 😊";
-        }
-        
-        response = `✅ Tu pedido ha sido confirmado:\n\n${mensaje}\n\n¡Gracias por tu compra!${mensajeSugerencia}`;
+        response = `✅ Tu pedido ha sido confirmado:\n\n${mensaje}\n\n¡Gracias por tu compra!\n\nUn asesor te contactará pronto para coordinar entrega y pago. 😊`;
         
         console.log(`Cliente ${telefono} confirmó pedido: $${total}`);
-        await db.marcarTransferida(from);
       } else {
         const productoDetectado = buscarProductoPorNombre(incomingMsg) || buscarProductoEnHistorial(history, incomingMsg);
-        if (productoDetectado) {
+        if (productoDetectado && detectarCompra(incomingMsg)) {
           const cat = buscarProductosPorCategoria(incomingMsg);
           if (cat.categoria) {
             await db.setCategoriaActual(from, cat.categoria);
