@@ -1,6 +1,19 @@
 require('dotenv').config();
 const mysql = require('mysql2/promise');
 
+function parseJSONField(value) {
+  if (!value) return null;
+  if (typeof value === 'object') return value;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
@@ -131,8 +144,8 @@ async function getEstado(telefono) {
   const estado = estados[0];
   return {
     categoria_actual: estado.categoria_actual,
-    producto_pendiente: estado.producto_pendiente ? JSON.parse(estado.producto_pendiente) : null,
-    carrito: estado.carrito ? JSON.parse(estado.carrito) : [],
+    producto_pendiente: parseJSONField(estado.producto_pendiente),
+    carrito: parseJSONField(estado.carrito),
     transferido: !!estado.transferido,
     greeting_sent: !!estado.greeting_sent
   };

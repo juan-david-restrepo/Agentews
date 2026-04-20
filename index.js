@@ -980,6 +980,10 @@ app.post('/webhook', async (req, res) => {
     } else if (detectarConsultaPrecio(incomingMsg)) {
       const producto = buscarProductoPorNombre(incomingMsg);
       if (producto) {
+        const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
+        if (resultadoCategoria.categoria) {
+          await db.setCategoriaActual(from, resultadoCategoria.categoria);
+        }
         response = `${producto.nombre} | ${producto.precio}. ¿Te interesa? 😊`;
       } else {
         const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
@@ -1044,6 +1048,10 @@ app.post('/webhook', async (req, res) => {
       } else {
         const productoDetectado = buscarProductoPorNombre(incomingMsg) || buscarProductoEnHistorial(history, incomingMsg);
         if (productoDetectado) {
+          const cat = buscarProductosPorCategoria(incomingMsg);
+          if (cat.categoria) {
+            await db.setCategoriaActual(from, cat.categoria);
+          }
           await db.guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
           response = `Producto: ${productoDetectado.nombre}\nValor: ${productoDetectado.precio}\n\n¿Confirmas este pedido? Responde "si" para confirmar 😊`;
         } else if (detectarCompra(incomingMsg)) {
