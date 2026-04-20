@@ -1346,7 +1346,7 @@ app.post('/webhook', async (req, res) => {
       }
     } else if (detectarVerCarrito(incomingMsg)) {
       const carritoData = await formatearCarrito(from);
-      if (carritoData && carritoData.items.length > 0) {
+      if (carritoData && carritoData.mensaje) {
         response = `${carritoData.mensaje}\n\n¿Confirmas la compra? Responde "si" o "confirmo" para proceder 😊`;
       } else {
         response = "Tu carrito está vacío. ¿Qué producto te gustaría comprar? 😊";
@@ -1466,7 +1466,11 @@ app.post('/webhook', async (req, res) => {
               response = `${productoDetectado.nombre} añadido al carrito (${cantidad} unidad${cantidad > 1 ? 'es' : ''}) por ${productoDetectado.precio}.\n\n¿Quieres ver más productos o confirmar tu compra? 😊`;
             } else {
               const carritoActual = await formatearCarrito(from);
-              response = `${productoDetectado.nombre} añadido.\n\n${carritoActual.mensaje}\n\n¿Confirmas la compra? Responde "si" o "confirmo" para proceder 😊`;
+              if (carritoActual && carritoActual.mensaje) {
+                response = `${productoDetectado.nombre} añadido.\n\n${carritoActual.mensaje}\n\n¿Confirmas la compra? Responde "si" o "confirmo" para proceder 😊`;
+              } else {
+                response = `${productoDetectado.nombre} añadido al carrito.\n\n¿Quieres ver más productos o confirmar tu compra? 😊`;
+              }
             }
           } else {
             response = result.mensaje;
