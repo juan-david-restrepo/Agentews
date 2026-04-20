@@ -304,6 +304,17 @@ const TRIGGERS_ASESOR = [
   'atención humana', 'derivame a', 'transferirme a'
 ];
 
+function esPreguntaInformativa(mensaje) {
+  const msg = mensaje.toLowerCase();
+  const patrones = [
+    /por qué/i, /porque/i, /debería/i, /convénzame/i,
+    /argumento/i, /razón/i, /para qué/i,
+    /me puedes dar/i, /dime por qué/i,
+    /te parece que/i, /vale la pena/i, /me conviene/i
+  ];
+  return patrones.some(p => p.test(msg));
+}
+
 const MAX_ITEMS_CARRITO = 10;
 
 const TRIGGERS_COMPRA = [
@@ -1508,10 +1519,21 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
           response = "No hay productos en el carrito. ¿Qué te gustaría comprar? 😊";
         }
       } else {
+        const esInfoPura = esPreguntaInformativa(incomingMsg);
         const productoDetectado = buscarProductoPorNombre(incomingMsg);
-        const cantidadDetectada = detectarCantidad(incomingMsg);
         
-        if (productoDetectado && (detectarCompra(incomingMsg) || detectarIntentionAddCarrito(incomingMsg) || incomingMsg.toLowerCase().includes('comprar') || incomingMsg.toLowerCase().includes('agregar') || incomingMsg.toLowerCase().includes('agregarle') || incomingMsg.toLowerCase().includes('nido'))) {
+        if (esInfoPura && productoDetectado) {
+          const argumentos = [
+            "Madera Flor Morado: 3x más resistente que otras maderas",
+            "Fabricación propia en Armenia: Control de calidad directo",
+            "Diseño exclusivo: Pieza única para tu hogar",
+            "Garantía de fabricación: 1 año en estructura",
+            "Delivery gratis en Armenia: Entrega sin costo adicional"
+          ];
+          const argRandom = argumentos[Math.floor(Math.random() * argumentos.length)];
+          response = `${productoDetectado.nombre} por ${productoDetectado.precio} es una excelente elección. ${argRandom}. ¿Te gustaría una foto o verlo en persona? 😊`;
+        } else if (productoDetectado && (detectarCompra(incomingMsg) || detectarIntentionAddCarrito(incomingMsg) || incomingMsg.toLowerCase().includes('comprar') || incomingMsg.toLowerCase().includes('agregar') || incomingMsg.toLowerCase().includes('agregarle') || incomingMsg.toLowerCase().includes('nido'))) {
+          const cantidadDetectada = detectarCantidad(incomingMsg);
           const cat = buscarProductosPorCategoria(incomingMsg);
           if (cat.categoria) {
             await db.setCategoriaActual(from, cat.categoria);
