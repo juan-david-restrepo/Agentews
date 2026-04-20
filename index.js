@@ -253,11 +253,13 @@ function buscarInfoProducto(nombreProducto) {
 }
 
 const TRIGGERS_ASESOR = [
-  'hablar con alguien', 'hablar con un asesor', 'asesor',
-  'hablar con humano', 'persona real', 'necesito ayuda',
-  'quiero comprar', 'lo quiero', 'como hago para pedir',
-  'cotizar', 'hacer un pedido', 'hablar con persona',
-  'hablar con alguien real', 'necesito un humano'
+  'hablar con', 'hablarle a', 'llamar a',
+  'asesor', 'asesora', 'asesores',
+  'humano', 'humana', 'persona real',
+  'persona de verdad', 'una persona',
+  'necesito hablar con', 'quiero hablar con',
+  'hablar con alguien más', 'que me atienda alguien',
+  'atención humana', 'derivame a', 'transferirme a'
 ];
 
 const TRIGGERS_COMPRA = [
@@ -276,7 +278,28 @@ const TRIGGERS_COMPRA = [
 
 function detectarAsesor(mensaje) {
   const msg = mensaje.toLowerCase();
-  return TRIGGERS_ASESOR.some(t => msg.includes(t));
+  const triggers_exactos = [
+    'hablar con un asesor', 'hablar con asesor', 'hablarle al asesor',
+    'hablar con una persona', 'hablar con humano', 'hablar con persona real',
+    'necesito un asesor', 'necesito una persona', 'necesito un humano',
+    'quiero hablar con', 'necesito hablar con',
+    'asesor', 'asesora',
+    'humano', 'humana',
+    'persona real', 'persona de verdad',
+    'que me atienda', 'derivame', 'transferirme',
+    'atencion humana', 'atención humana'
+  ];
+  if (triggers_exactos.some(t => msg.includes(t))) {
+    return true;
+  }
+  const patrones = [
+    /\bhablar\s+con\b/,
+    /\bhablarle\s+a\b/,
+    /\bllamar\s+a\b/,
+    /\bpersona\b/,
+    /\bhumano\b/
+  ];
+  return patrones.some(p => p.test(msg));
 }
 
 function detectarCompra(mensaje) {
@@ -919,6 +942,61 @@ async function callGemini(prompt) {
   return data.candidates[0].content.parts[0].text;
 }
 
+const PROMPT_CLASIFICACION = `Clasifica el mensaje del usuario según estas reglas:
+
+REGLAS DE CLASIFICACIÓN:
+1. "sí" + cualquier cosa extra = CONSULTA (no confirmar)
+2. "sí pero...", "sí, quiero saber..." = CONSULTA
+3. "sí, confirmo", "sí, lo quiero", "sí, me lo llevo" = CONFIRMAR_COMPRA
+4. producto + "medidas/material/precio" = CONSULTA_INFO
+5. "hablar con", "asesor", "humano" = PEDIR_ASESOR
+6. "catálogo", "PDF", "ver productos" = VER_CATALOGO
+7. "cuánto", "precio", "cuesta" = CONSULTA_PRECIO
+8. hola, saludos = SALUDO
+9. "gracias" = AGRADECIMIENTO
+10. cualquier otra cosa = GENERAL
+
+PRODUCTOS CON PRECIOS:
+${generarInventarioTexto()}
+
+Responde SOLO con JSON en este formato (sin texto adicional):
+{"intencion": "CONSULTA|CONSULTA_INFO|CONSULTA_PRECIO|CONFIRMAR_COMPRA|PEDIR_ASESOR|VER_CATALOGO|SALUDO|AGRADECIMIENTO|GENERAL", "producto": "nombre del producto o null", "detalle": "medidas/material/precio/general o null"}`;
+
+async function clasificarIntencion(mensaje) {
+  const url = `https://aiplatform.googleapis.com/v1/publishers/google/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
+  
+  const contents = [
+    { role: 'user', parts: [{ text: PROMPT_CLASIFICACION }] },
+    { role: 'user', parts: [{ text: `Mensaje del usuario: "${mensaje}"` }] }
+  ];
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents,
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 100
+      }
+    })
+  });
+
+  if (!response.ok) {
+    return { intencion: 'GENERAL', producto: null, detalle: null };
+  }
+
+  const data = await response.json();
+  const texto = data.candidates[0].content.parts[0].text;
+  
+  try {
+    const limpio = texto.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(limpio);
+  } catch {
+    return { intencion: 'GENERAL', producto: null, detalle: null };
+  }
+}
+
 app.post('/webhook', async (req, res) => {
   const incomingMsg = req.body.Body || '';
   const from = req.body.From || 'unknown';
@@ -931,11 +1009,23 @@ app.post('/webhook', async (req, res) => {
 
   try {
     await db.getOrCreateUsuario(from);
+    
+    const estaTransferidoAhora = await db.estaTransferida(from);
+    const esTransferencia = detectarAsesor(incomingMsg);
+    if (estaTransferidoAhora && !esTransferencia) {
+      console.log(`Limpiando estado transferido para ${from}`);
+      await db.updateEstado(from, { transferido: false });
+    }
+    
     const history = await getHistoryDB(from);
     let response;
     let imagenURL = null;
 
-    if (detectarAsesor(incomingMsg) && !(await estaTransferidaDB(from))) {
+    const esAsesorDetectado = detectarAsesor(incomingMsg);
+    let intencionClasificada = null;
+    let debeTransferir = esAsesorDetectado;
+    
+    if (debeTransferir && !(await estaTransferidaDB(from))) {
       const telefono = from.replace('whatsapp:', '');
       
       await enviarNotificacionTelegram(telefono, incomingMsg, history, 'asesor');
@@ -1041,7 +1131,7 @@ app.post('/webhook', async (req, res) => {
           response = "No encontré ese producto. ¿Te interesan las bases de compositor o las sillas de compositor? 😊";
         }
       }
-    } else if (detectarConsultaInfo(incomingMsg)) {
+} else if (detectarConsultaInfo(incomingMsg)) {
       const productoInfo = buscarInfoProducto(incomingMsg);
       if (productoInfo) {
         const cat = buscarProductosPorCategoria(incomingMsg);
@@ -1050,7 +1140,7 @@ app.post('/webhook', async (req, res) => {
         }
         const es_buscar_info = /medidas|material|de qué|características|es de|es de qué|que trae|viene/i.test(incomingMsg);
         if (es_buscar_info) {
-          response = `${productoInfo.nombre}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n💰 Precio: ${productoInfo.precio}\n\nEsta pieza está elaborada en ${productoInfo.material.split(',')[0].toLowerCase()}, lo que garantiza resistencia y durabilidad.¿Te gustaría verlo en persona o saber más? 😊`;
+          response = `${productoInfo.nombre}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n💰 Precio: ${productoInfo.precio}\n\nEsta pieza estáurada en ${productoInfo.material.split(',')[0].toLowerCase()}, lo que garantiza resistencia y durabilidad.¿Te gustaría verlo en persona o saber más? 😊`;
         } else {
           response = `${productoInfo.nombre}\n💰 Precio: ${productoInfo.precio}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n\n¡Excelente opción! Esta pieza está feita en ${productoInfo.material.split(',')[0].toLowerCase()}, muy resistente y elegante. ¿Te gustaría más información o coordinar una cita para verlo? 😊`;
         }
@@ -1082,7 +1172,21 @@ app.post('/webhook', async (req, res) => {
     } else if (!(await db.estaTransferida(from))) {
       const pendiente = await db.getProductoPendiente(from);
       
-      if (pendiente && /si|sí|confirmo|confirmar|ok|perfecto|yes|si claro|así|asiprocede|está bien/i.test(incomingMsg)) {
+      const esConfirmacionExplicita = /si lo compro|confirmo|confirmar|me lo llevo ya|comprar ahora|pedido confirmado|ordenar ya/i.test(incomingMsg);
+      const esConfirmacionSimple = /si|sí|ok|perfecto|yes|si claro|así|asiprocede|está bien/i.test(incomingMsg);
+      
+      let intencionClasificada = null;
+      
+      if (pendiente && esConfirmacionSimple) {
+        try {
+          intencionClasificada = await clasificarIntencion(incomingMsg);
+          console.log('Clasificación:', JSON.stringify(intencionClasificada));
+        } catch (e) {
+          console.log('Error classify:', e.message);
+        }
+      }
+      
+      if (pendiente && (esConfirmacionExplicita || intencionClasificada?.intencion === 'CONFIRMAR_COMPRA')) {
         await db.agregarAlCarrito(from, pendiente.producto, pendiente.precio);
         await db.clearProductoPendiente(from);
         
@@ -1096,6 +1200,13 @@ app.post('/webhook', async (req, res) => {
         response = `✅ Tu pedido ha sido confirmado:\n\n${mensaje}\n\n¡Gracias por tu compra!\n\nUn asesor te contactará pronto para coordinar entrega y pago. 😊`;
         
         console.log(`Cliente ${telefono} confirmó pedido: $${total}`);
+      } else if (pendiente && intencionClasificada?.intencion === 'CONSULTA') {
+        const info = buscarInfoProducto(pendiente.producto);
+        if (info) {
+          response = `${info.nombre}\n📏 Medidas: ${info.medidas}\n🪵 Material: ${info.material}\n💰 Precio: ${info.precio}\n\nEsta pieza está feita em ${info.material.split(',')[0].toLowerCase()}, muito resistente e elegante. ¿Te gustaría mais información ou coordinar uma visita? 😊`;
+        } else {
+          response = SALUDO_INICIAL;
+        }
       } else {
         const productoDetectado = buscarProductoPorNombre(incomingMsg) || buscarProductoEnHistorial(history, incomingMsg);
         if (productoDetectado && detectarCompra(incomingMsg)) {
