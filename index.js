@@ -304,10 +304,16 @@ const TRIGGERS_ASESOR = [
   'atención humana', 'derivame a', 'transferirme a'
 ];
 
+const MAX_ITEMS_CARRITO = 10;
+
 const TRIGGERS_COMPRA = [
   'si lo compro', 'confirmo compra', 'este me lo llevo',
   'confirmar compra', 'confirmar pedido',
   'me lo llevo ya', 'ya me lo llevo',
+  'deseo proceder', 'si deseo', 'si quiero',
+  'me quiero llevar', 'me llevo en', 'quiero llevar',
+  'completar mi pedido', 'finalizar mi pedido', 'ya lo quiero',
+  'perfecto', 'muy bien', 'esta bien', 'está bien',
   'comprar ahora', 'finalizar compra',
   'pedido confirmado', 'ordenar ya',
   'quiero comprar', 'me gustaría comprar',
@@ -317,8 +323,6 @@ const TRIGGERS_COMPRA = [
   'dámelo', 'me lo llevo',
   'lo tomo', 'me quedo con'
 ];
-
-const MAX_ITEMS_CARRITO = 10;
 
 function detectarAsesor(mensaje) {
   const msg = mensaje.toLowerCase();
