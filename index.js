@@ -1217,6 +1217,25 @@ app.post('/webhook', async (req, res) => {
       
       res.status(200).send('');
       return;
+    } else if (detectarMasBarato(incomingMsg)) {
+      const categoria = await db.getCategoriaActual(from);
+      if (categoria && knowledge.inventario[categoria]) {
+        const masBarato = buscarMasBarato(categoria);
+        if (masBarato) {
+          response = `La opción más económica es ${masBarato.nombre} | ${masBarato.precio}. ¿Te interesa? 😊`;
+        }
+      } else {
+        const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
+        if (resultadoCategoria.categoria) {
+          const masBarato = buscarMasBarato(resultadoCategoria.categoria);
+          if (masBarato) {
+            await db.setCategoriaActual(from, resultadoCategoria.categoria);
+            response = `La opción más económica es ${masBarato.nombre} | ${masBarato.precio}. ¿Te interesa? 😊`;
+          }
+        } else {
+          response = "¿De qué categoría quieres la opción más económica? 😊";
+        }
+      }
     } else if (detectarSolicitudFoto(incomingMsg)) {
       const producto = buscarImagenProducto(incomingMsg);
       if (producto) {
@@ -1261,25 +1280,6 @@ app.post('/webhook', async (req, res) => {
       } else {
         const categoriasDisponibles = Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ');
         response = `Claro! Estas son las categorías disponibles:\n${categoriasDisponibles}\n\n¿ cual te gustaría ver? 😊`;
-      }
-} else if (detectarMasBarato(incomingMsg)) {
-      const categoria = await db.getCategoriaActual(from);
-      if (categoria && knowledge.inventario[categoria]) {
-        const masBarato = buscarMasBarato(categoria);
-        if (masBarato) {
-          response = `La opción más económica es ${masBarato.nombre} | ${masBarato.precio}. ¿Te interesa? 😊`;
-        }
-      } else {
-        const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
-        if (resultadoCategoria.categoria) {
-          const masBarato = buscarMasBarato(resultadoCategoria.categoria);
-          if (masBarato) {
-            await db.setCategoriaActual(from, resultadoCategoria.categoria);
-            response = `La opción más económica es ${masBarato.nombre} | ${masBarato.precio}. ¿Te interesa? 😊`;
-          }
-        } else {
-          response = "¿De qué categoría quieres la opción más económica? 😊";
-        }
       }
     } else if (detectarConsultaPrecio(incomingMsg)) {
       const producto = buscarProductoPorNombre(incomingMsg);
