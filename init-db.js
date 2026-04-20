@@ -56,6 +56,20 @@ async function initDB() {
     `);
     console.log('✅ Tabla estado_usuario creada o verificada');
 
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS pedidos (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        usuario_id INT NOT NULL,
+        producto VARCHAR(255) NOT NULL,
+        precio VARCHAR(50) NOT NULL,
+        cantidad INT DEFAULT 1,
+        estado ENUM('confirmado', 'entregado', 'cancelado') DEFAULT 'confirmado',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('✅ Tabla pedidos creada o verificada');
+
     console.log('\n🎉 Base de datos lista!\n');
     
   } catch (error) {

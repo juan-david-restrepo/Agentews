@@ -1246,21 +1246,40 @@ if (pendiente && (esConfirmacionExplicita || intencionClasificada?.intencion ===
             precio: pendiente.precio
           }];
           
+          await db.guardarPedido(telefono, pendiente.producto, pendiente.precio, cantidad);
+          await db.limpiarConversaciones(from);
+          await db.clearProductoPendiente(from);
+          await db.setCategoriaActual(from, null);
+          
           await enviarNotificacionPedido(telefono, itemsConCantidad, history);
           
           response = `✅ Tu solicitud de compra ha sido recibida:\n\n📦 ${cantidad} unidades de ${pendiente.producto}\n💰 Precio unitario: ${pendiente.precio}\n\nUn asesor te contactará pronto para confirmar la compra y coordinar entrega y pago. 😊`;
           
           console.log(`Cliente ${telefono} solicitó ${cantidad} unidades: ${pendiente.producto}`);
         } else {
-          await db.agregarAlCarrito(from, pendiente.producto, pendiente.precio);
-          await db.clearProductoPendiente(from);
+          const itemsCarrito = await db.verCarrito(from);
           
-          const catalogoItems = await db.verCarrito(from);
+          for (const item of itemsCarrito) {
+            await db.guardarPedido(from, item.producto, item.precio, 1);
+          }
+          
           const telefono = from.replace('whatsapp:', '');
           
-          await enviarNotificacionPedido(telefono, catalogoItems, history);
+          await db.limpiarConversaciones(from);
+          await db.clearProductoPendiente(from);
+          await db.setCategoriaActual(from, null);
+          await db.limpiarCarrito(from);
           
-          const { mensaje, total } = await formatearCarrito(from);
+          await enviarNotificacionPedido(telefono, itemsCarrito, history);
+          
+          let mensaje = "📦 Tu pedido:\n\n";
+          let total = 0;
+          for (const item of itemsCarrito) {
+            mensaje += `• ${item.producto}: ${item.precio}\n`;
+            const precioNum = item.precio.replace(/[^0-9]/g, '');
+            total += parseInt(precioNum) || 0;
+          }
+          mensaje += `\n💰 Total: $${total.toLocaleString()}`;
           
           response = `✅ Tu pedido ha sido confirmado:\n\n${mensaje}\n\n¡Gracias por tu compra!\n\nUn asesor te contactará pronto para coordinar entrega y pago. 😊`;
           
@@ -1281,7 +1300,13 @@ if (pendiente && (esConfirmacionExplicita || intencionClasificada?.intencion ===
             await db.setCategoriaActual(from, cat.categoria);
           }
           await db.guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
-          response = `Producto: ${productoDetectado.nombre}\nValor: ${productoDetectado.precio}\n\n¿Confirmas este pedido? Responde "si" para confirmar 😊`;
+          const esBaseComedor = /BASE/i.test(productoDetectado.nombre);
+          if (esBaseComedor) {
+            response = `Producto: ${productoDetectado.nombre}\nValor: ${productoDetectado.precio}\n\n¿Confirmas este pedido? Responde "si" para confirmar 😊\
+\n\nPD: ¿Te gustaría ver las sillas que combinan con esta base? 😊`;
+          } else {
+            response = `Producto: ${productoDetectado.nombre}\nValor: ${productoDetectado.precio}\n\n¿Confirmas este pedido? Responde "si" para confirmar 😊`;
+          }
         } else if (detectarCompra(incomingMsg)) {
           response = "Para hacer un pedido, dime qué producto te interesa! 😊";
         } else {

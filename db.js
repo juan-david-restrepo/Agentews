@@ -266,6 +266,60 @@ async function setCategoriaActual(telefono, categoria) {
   await updateEstado(telefono, { categoria_actual: categoria });
 }
 
+async function guardarPedido(telefono, producto, precio, cantidad = 1) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+  
+  const [usuarios] = await pool.query(
+    'SELECT id FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return false;
+  
+  await pool.query(
+    'INSERT INTO pedidos (usuario_id, producto, precio, cantidad) VALUES (?, ?, ?, ?)',
+    [usuarios[0].id, producto, precio, cantidad]
+  );
+  
+  return true;
+}
+
+async function getPedidos(telefono) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+  
+  const [usuarios] = await pool.query(
+    'SELECT id FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return [];
+  
+  const [pedidos] = await pool.query(
+    'SELECT producto, precio, cantidad, estado, created_at FROM pedidos WHERE usuario_id = ? ORDER BY created_at DESC',
+    [usuarios[0].id]
+  );
+  
+  return pedidos;
+}
+
+async function limpiarConversaciones(telefono) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+  
+  const [usuarios] = await pool.query(
+    'SELECT id FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return false;
+  
+  await pool.query(
+    'DELETE FROM conversaciones WHERE usuario_id = ?',
+    [usuarios[0].id]
+  );
+  
+  return true;
+}
+
 module.exports = {
   pool,
   getOrCreateUsuario,
@@ -284,5 +338,8 @@ module.exports = {
   haEnviadoSaludo,
   marcarSaludoEnviado,
   getCategoriaActual,
-  setCategoriaActual
+  setCategoriaActual,
+  guardarPedido,
+  getPedidos,
+  limpiarConversaciones
 };
