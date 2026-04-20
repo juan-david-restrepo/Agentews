@@ -666,6 +666,7 @@ function detectarLimpiarCarrito(mensaje) {
 }
 
 function detectarSolicitudCatalogo(mensaje) {
+  const msg = mensaje.toLowerCase();
   const patrones = [
     /\bcat[áa]logos?\b/i,
     /ver.*el.*cat[áa]logo/i,
@@ -697,11 +698,25 @@ function detectarSolicitudCatalogo(mensaje) {
     /\bver\s+pdf\b/i,
     /\bdame\s+pdf\b/i,
     /\bel\s+cat/i,
-    /\bver\s+cat/i
+    /\bver\s+cat/i,
+    /el\s+cat[áa]logo\s+completo/i,
+    /qu[é]产品的/i,
+    /ver\s+todos\s+los\s+productos/i,
+    /\bver\s+todo\b/i,
+    /ver\s+todo\s+el\s+cat/i,
+    /ver\s+todo\s+el\s+inventario/i,
+    /muestrame\s+todo/i
   ];
 
   for (const patron of patrones) {
     if (patron.test(mensaje)) {
+      return true;
+    }
+  }
+  
+  const palabrasCategoria = ['sofa', 'sofas', 'silla', 'sillas', 'cama', 'camas', 'mesa', 'mesas', 'base', 'bases', 'comedor', 'comedores'];
+  for (const palabra of palabrasCategoria) {
+    if (msg.includes(palabra + 's') || msg === palabra || msg.includes('ver ' + palabra) || msg.includes('ver los ' + palabra) || msg.includes('ver las ' + palabra)) {
       return true;
     }
   }
@@ -1191,39 +1206,42 @@ app.post('/webhook', async (req, res) => {
       } else {
         response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
       }
-    } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon')) {
-      const porCategoria = buscarProductosPorCategoria(incomingMsg);
+    } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
+      let porCategoria = buscarProductosPorCategoria(incomingMsg);
       let catalogo = null;
-      let tienePDF = false;
       
-      if (porCategoria.productos.length > 0 && porCategoria.categoria && knowledge.catalogos[porCategoria.categoria]) {
-        catalogo = { categoria: porCategoria.categoria, url: knowledge.catalogos[porCategoria.categoria] };
-        tienePDF = true;
-        await db.setCategoriaActual(from, porCategoria.categoria);
+      if (!porCategoria.categoria) {
+        const categoriaGuardada = await db.getCategoriaActual(from);
+        if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
+          porCategoria = { categoria: categoriaGuardada, productos: knowledge.inventario[categoriaGuardada].productos };
+        }
       }
       
-      if (!catalogo) {
+      if (!porCategoria.categoria) {
         const catalogoBuscado = buscarCatalogo(incomingMsg);
-        if (catalogoBuscado?.url && catalogoBuscado.categoria === porCategoria.categoria) {
+        if (catalogoBuscado && catalogoBuscado.url && catalogoBuscado.categoria) {
           catalogo = catalogoBuscado;
-          tienePDF = true;
+          porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
         }
+      }
+      
+      if (!catalogo && porCategoria.categoria && knowledge.catalogos[porCategoria.categoria]) {
+        catalogo = { categoria: porCategoria.categoria, url: knowledge.catalogos[porCategoria.categoria] };
+        await db.setCategoriaActual(from, porCategoria.categoria);
       }
       
       if (catalogo && catalogo.url) {
         imagenURL = catalogo.url;
         let nombreCat = formatearNombreCategoria(catalogo.categoria);
         response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊`;
-      } else {
-        const porCategoria = buscarProductosPorCategoria(incomingMsg);
-        if (porCategoria.productos.length > 0) {
-          if (porCategoria.categoria) {
-            await db.setCategoriaActual(from, porCategoria.categoria);
-          }
-          response = formatearProductosVenta(porCategoria.productos);
-        } else {
-          response = "Dime qué categoría te interesa (comedores, sillas, camas, sofás, etc.) y te envío el catálogo 😊";
+      } else if (porCategoria.productos && porCategoria.productos.length > 0) {
+        if (porCategoria.categoria) {
+          await db.setCategoriaActual(from, porCategoria.categoria);
         }
+        response = formatearProductosVenta(porCategoria.productos);
+      } else {
+        const categoriasDisponibles = Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ');
+        response = `Claro! Estas son las categorías disponibles:\n${categoriasDisponibles}\n\n¿ cual te gustaría ver? 😊`;
       }
 } else if (detectarMasBarato(incomingMsg)) {
       const categoria = await db.getCategoriaActual(from);
