@@ -143,9 +143,9 @@ async function limpiarCarritoDB(from) {
   return await db.limpiarCarrito(from);
 }
 
-function formatearCarrito(from) {
-  const items = verCarrito(from);
-  if (items.length === 0) return null;
+async function formatearCarrito(from) {
+  const items = await db.verCarrito(from);
+  if (!items || items.length === 0) return null;
   
   let mensaje = "📦 Tu carrito:\n\n";
   let total = 0;
@@ -998,27 +998,36 @@ app.post('/webhook', async (req, res) => {
         }
       }
     } else if (detectarConsultaInfo(incomingMsg)) {
-      const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
-      const porCategoria = resultadoCategoria.productos;
-      if (porCategoria.length > 0) {
-        if (resultadoCategoria.categoria) {
-          await db.setCategoriaActual(from, resultadoCategoria.categoria);
+      const productoEspecifico = buscarProductoPorNombre(incomingMsg);
+      if (productoEspecifico) {
+        const cat = buscarProductosPorCategoria(incomingMsg);
+        if (cat.categoria) {
+          await db.setCategoriaActual(from, cat.categoria);
         }
-        response = formatearProductosVenta(porCategoria);
+        response = `${productoEspecifico.nombre}\nValor: ${productoEspecifico.precio}\n\n¿Te interesa este producto? 😊`;
       } else {
-        await addToHistoryDB(from, 'user', incomingMsg);
-        response = await callGemini({
-          history: history,
-          currentMessage: incomingMsg
-        });
-        
-        const pareceNoSabe = !response.includes('$') && 
-          (response.includes('no tengo') || response.includes('no estoy segura') || 
-           response.includes('posiblemente') || response.includes('creo que') ||
-           response.length < 30);
-        
-        if (pareceNoSabe) {
-          response += "\n\n¿Te gustaría que te transferiera a un asesor para aclarar tu duda? 😊";
+        const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
+        const porCategoria = resultadoCategoria.productos;
+        if (porCategoria.length > 0) {
+          if (resultadoCategoria.categoria) {
+            await db.setCategoriaActual(from, resultadoCategoria.categoria);
+          }
+          response = formatearProductosVenta(porCategoria);
+        } else {
+          await addToHistoryDB(from, 'user', incomingMsg);
+          response = await callGemini({
+            history: history,
+            currentMessage: incomingMsg
+          });
+          
+          const pareceNoSabe = !response.includes('$') && 
+            (response.includes('no tengo') || response.includes('no estoy segura') || 
+             response.includes('posiblemente') || response.includes('creo que') ||
+             response.length < 30);
+          
+          if (pareceNoSabe) {
+            response += "\n\n¿Te gustaría que te transferiera a un asesor para aclarar tu duda? 😊";
+          }
         }
       }
     } else if (!(await db.estaTransferida(from))) {
@@ -1033,7 +1042,7 @@ app.post('/webhook', async (req, res) => {
         
         await enviarNotificacionPedido(telefono, catalogoItems, history);
         
-        const { mensaje, total } = formatearCarrito(from);
+        const { mensaje, total } = await formatearCarrito(from);
         
         const categoriaBase = await db.getCategoriaActual(from);
         let mensajeSugerencia = "";
@@ -1056,6 +1065,16 @@ app.post('/webhook', async (req, res) => {
           response = `Producto: ${productoDetectado.nombre}\nValor: ${productoDetectado.precio}\n\n¿Confirmas este pedido? Responde "si" para confirmar 😊`;
         } else if (detectarCompra(incomingMsg)) {
           response = "Para hacer un pedido, dime qué producto te interesa! 😊";
+        } else {
+          const catResult = buscarProductosPorCategoria(incomingMsg);
+          if (catResult.categoria) {
+            await db.setCategoriaActual(from, catResult.categoria);
+          }
+          await addToHistoryDB(from, 'user', incomingMsg);
+          response = await callGemini({
+            history: history,
+            currentMessage: incomingMsg
+          });
         }
       }
     } else {
