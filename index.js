@@ -313,7 +313,7 @@ const TRIGGERS_COMPRA = [
   'deseo proceder', 'si deseo', 'si quiero',
   'me quiero llevar', 'me llevo en', 'quiero llevar',
   'completar mi pedido', 'finalizar mi pedido', 'ya lo quiero',
-  'perfecto', 'muy bien', 'esta bien', 'está bien',
+  'perfecto', 'muy bien', 'esta bien', 'está bien', 'bien',
   'comprar ahora', 'finalizar compra',
   'pedido confirmado', 'ordenar ya',
   'quiero comprar', 'me gustaría comprar',
@@ -321,7 +321,8 @@ const TRIGGERS_COMPRA = [
   'si quiero', 'si quiero compr',
   'sí quiero', 'sí, quiero',
   'dámelo', 'me lo llevo',
-  'lo tomo', 'me quedo con'
+  'lo tomo', 'me quedo con',
+  'me gustaría comprarlo', 'lo quiero Comprar'
 ];
 
 function detectarAsesor(mensaje) {
@@ -756,6 +757,9 @@ function detectarIntentionAddCarrito(mensaje) {
   const msg = mensaje.toLowerCase();
   const patrones = [
     /me\s+gustaria\s+comprar/i,
+    /me\s+gustaria\s+comprarlo/i,
+    /me\s+gustaria\s+comprar\s+el/i,
+    /me\s+gustaria\s+comprar\s+la/i,
     /quiero\s+comprar/i,
     /quiero\s+la\s+/i,
     /Quiero\s+el\s+/i,
@@ -765,7 +769,22 @@ function detectarIntentionAddCarrito(mensaje) {
     /necesito\s+el\s+/i,
     /necesito\s+la\s+/i,
     /\bcomprar\b.*\b(silla|base|cama|mesa|sofa)/i,
-    /\b(silla|base|cama|mesa|sofa)\b.*\bcomprar\b/i
+    /\b(silla|base|cama|mesa|sofa)\b.*\bcomprar\b/i,
+    /me\s+gust[óa]\s+comprar/i,
+    /bien\s+me\s+gustar/i,
+    /bien\s+me\s+llevo/i,
+    /bien\s+me\s+comprar/i,
+    /lo\s+quiero\s+comprar/i,
+    /lo\s+quiero\b/i,
+    /me\s+lo\s+llevo/i,
+    /comprar\s+ese/i,
+    /comprar\s+este/i,
+    /comprar\s+la/i,
+    /comprar\s+el/i,
+    /\bcomprar\b\s+es[oe]/i,
+    /comprar\s+el\s+nube/i,
+    /comprar\s+el\s+sofa/i,
+    /Comprar\s+ese/i
   ];
   return patrones.some(p => p.test(msg));
 }
@@ -1363,7 +1382,21 @@ app.post('/webhook', async (req, res) => {
         await enviarNotificacionPedido(telefono, itemsEnCarrito, history);
         
         const mensajeConfirmado = await formatearCarrito(from);
-        response = `📦 ¡Pedido confirmado!\n\n${mensajeConfirmado.mensaje}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉`;
+        if (mensajeConfirmado && mensajeConfirmado.mensaje) {
+          response = `📦 ¡Pedido confirmado!\n\n${mensajeConfirmado.mensaje}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉`;
+        } else {
+          let productosTxt = '';
+          let totalConfirmado = 0;
+          itemsEnCarrito.forEach((item, i) => {
+            const cant = item.cantidad || 1;
+            const precio = parseInt(item.precio.replace(/[^0-9]/g, '')) || 0;
+            productosTxt += `${i + 1}. ${item.producto} - ${item.precio}`;
+            if (cant > 1) productosTxt += ` (${cant} unidades)`;
+            productosTxt += '\n';
+            totalConfirmado += precio * cant;
+          });
+          response = `📦 ¡Pedido confirmado!\n\n${productosTxt}💰 Total: $${totalConfirmado.toLocaleString()}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉`;
+        }
         
         console.log(`Cliente ${telefono} confirmó compra: $${total}`);
       } else if (esConfirmacionExplicita && itemsEnCarrito.length > 0) {
@@ -1386,7 +1419,21 @@ app.post('/webhook', async (req, res) => {
         await enviarNotificacionPedido(telefono, itemsEnCarrito, history);
         
         const mensajeConfirmado2 = await formatearCarrito(from);
-        response = `📦 ¡Pedido confirmado!\n\n${mensajeConfirmado2.mensaje}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉`;
+        if (mensajeConfirmado2 && mensajeConfirmado2.mensaje) {
+          response = `📦 ¡Pedido confirmado!\n\n${mensajeConfirmado2.mensaje}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉`;
+        } else {
+          let productosTxt = '';
+          let totalConfirmado = 0;
+          itemsEnCarrito.forEach((item, i) => {
+            const cant = item.cantidad || 1;
+            const precio = parseInt(item.precio.replace(/[^0-9]/g, '')) || 0;
+            productosTxt += `${i + 1}. ${item.producto} - ${item.precio}`;
+            if (cant > 1) productosTxt += ` (${cant} unidades)`;
+            productosTxt += '\n';
+            totalConfirmado += precio * cant;
+          });
+          response = `📦 ¡Pedido confirmado!\n\n${productosTxt}💰 Total: $${totalConfirmado.toLocaleString()}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉`;
+        }
         
         console.log(`Cliente ${telefono} confirmó compra explícita: $${total}`);
       } else if (esConfirmacionSimple) {
