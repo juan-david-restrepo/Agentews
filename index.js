@@ -1108,7 +1108,7 @@ app.get('/webhook', (req, res) => {
 app.get('/health', async (req, res) => {
   let activeUsers = 0;
   try {
-    const [rows] = await db.pool.execute('SELECT COUNT(*) as count FROM usuarios');
+    const [rows] = await db.pool.query('SELECT COUNT(*) as count FROM usuarios');
     activeUsers = rows[0].count;
   } catch (e) {
     activeUsers = 0;

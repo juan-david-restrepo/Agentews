@@ -15,30 +15,30 @@ const pool = mysql.createPool({
 async function getOrCreateUsuario(telefono) {
   const telefonoLimpio = telefono.replace('whatsapp:', '');
   
-  const [usuarios] = await pool.execute(
+  const [usuarios] = await pool.query(
     'SELECT * FROM usuarios WHERE telefono = ?',
     [telefonoLimpio]
   );
 
   if (usuarios.length > 0) {
-    await pool.execute(
+    await pool.query(
       'UPDATE usuarios SET last_interaction = NOW() WHERE id = ?',
       [usuarios[0].id]
     );
     return usuarios[0];
   }
 
-  const [result] = await pool.execute(
+  const [result] = await pool.query(
     'INSERT INTO usuarios (telefono, created_at, last_interaction) VALUES (?, NOW(), NOW())',
     [telefonoLimpio]
   );
 
-  const [nuevoUsuario] = await pool.execute(
+  const [nuevoUsuario] = await pool.query(
     'SELECT * FROM usuarios WHERE id = ?',
     [result.insertId]
   );
 
-  await pool.execute(
+  await pool.query(
     'INSERT INTO estado_usuario (usuario_id) VALUES (?)',
     [result.insertId]
   );
@@ -49,7 +49,7 @@ async function getOrCreateUsuario(telefono) {
 async function getHistorial(telefono, limite = 12) {
   const telefonoLimpio = telefono.replace('whatsapp:', '');
   
-  const [usuarios] = await pool.execute(
+  const [usuarios] = await pool.query(
     'SELECT id FROM usuarios WHERE telefono = ?',
     [telefonoLimpio]
   );
@@ -60,7 +60,7 @@ async function getHistorial(telefono, limite = 12) {
 
   const usuarioId = usuarios[0].id;
 
-  const [mensajes] = await pool.execute(
+  const [mensajes] = await pool.query(
     `SELECT role, contenido FROM conversaciones 
      WHERE usuario_id = ? 
      ORDER BY created_at DESC LIMIT ?`,
@@ -76,19 +76,19 @@ async function getHistorial(telefono, limite = 12) {
 async function addMensaje(telefono, role, contenido) {
   const telefonoLimpio = telefono.replace('whatsapp:', '');
   
-  const [usuarios] = await pool.execute(
+  const [usuarios] = await pool.query(
     'SELECT id FROM usuarios WHERE telefono = ?',
     [telefonoLimpio]
   );
 
   if (usuarios.length === 0) {
     const usuario = await getOrCreateUsuario(telefono);
-    await pool.execute(
+    await pool.query(
       'INSERT INTO conversaciones (usuario_id, role, contenido, created_at) VALUES (?, ?, ?, NOW())',
       [usuario.id, role, contenido]
     );
   } else {
-    await pool.execute(
+    await pool.query(
       'INSERT INTO conversaciones (usuario_id, role, contenido, created_at) VALUES (?, ?, ?, NOW())',
       [usuarios[0].id, role, contenido]
     );
@@ -98,7 +98,7 @@ async function addMensaje(telefono, role, contenido) {
 async function getEstado(telefono) {
   const telefonoLimpio = telefono.replace('whatsapp:', '');
   
-  const [usuarios] = await pool.execute(
+  const [usuarios] = await pool.query(
     'SELECT id FROM usuarios WHERE telefono = ?',
     [telefonoLimpio]
   );
@@ -113,7 +113,7 @@ async function getEstado(telefono) {
     };
   }
 
-  const [estados] = await pool.execute(
+  const [estados] = await pool.query(
     'SELECT * FROM estado_usuario WHERE usuario_id = ?',
     [usuarios[0].id]
   );
@@ -141,7 +141,7 @@ async function getEstado(telefono) {
 async function updateEstado(telefono, datos) {
   const telefonoLimpio = telefono.replace('whatsapp:', '');
   
-  const [usuarios] = await pool.execute(
+  const [usuarios] = await pool.query(
     'SELECT id FROM usuarios WHERE telefono = ?',
     [telefonoLimpio]
   );
@@ -184,7 +184,7 @@ async function updateEstado(telefono, datos) {
 
   valores.push(usuarioId);
 
-  await pool.execute(
+  await pool.query(
     `UPDATE estado_usuario SET ${campos.join(', ')} WHERE usuario_id = ?`,
     valores
   );
