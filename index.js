@@ -135,6 +135,22 @@ function buscarProductosRelacionados(categoria, limite = 3) {
   return productos.slice(0, limite);
 }
 
+async function agregarAlCarritoDB(from, producto, precio, cantidad = 1) {
+  const items = await db.verCarrito(from);
+  
+  if (items.length >= MAX_ITEMS_CARRITO) {
+    return { success: false, mensaje: `El carrito tiene máximo ${MAX_ITEMS_CARRITO} productos. Confirma tu compra o elimina algo.` };
+  }
+  
+  const yaExiste = items.find(item => item.producto === producto);
+  if (yaExiste) {
+    return { success: false, mensaje: "Este producto ya está en el carrito. ¿Quieres confirmar la compra?" };
+  }
+  
+  await db.agregarAlCarrito(from, producto, precio, cantidad);
+  return { success: true, mensaje: null };
+}
+
 async function verCarritoDB(from) {
   return await db.verCarrito(from);
 }
@@ -147,18 +163,24 @@ async function formatearCarrito(from) {
   const items = await db.verCarrito(from);
   if (!items || items.length === 0) return null;
   
-  let mensaje = "📦 Tu carrito:\n\n";
+  let mensaje = "🛒 Tu carrito:\n\n";
   let total = 0;
   
   items.forEach((item, index) => {
-    mensaje += `${index + 1}. ${item.producto}: ${item.precio}\n`;
-    const precioNum = item.precio.replace(/[^0-9]/g, '');
-    total += parseInt(precioNum) || 0;
+    const cantidad = item.cantidad || 1;
+    const precioUnitario = parseInt(item.precio.replace(/[^0-9]/g, '')) || 0;
+    const precioTotal = precioUnitario * cantidad;
+    mensaje += `${index + 1}. ${item.producto} - ${item.precio}`;
+    if (cantidad > 1) {
+      mensaje += ` (${cantidad} unidades)`;
+    }
+    mensaje += `\n`;
+    total += precioTotal;
   });
   
-  mensaje += `\n💰 Total: $${total.toLocaleString()}`;
+  mensaje += `\n─────────────────\n💰 Total: $${total.toLocaleString()}`;
   
-  return { mensaje, total };
+  return { mensaje, total, items };
 }
 
 function buscarProductoEnHistorial(history, mensaje) {
@@ -295,6 +317,8 @@ const TRIGGERS_COMPRA = [
   'dámelo', 'me lo llevo',
   'lo tomo', 'me quedo con'
 ];
+
+const MAX_ITEMS_CARRITO = 10;
 
 function detectarAsesor(mensaje) {
   const msg = mensaje.toLowerCase();
@@ -470,9 +494,15 @@ async function enviarNotificacionPedido(telefono, productos, historial) {
   let total = 0;
   
   productos.forEach((item, index) => {
-    listaProductos += `${index + 1}. ${item.producto} - ${item.precio}\n`;
-    const precioNum = item.precio.replace(/[^0-9]/g, '');
-    total += parseInt(precioNum) || 0;
+    const cantidad = item.cantidad || 1;
+    const precioUnitario = parseInt(item.precio.replace(/[^0-9]/g, '')) || 0;
+    const precioTotal = precioUnitario * cantidad;
+    listaProductos += `${index + 1}. ${item.producto} - ${item.precio}`;
+    if (cantidad > 1) {
+      listaProductos += ` (${cantidad})`;
+    }
+    listaProductos += `\n`;
+    total += precioTotal;
   });
 
   const historialTexto = historial.slice(-4).map(m => {
@@ -481,21 +511,26 @@ async function enviarNotificacionPedido(telefono, productos, historial) {
     return `${rol} ${contenido}`;
   }).join('\n');
 
+  const fechaActual = new Date().toLocaleString('es-CO', { 
+    timeZone: 'America/Bogota',
+    dateStyle: 'full',
+    timeStyle: 'short'
+  });
+
   const texto = `
-📦 <b> NUEVO PEDIDO - DeCasa</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 <b>NUEVO PEDIDO - DeCasa</b>
+━━━━━━━━━━━━━━━━━━━━━━━━
 📱 <b>Cliente:</b> ${telefono}
-🕐 <b>Hora:</b> ${new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })}
-━━━━━━━━━━━━━━━━━━━━━━━━━
+📅 <b>Fecha:</b> ${fechaActual}
+━━━━━━━━━━━━━━━━━━━━━━━━
 
 🛒 <b>Productos:</b>
-${listaProductos}
-💰 <b>Total:</b> $${total.toLocaleString()}
-━━━━━━━━━━━━━━━━━━━━━━━━━
+${listaProductos}💰 <b>Total:</b> $${total.toLocaleString()}
+━━━━━━━━━━━━━━━━━━━━━━━━
 
 📋 <b>Conversación:</b>
 ${historialTexto}
-━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━
 
 💡 <a href="wa.me/${telefono.replace(/\D/g,'')}">Responder por WhatsApp</a>
 `;
@@ -595,6 +630,37 @@ function detectarMasBarato(mensaje) {
          msg.includes('menor precio') || msg.includes('menor costo');
 }
 
+function detectarVerCarrito(mensaje) {
+  const msg = mensaje.toLowerCase();
+  const patrones = [
+    /ver.*carrito/i,
+    /mi carrito/i,
+    /carrito/i,
+    /que tengo/i,
+    /qué tengo/i,
+    /qué hay/i,
+    /que hay/i,
+    /ver lo que tengo/i,
+    /mostrar carrito/i,
+    /dame el carrito/i,
+    /ver mis productos/i
+  ];
+  return patrones.some(p => p.test(msg));
+}
+
+function detectarLimpiarCarrito(mensaje) {
+  const msg = mensaje.toLowerCase();
+  const patrones = [
+    /borrar.*carrito/i,
+    /vaciar.*carrito/i,
+    /eliminar.*todo/i,
+    /empezar.*de nuevo/i,
+    /limpiar.*carrito/i,
+    /cancelar.*pedido/i
+  ];
+  return patrones.some(p => p.test(msg));
+}
+
 function detectarSolicitudCatalogo(mensaje) {
   const patrones = [
     /\bcat[áa]logos?\b/i,
@@ -665,6 +731,24 @@ function detectarCantidad(mensaje) {
   if (/\b(?:1|una?)\b/i.test(mensaje)) return 1;
   
   return null;
+}
+
+function detectarIntentionAddCarrito(mensaje) {
+  const msg = mensaje.toLowerCase();
+  const patrones = [
+    /me\s+gustaria\s+comprar/i,
+    /quiero\s+comprar/i,
+    /quiero\s+la\s+/i,
+    /Quiero\s+el\s+/i,
+    /me\s+llevo/i,
+    /dame\s+el\s+/i,
+    /dame\s+la\s+/i,
+    /necesito\s+el\s+/i,
+    /necesito\s+la\s+/i,
+    /\bcomprar\b.*\b(silla|base|cama|mesa|sofa)/i,
+    /\b(silla|base|cama|mesa|sofa)\b.*\bcomprar\b/i
+  ];
+  return patrones.some(p => p.test(msg));
 }
 
 function buscarProductosPorCategoria(mensaje) {
@@ -1219,93 +1303,104 @@ app.post('/webhook', async (req, res) => {
           }
         }
       }
+    } else if (detectarVerCarrito(incomingMsg)) {
+      const carritoData = await formatearCarrito(from);
+      if (carritoData && carritoData.items.length > 0) {
+        response = `${carritoData.mensaje}\n\n¿Confirmas la compra? Responde "si" o "confirmo" para proceder 😊`;
+      } else {
+        response = "Tu carrito está vacío. ¿Qué producto te gustaría comprar? 😊";
+      }
+    } else if (detectarLimpiarCarrito(incomingMsg)) {
+      await db.limpiarCarrito(from);
+      await db.clearProductoPendiente(from);
+      response = "Carrito vaciado. ¿Qué te gustaría comprar? 😊";
     } else if (!(await db.estaTransferida(from))) {
       const pendiente = await db.getProductoPendiente(from);
+      const itemsEnCarrito = await db.verCarrito(from);
       
-      const esConfirmacionExplicita = /si lo compro|confirmo|confirmar|me lo llevo ya|comprar ahora|pedido confirmado|ordenar ya/i.test(incomingMsg);
-      const esConfirmacionSimple = /si|sí|ok|perfecto|yes|si claro|así|asiprocede|está bien/i.test(incomingMsg);
+      const esConfirmacionExplicita = /si lo compro|confirmo compra|este me lo llevo|confirmar|me lo llevo ya|comprar ahora|pedido confirmado|ordenar ya|confirmar.*pedido/i.test(incomingMsg);
+      const esConfirmacionSimple = /^si$|^sí$|^ok$|^yes$|^si claro$|^así$|^asiprocede$|^confirmo$/i.test(incomingMsg.trim());
       
-      let intencionClasificada = null;
-      
-      if (pendiente && esConfirmacionSimple) {
-        try {
-          intencionClasificada = await clasificarIntencion(incomingMsg);
-          console.log('Clasificación:', JSON.stringify(intencionClasificada));
-        } catch (e) {
-          console.log('Error classify:', e.message);
-        }
-      }
-      
-if (pendiente && (esConfirmacionExplicita || intencionClasificada?.intencion === 'CONFIRMAR_COMPRA')) {
-        const cantidad = detectarCantidad(incomingMsg) || 1;
+      if (esConfirmacionSimple && itemsEnCarrito.length > 0) {
+        const telefono = from.replace('whatsapp:', '');
+        const total = itemsEnCarrito.reduce((acc, item) => {
+          const precioUnitario = parseInt(item.precio.replace(/[^0-9]/g, '')) || 0;
+          const cantidad = item.cantidad || 1;
+          return acc + (precioUnitario * cantidad);
+        }, 0);
         
-        if (cantidad > 1) {
-          const telefono = from.replace('whatsapp:', '');
-          const itemsConCantidad = [{
-            producto: `(${cantidad} unidades) ${pendiente.producto}`,
-            precio: pendiente.precio
-          }];
-          
-          await db.guardarPedido(telefono, pendiente.producto, pendiente.precio, cantidad);
-          await db.limpiarConversaciones(from);
-          await db.clearProductoPendiente(from);
-          await db.setCategoriaActual(from, null);
-          
-          await enviarNotificacionPedido(telefono, itemsConCantidad, history);
-          
-          response = `✅ Tu solicitud de compra ha sido recibida:\n\n📦 ${cantidad} unidades de ${pendiente.producto}\n💰 Precio unitario: ${pendiente.precio}\n\nUn asesor te contactará pronto para confirmar la compra y coordinar entrega y pago. 😊`;
-          
-          console.log(`Cliente ${telefono} solicitó ${cantidad} unidades: ${pendiente.producto}`);
-        } else {
-          const itemsCarrito = await db.verCarrito(from);
-          
-          for (const item of itemsCarrito) {
-            await db.guardarPedido(from, item.producto, item.precio, 1);
-          }
-          
-          const telefono = from.replace('whatsapp:', '');
-          
-          await db.limpiarConversaciones(from);
-          await db.clearProductoPendiente(from);
-          await db.setCategoriaActual(from, null);
-          await db.limpiarCarrito(from);
-          
-          await enviarNotificacionPedido(telefono, itemsCarrito, history);
-          
-          let mensaje = "📦 Tu pedido:\n\n";
-          let total = 0;
-          for (const item of itemsCarrito) {
-            mensaje += `• ${item.producto}: ${item.precio}\n`;
-            const precioNum = item.precio.replace(/[^0-9]/g, '');
-            total += parseInt(precioNum) || 0;
-          }
-          mensaje += `\n💰 Total: $${total.toLocaleString()}`;
-          
-          response = `✅ Tu pedido ha sido confirmado:\n\n${mensaje}\n\n¡Gracias por tu compra!\n\nUn asesor te contactará pronto para coordinar entrega y pago. 😊`;
-          
-          console.log(`Cliente ${telefono} confirmó pedido: $${total}`);
+        for (const item of itemsEnCarrito) {
+          await db.guardarPedido(telefono, item.producto, item.precio, item.cantidad || 1);
         }
-      } else if (pendiente && intencionClasificada?.intencion === 'CONSULTA') {
-        const info = buscarInfoProducto(pendiente.producto);
-        if (info) {
-          response = `${info.nombre}\n📏 Medidas: ${info.medidas}\n🪵 Material: ${info.material}\n💰 Precio: ${info.precio}\n\nEsta pieza está hecha en ${info.material.split(',')[0].toLowerCase()}, muy resistente y elegante. ¿Te gustaría más información o coordinar una visita? 😊`;
+        
+        await db.limpiarConversaciones(from);
+        await db.clearProductoPendiente(from);
+        await db.setCategoriaActual(from, null);
+        await db.limpiarCarrito(from);
+        
+        await enviarNotificacionPedido(telefono, itemsEnCarrito, history);
+        
+        const mensajeConfirmado = await formatearCarrito(from);
+        response = `📦 ¡Pedido confirmado!\n\n${mensajeConfirmado.mensaje}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉`;
+        
+        console.log(`Cliente ${telefono} confirmó compra: $${total}`);
+      } else if (esConfirmacionExplicita && itemsEnCarrito.length > 0) {
+        const telefono = from.replace('whatsapp:', '');
+        const total = itemsEnCarrito.reduce((acc, item) => {
+          const precioUnitario = parseInt(item.precio.replace(/[^0-9]/g, '')) || 0;
+          const cantidad = item.cantidad || 1;
+          return acc + (precioUnitario * cantidad);
+        }, 0);
+        
+        for (const item of itemsEnCarrito) {
+          await db.guardarPedido(telefono, item.producto, item.precio, item.cantidad || 1);
+        }
+        
+        await db.limpiarConversaciones(from);
+        await db.clearProductoPendiente(from);
+        await db.setCategoriaActual(from, null);
+        await db.limpiarCarrito(from);
+        
+        await enviarNotificacionPedido(telefono, itemsEnCarrito, history);
+        
+        const mensajeConfirmado2 = await formatearCarrito(from);
+        response = `📦 ¡Pedido confirmado!\n\n${mensajeConfirmado2.mensaje}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉`;
+        
+        console.log(`Cliente ${telefono} confirmó compra explícita: $${total}`);
+      } else if (esConfirmacionSimple) {
+        const carritoData = await formatearCarrito(from);
+        if (carritoData && carritoData.items.length > 0) {
+          response = `${carritoData.mensaje}\n\n¿Confirmas la compra? Responde "si" o "confirmo" para proceder 😊`;
+        } else if (pendiente) {
+          const cantidad = detectarCantidad(incomingMsg) || 1;
+          await agregarAlCarritoDB(from, pendiente.producto, pendiente.precio, cantidad);
+          response = `${pendiente.producto} añadido al carrito (${cantidad} unidad${cantidad > 1 ? 'es' : ''}).\n\nPuedes seguir viendo productos o confirmar tu compra cuando quieras.\n\n¿Quieres ver el carrito? 😊`;
         } else {
-          response = SALUDO_INICIAL;
+          response = "No hay productos en el carrito. ¿Qué te gustaría comprar? 😊";
         }
       } else {
-        const productoDetectado = buscarProductoPorNombre(incomingMsg) || buscarProductoEnHistorial(history, incomingMsg);
-        if (productoDetectado && detectarCompra(incomingMsg)) {
+        const productoDetectado = buscarProductoPorNombre(incomingMsg);
+        const cantidadDetectada = detectarCantidad(incomingMsg);
+        
+        if (productoDetectado && (detectarCompra(incomingMsg) || detectarIntentionAddCarrito(incomingMsg) || incomingMsg.toLowerCase().includes('comprar'))) {
           const cat = buscarProductosPorCategoria(incomingMsg);
           if (cat.categoria) {
             await db.setCategoriaActual(from, cat.categoria);
           }
-          await db.guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
-          const esBaseComedor = /BASE/i.test(productoDetectado.nombre);
-          if (esBaseComedor) {
-            response = `Producto: ${productoDetectado.nombre}\nValor: ${productoDetectado.precio}\n\n¿Confirmas este pedido? Responde "si" para confirmar 😊\
-\n\nPD: ¿Te gustaría ver las sillas que combinan con esta base? 😊`;
+          
+          const cantidad = cantidadDetectada || 1;
+          const result = await agregarAlCarritoDB(from, productoDetectado.nombre, productoDetectado.precio, cantidad);
+          
+          if (result.success) {
+            const itemsCarrito = await db.verCarrito(from);
+            if (itemsCarrito.length === 1) {
+              response = `${productoDetectado.nombre} añadido al carrito (${cantidad} unidad${cantidad > 1 ? 'es' : ''}) por ${productoDetectado.precio}.\n\n¿Quieres ver más productos o confirmar tu compra? 😊`;
+            } else {
+              const carritoActual = await formatearCarrito(from);
+              response = `${productoDetectado.nombre} añadido.\n\n${carritoActual.mensaje}\n\n¿Confirmas la compra? Responde "si" o "confirmo" para proceder 😊`;
+            }
           } else {
-            response = `Producto: ${productoDetectado.nombre}\nValor: ${productoDetectado.precio}\n\n¿Confirmas este pedido? Responde "si" para confirmar 😊`;
+            response = result.mensaje;
           }
         } else if (detectarCompra(incomingMsg)) {
           response = "Para hacer un pedido, dime qué producto te interesa! 😊";

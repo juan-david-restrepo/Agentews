@@ -203,16 +203,17 @@ async function updateEstado(telefono, datos) {
   );
 }
 
-async function agregarAlCarrito(telefono, producto, precio) {
+async function agregarAlCarrito(telefono, producto, precio, cantidad = 1) {
   const estado = await getEstado(telefono);
   const carrito = estado.carrito || [];
   
-  const yaExiste = carrito.some(item => item.producto === producto);
-  if (yaExiste) {
-    return false;
+  const itemExistente = carrito.find(item => item.producto === producto);
+  if (itemExistente) {
+    itemExistente.cantidad = (itemExistente.cantidad || 1) + cantidad;
+  } else {
+    carrito.push({ producto, precio, cantidad });
   }
   
-  carrito.push({ producto, precio });
   await updateEstado(telefono, { carrito });
   return true;
 }
