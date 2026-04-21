@@ -12,20 +12,19 @@ app.use(express.json());
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const MODEL_NAME = 'gemini-2.5-flash-lite';
 
-const SALUDO_INICIAL = `Hola! 👋 Soy Elena, tu asesora de DeCasa. Somos especialistas en muebles de alta calidad en madera Flor Morado, con mas de 206 productos para el hogar. 
+const SALUDO_INICIAL = `Hola! 👋 Soy Elena, tu asesora de DeCasa.
 
- Nuestras categorias:
-• Sillas de comedor
-• Bases de comedor
-• Camas
-• Mesas de centro, noche y TV
-• Mesas auxiliares
-• Sillas auxiliares y de barra
-• Sofás
+🏠 Especialistas en muebles de madera Flor Morado (más de 200 productos)
+📍 Nuestras tiendas en Armenia, Quindío:
+   - Av. Bolívar # 16 N 26
+   - Km 2 vía El Edén
+   - Km 1 vía Jardines
 
-Horario de atencion: Lunes a viernes de 8am a 5pm.
+📦 Categorías: Sillas, Bases, Camas, Mesas, Sofás
+🕐 Horario: L-V 8am-5pm
 
-Qué deseas? 😊`;
+💬 Estoy para ayudarte con información o comprar muebles. 
+   ¿Qué necesitas? 😊`;
 
 const generarInventarioTexto = () => {
   let texto = '\n\n=== INVENTARIO DE PRODUCTOS ===\n';
@@ -48,7 +47,14 @@ PERFIL DE VENDEDORA:
 - Empresa: DeCasa
 - Especialidad: Muebles de madera Flor Morado de alta calidad
 - Horario: Lunes a viernes de 8am a 5pm
-- Disponieble en la ciudad de Armenia 
+- Disponible en la ciudad de Armenia, Quindío
+
+DIRECCIONES DE NUESTRAS TIENDAS:
+- Avenida Bolívar # 16 N 26, Armenia, Quindío
+- Km 2 vía El Edén, Armenia, Quindío
+- Km 1 vía Jardines, Armenia, Quindío
+
+Cuando el cliente pregunte por ubicación, dirección o dónde están, proporciona las 3 direcciones disponibles y pregunta si desea agendar una visita.
 
 INSTRUCCIONES IMPORTANTES - PRIORIDAD ABSOLUTA:
 1. NUNCA inventest información sobre productos, precios o disponibilidad. Si no tienes la información EXACTA del inventario, DEBES decir: "No tengo esa información específica disponible."
@@ -696,6 +702,86 @@ function detectarLimpiarCarrito(mensaje) {
   return patrones.some(p => p.test(msg));
 }
 
+function esMensajeRelevante(mensaje) {
+  const msg = mensaje.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  const sinonimos = {
+    productos: /silla[ s]?|mesa[ s]?|cama[ s]?|sofa[ s]?|sofas?|base[ s]?|cajon[eo][ s]?|colchon[es]?|escritorio[ s]?|mueble[ s]?|sillon|puff| banqueta/,
+    compra: /precio|cuesta|val(?:e|er|or)|comprar|llevar|pedido|carrito|confirmar|pagar|ordenar|adquirir/,
+    materiales: /madera|flor morado|cedro|roble|laminado|tapizado|chapilla|pintado/,
+    servicio: /delivery|envio|entrega|armenia|horario|atencion|contacto|ubicacion|direccion|tienda/,
+    redes: /instagram|facebook|tiktok|youtube|redes?|pagina web|pagina oficial|social/,
+    general: /catalogo[ s]?|pdf|foto[ s]?|imagen[ s]?|producto[ s]?|ver|mostrar|coleccion/,
+    especifico: /flor morado|de casa|decasa/
+  };
+  
+  for (const [categoria, patron] of Object.entries(sinonimos)) {
+    if (patron.test(msg)) {
+      return true;
+    }
+  }
+  
+  const preguntasIntencion = /cu[áa]nto|cu[áa]l|qu[é]|d[óa]nde|c[óa]mo|cu[áa]ndo|por qu[é]/;
+  if (preguntasIntencion.test(msg)) {
+    return false;
+  }
+  
+  return msg.length < 15;
+}
+
+function generarMensajeInstagram() {
+  return "\n\n📱 Síguenos en Instagram: @muebles_decasa\n🔔 ¡Mantente al día con nuestros nuevos productos y promociones!";
+}
+
+function generarMensajeDespedida() {
+  return "\n\n📱 Síguenos en Instagram: @muebles_decasa\n🔔 ¡Mantente al día con nuestros productos y ofertas!\n\nQue tengas un lindo día! 😊";
+}
+
+function detectarCalculoTotal(mensaje) {
+  const msg = mensaje.toLowerCase();
+  const patrones = [
+    /cu[áa]nto.*(total|suma|mont[oa])/i,
+    /total.*(de|m[áa]s)/i,
+    /suma.*de/i,
+    /cu[áa]nto.*(valen|cuestan)/i,
+    /cu[áa]l.*(es )?el.*total/i
+  ];
+  return patrones.some(p => p.test(msg));
+}
+
+function calcularTotalProductos(mensaje, from) {
+  const msg = mensaje.toLowerCase();
+  const categorias = Object.values(knowledge.inventario || {});
+  const productosMencionados = [];
+  
+  for (const categoria of categorias) {
+    for (const producto of categoria.productos) {
+      const nombreLimpio = producto.nombre.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      const palabras = nombreLimpio.split(' ').filter(p => p.length > 3);
+      let coincidencias = 0;
+      for (const palabra of palabras) {
+        if (msg.includes(palabra)) {
+          coincidencias++;
+        }
+      }
+      
+      if (coincidencias >= 2 || (palabras.length === 1 && msg.includes(palabras[0]))) {
+        productosMencionados.push({
+          nombre: producto.nombre,
+          precio: producto.precio
+        });
+      }
+    }
+  }
+  
+  return productosMencionados;
+}
+
 function detectarSolicitudCatalogo(mensaje) {
   const msg = mensaje.toLowerCase();
   const patrones = [
@@ -1222,6 +1308,7 @@ app.post('/webhook', async (req, res) => {
 
   try {
     await db.getOrCreateUsuario(from);
+    await db.verificarYLimpiarInactividad(from, 20);
     
     const estaTransferidoAhora = await db.estaTransferida(from);
     const esTransferencia = detectarAsesor(incomingMsg);
@@ -1255,17 +1342,19 @@ if (debeTransferir && !(await estaTransferidaDB(from))) {
         });
         productosTxt += `\n─────────────────\n💰 Total: $${total.toLocaleString()}`;
         
+        response = `📦 Tu pedido ha sido derivado a un asesor:\n\n${productosTxt}\n\nUn asesor te contactará pronto para confirmar entrega y pago. 🎉${generarMensajeInstagram()}`;
+        
         for (const item of itemsCarrito) {
           await db.guardarPedido(telefono, item.producto, item.precio, item.cantidad || 1);
         }
         
-        await db.limpiarConversaciones(from);
-        await db.setCategoriaActual(from, null);
-        await db.limpiarCarrito(from);
+        await db.marcarPedidoConfirmado(from);
         
         await enviarNotificacionTelegram(telefono, incomingMsg, history, 'pedido');
         
-        response = `📦 Tu pedido ha sido derivado a un asesor:\n\n${productosTxt}\n\nUn asesor te contactará pronto para confirmar entrega y pago. 🎉`;
+        await db.limpiarConversaciones(from);
+        await db.setCategoriaActual(from, null);
+        await db.limpiarCarrito(from);
         
         console.log(`Cliente ${telefono} transferido con pedido: $${total}`);
       } else {
@@ -1393,6 +1482,8 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
             await db.setCategoriaActual(from, resultadoCategoria.categoria);
           }
           response = formatearProductosVenta(porCategoria);
+        } else if (!esMensajeRelevante(incomingMsg)) {
+          response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
         } else {
           await addToHistoryDB(from, 'user', incomingMsg);
           response = await callGemini({
@@ -1441,33 +1532,33 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
           return acc + (precioUnitario * cantidad);
         }, 0);
         
+        let productosTxt = '';
+        let totalConfirmado = 0;
+        itemsEnCarrito.forEach((item, i) => {
+          const cant = item.cantidad || 1;
+          const precio = parseInt(item.precio.replace(/[^0-9]/g, '')) || 0;
+          productosTxt += `${i + 1}. ${item.producto} - ${item.precio}`;
+          if (cant > 1) productosTxt += ` (${cant} unidades)`;
+          productosTxt += '\n';
+          totalConfirmado += precio * cant;
+        });
+        
+        const mensajeCarrito = `🛒 Tu pedido:\n\n${productosTxt}─────────────────\n💰 Total: $${totalConfirmado.toLocaleString()}`;
+        
+        response = `📦 ¡Pedido confirmado!\n\n${mensajeCarrito}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉${generarMensajeInstagram()}`;
+        
         for (const item of itemsEnCarrito) {
           await db.guardarPedido(telefono, item.producto, item.precio, item.cantidad || 1);
         }
+        
+        await db.marcarPedidoConfirmado(from);
+        
+        await enviarNotificacionPedido(telefono, itemsEnCarrito, history);
         
         await db.limpiarConversaciones(from);
         await db.clearProductoPendiente(from);
         await db.setCategoriaActual(from, null);
         await db.limpiarCarrito(from);
-        
-        await enviarNotificacionPedido(telefono, itemsEnCarrito, history);
-        
-        const mensajeConfirmado = await formatearCarrito(from);
-        if (mensajeConfirmado && mensajeConfirmado.mensaje) {
-          response = `📦 ¡Pedido confirmado!\n\n${mensajeConfirmado.mensaje}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉`;
-        } else {
-          let productosTxt = '';
-          let totalConfirmado = 0;
-          itemsEnCarrito.forEach((item, i) => {
-            const cant = item.cantidad || 1;
-            const precio = parseInt(item.precio.replace(/[^0-9]/g, '')) || 0;
-            productosTxt += `${i + 1}. ${item.producto} - ${item.precio}`;
-            if (cant > 1) productosTxt += ` (${cant} unidades)`;
-            productosTxt += '\n';
-            totalConfirmado += precio * cant;
-          });
-          response = `📦 ¡Pedido confirmado!\n\n${productosTxt}💰 Total: $${totalConfirmado.toLocaleString()}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉`;
-        }
         
         console.log(`Cliente ${telefono} confirmó compra: $${total}`);
       } else if (esConfirmacionExplicita && itemsEnCarrito.length > 0) {
@@ -1478,38 +1569,38 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
           return acc + (precioUnitario * cantidad);
         }, 0);
         
+        let productosTxt = '';
+        let totalConfirmado = 0;
+        itemsEnCarrito.forEach((item, i) => {
+          const cant = item.cantidad || 1;
+          const precio = parseInt(item.precio.replace(/[^0-9]/g, '')) || 0;
+          productosTxt += `${i + 1}. ${item.producto} - ${item.precio}`;
+          if (cant > 1) productosTxt += ` (${cant} unidades)`;
+          productosTxt += '\n';
+          totalConfirmado += precio * cant;
+        });
+        
+        const mensajeCarrito = `🛒 Tu pedido:\n\n${productosTxt}─────────────────\n💰 Total: $${totalConfirmado.toLocaleString()}`;
+        
+        response = `📦 ¡Pedido confirmado!\n\n${mensajeCarrito}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉${generarMensajeInstagram()}`;
+        
         for (const item of itemsEnCarrito) {
           await db.guardarPedido(telefono, item.producto, item.precio, item.cantidad || 1);
         }
+        
+        await db.marcarPedidoConfirmado(from);
+        
+        await enviarNotificacionPedido(telefono, itemsEnCarrito, history);
         
         await db.limpiarConversaciones(from);
         await db.clearProductoPendiente(from);
         await db.setCategoriaActual(from, null);
         await db.limpiarCarrito(from);
         
-        await enviarNotificacionPedido(telefono, itemsEnCarrito, history);
-        
-        const mensajeConfirmado2 = await formatearCarrito(from);
-        if (mensajeConfirmado2 && mensajeConfirmado2.mensaje) {
-          response = `📦 ¡Pedido confirmado!\n\n${mensajeConfirmado2.mensaje}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉`;
-        } else {
-          let productosTxt = '';
-          let totalConfirmado = 0;
-          itemsEnCarrito.forEach((item, i) => {
-            const cant = item.cantidad || 1;
-            const precio = parseInt(item.precio.replace(/[^0-9]/g, '')) || 0;
-            productosTxt += `${i + 1}. ${item.producto} - ${item.precio}`;
-            if (cant > 1) productosTxt += ` (${cant} unidades)`;
-            productosTxt += '\n';
-            totalConfirmado += precio * cant;
-          });
-          response = `📦 ¡Pedido confirmado!\n\n${productosTxt}💰 Total: $${totalConfirmado.toLocaleString()}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉`;
-        }
-        
         console.log(`Cliente ${telefono} confirmó compra explícita: $${total}`);
       } else if (esConfirmacionSimple) {
         const carritoData = await formatearCarrito(from);
-        if (carritoData && carritoData.items.length > 0) {
+        if (carritoData && carritoData.mensaje) {
           response = `${carritoData.mensaje}\n\n¿Confirmas la compra? Responde "si" o "confirmo" para proceder 😊`;
         } else if (pendiente) {
           const cantidad = detectarCantidad(incomingMsg) || 1;
@@ -1559,6 +1650,8 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
           }
         } else if (detectarCompra(incomingMsg)) {
           response = "Para hacer un pedido, dime qué producto te interesa! 😊";
+        } else if (!esMensajeRelevante(incomingMsg)) {
+          response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
         } else {
           const catResult = buscarProductosPorCategoria(incomingMsg);
           if (catResult.categoria) {
@@ -1575,6 +1668,8 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
       if (history.length === 0 && !(await db.haEnviadoSaludo(from))) {
         response = SALUDO_INICIAL;
         await db.marcarSaludoEnviado(from);
+      } else if (!esMensajeRelevante(incomingMsg)) {
+        response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
       } else {
         await addToHistoryDB(from, 'user', incomingMsg);
 

@@ -147,7 +147,8 @@ async function getEstado(telefono) {
     producto_pendiente: parseJSONField(estado.producto_pendiente),
     carrito: parseJSONField(estado.carrito),
     transferido: !!estado.transferido,
-    greeting_sent: !!estado.greeting_sent
+    greeting_sent: !!estado.greeting_sent,
+    tiene_pedido: !!estado.tiene_pedido
   };
 }
 
@@ -191,6 +192,11 @@ async function updateEstado(telefono, datos) {
   if (datos.greeting_sent !== undefined) {
     campos.push('greeting_sent = ?');
     valores.push(datos.greeting_sent);
+  }
+
+  if (datos.tiene_pedido !== undefined) {
+    campos.push('tiene_pedido = ?');
+    valores.push(datos.tiene_pedido);
   }
 
   if (campos.length === 0) return;
@@ -321,6 +327,68 @@ async function limpiarConversaciones(telefono) {
   return true;
 }
 
+async function tienePedido(telefono) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+  
+  const [usuarios] = await pool.query(
+    'SELECT id FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return false;
+  
+  const [estados] = await pool.query(
+    'SELECT tiene_pedido FROM estado_usuario WHERE usuario_id = ?',
+    [usuarios[0].id]
+  );
+
+  if (estados.length === 0) return false;
+  return !!estados[0].tiene_pedido;
+}
+
+async function marcarPedidoConfirmado(telefono) {
+  await updateEstado(telefono, { tiene_pedido: true });
+}
+
+async function resetearEstadoSinPedido(telefono) {
+  await updateEstado(telefono, {
+    categoria_actual: null,
+    producto_pendiente: null,
+    carrito: [],
+    greeting_sent: false,
+    tiene_pedido: false
+  });
+}
+
+async function verificarYLimpiarInactividad(telefono, timeoutMinutos = 20) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+  
+  const [usuarios] = await pool.query(
+    'SELECT id, last_interaction FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return;
+  
+  const usuario = usuarios[0];
+  const ultimaInteraccion = new Date(usuario.last_interaction);
+  const ahora = new Date();
+  
+  const diffMinutos = (ahora - ultimaInteraccion) / (1000 * 60);
+  
+  if (diffMinutos >= timeoutMinutos) {
+    const tienePedidoConfirmado = await tienePedido(telefono);
+    
+    if (!tienePedidoConfirmado) {
+      await limpiarConversaciones(telefono);
+      await resetearEstadoSinPedido(telefono);
+      console.log(`🧹 Limpiando conversaciones inactivas para ${telefonoLimpio} (${diffMinutos.toFixed(1)} min sin compra)`);
+    } else {
+      console.log(`⏭️ Usuario ${telefonoLimpio} inactivo ${diffMinutos.toFixed(1)} min pero tiene pedidos - no se limpia`);
+    }
+  }
+}
+
 module.exports = {
   pool,
   getOrCreateUsuario,
@@ -342,5 +410,9 @@ module.exports = {
   setCategoriaActual,
   guardarPedido,
   getPedidos,
-  limpiarConversaciones
+  limpiarConversaciones,
+  tienePedido,
+  marcarPedidoConfirmado,
+  resetearEstadoSinPedido,
+  verificarYLimpiarInactividad
 };

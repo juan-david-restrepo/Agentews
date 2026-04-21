@@ -51,9 +51,15 @@ async function initDB() {
         carrito JSON,
         transferido BOOLEAN DEFAULT FALSE,
         greeting_sent BOOLEAN DEFAULT FALSE,
+        tiene_pedido BOOLEAN DEFAULT FALSE,
         FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
       )
     `);
+    
+    await connection.query(`
+      ALTER TABLE estado_usuario 
+      ADD COLUMN IF NOT EXISTS tiene_pedido BOOLEAN DEFAULT FALSE
+    `).catch(() => {});
     console.log('✅ Tabla estado_usuario creada o verificada');
 
     await connection.query(`
