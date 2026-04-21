@@ -1803,12 +1803,14 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
       
       if (!porCategoria.categoria) {
         const categoriaGuardada = await db.getCategoriaActual(from);
-        if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
+        if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
+          catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
+        } else if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
           porCategoria = { categoria: categoriaGuardada, productos: knowledge.inventario[categoriaGuardada].productos };
         }
       }
       
-      if (!porCategoria.categoria) {
+      if (!porCategoria.categoria && !catalogo) {
         const catalogoBuscado = buscarCatalogo(incomingMsg);
         if (catalogoBuscado && catalogoBuscado.url && catalogoBuscado.categoria) {
           catalogo = catalogoBuscado;
