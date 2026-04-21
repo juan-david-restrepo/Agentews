@@ -33,30 +33,37 @@ async function getOrCreateUsuario(telefono) {
     [telefonoLimpio]
   );
 
+  let usuario;
   if (usuarios.length > 0) {
     await pool.query(
       'UPDATE usuarios SET last_interaction = NOW() WHERE id = ?',
       [usuarios[0].id]
     );
-    return usuarios[0];
+    usuario = usuarios[0];
+  } else {
+    const [result] = await pool.query(
+      'INSERT INTO usuarios (telefono, created_at, last_interaction) VALUES (?, NOW(), NOW())',
+      [telefonoLimpio]
+    );
+    const [nuevoUsuario] = await pool.query(
+      'SELECT * FROM usuarios WHERE id = ?',
+      [result.insertId]
+    );
+    usuario = nuevoUsuario[0];
   }
 
-  const [result] = await pool.query(
-    'INSERT INTO usuarios (telefono, created_at, last_interaction) VALUES (?, NOW(), NOW())',
-    [telefonoLimpio]
+  const [estados] = await pool.query(
+    'SELECT 1 FROM estado_usuario WHERE usuario_id = ?',
+    [usuario.id]
   );
+  if (estados.length === 0) {
+    await pool.query(
+      'INSERT INTO estado_usuario (usuario_id) VALUES (?)',
+      [usuario.id]
+    );
+  }
 
-  const [nuevoUsuario] = await pool.query(
-    'SELECT * FROM usuarios WHERE id = ?',
-    [result.insertId]
-  );
-
-  await pool.query(
-    'INSERT INTO estado_usuario (usuario_id) VALUES (?)',
-    [result.insertId]
-  );
-
-  return nuevoUsuario[0];
+  return usuario;
 }
 
 async function getHistorial(telefono, limite = 12) {

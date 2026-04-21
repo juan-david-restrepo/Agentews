@@ -2051,12 +2051,27 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
           }
         }
         
+        const esSoloPronombre = /^si$|^sí$|^si$|^lo$|^la$|^les$|^este$|^esta$|^estos$|^estas$|^comprarlo$|^comprarla$|^quiero$|^me\s+gustaría$|^me\s+gustaria$/i.test(incomingMsg.trim());
+        const quiereAgregar = detectarCompra(incomingMsg) || detectarIntentionAddCarrito(incomingMsg) || incomingMsg.toLowerCase().includes('comprar') || incomingMsg.toLowerCase().includes('agregar') || incomingMsg.toLowerCase().includes('agregarle') || incomingMsg.toLowerCase().includes('lo') || incomingMsg.toLowerCase().includes('la');
+        
+        if (!productoDetectado && quiereAgregar) {
+          const ultimoProd = await db.getUltimoProducto(from);
+          if (ultimoProd && ultimoProd.nombre) {
+            productoDetectado = {
+              nombre: ultimoProd.nombre,
+              precio: ultimoProd.precio,
+              categoria: ultimoProd.categoria
+            };
+          }
+        }
+        
         if (esInfoPura && productoDetectado) {
           await db.setUltimoProducto(from, {
             nombre: productoDetectado.nombre,
             precio: productoDetectado.precio,
             categoria: productoDetectado.categoria
           });
+          await db.guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
           const argumentos = [
             "Madera Flor Morado: 3x más resistente que otras maderas",
             "Fabricación propia en Armenia: Control de calidad directo",
