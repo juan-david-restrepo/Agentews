@@ -1850,6 +1850,8 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
           material: productoInfo.material
         });
         
+        await db.guardarProductoPendiente(from, productoInfo.nombre, productoInfo.precio);
+        
         const es_buscar_info = /medidas|material|de qué|características|es de|es de qué|que trae|viene/i.test(incomingMsg);
         if (es_buscar_info) {
           response = `${productoInfo.nombre}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n💰 Precio: ${productoInfo.precio}\n\nEsta pieza está hecha en ${productoInfo.material.split(',')[0].toLowerCase()}, lo que garantiza resistencia y durabilidad.\n\n¿Procedemos a añadirla al carrito por ${productoInfo.precio}? 😊`;
@@ -2016,7 +2018,15 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
           await agregarAlCarritoDB(from, pendiente.producto, pendiente.precio, cantidad);
           response = `${pendiente.producto} añadido al carrito (${cantidad} unidad${cantidad > 1 ? 'es' : ''}).\n\nPuedes seguir viendo productos o confirmar tu compra cuando quieras.\n\n¿Quieres ver el carrito? 😊`;
         } else {
-          response = "No hay productos en el carrito. ¿Qué te gustaría comprar? 😊";
+          const ultimoProd = await db.getUltimoProducto(from);
+          if (ultimoProd && ultimoProd.nombre) {
+            const cantidad = detectarCantidad(incomingMsg) || 1;
+            await agregarAlCarritoDB(from, ultimoProd.nombre, ultimoProd.precio, cantidad);
+            await db.clearProductoPendiente(from);
+            response = `${ultimoProd.nombre} añadido al carrito (${cantidad} unidad${cantidad > 1 ? 'es' : ''}) por ${ultimoProd.precio}.\n\nPuedes seguir viendo productos o confirmar tu compra cuando quieras.\n\n¿Quieres ver el carrito? 😊`;
+          } else {
+            response = "No hay productos en el carrito. ¿Qué te gustaría comprar? 😊";
+          }
         }
       } else {
         const esInfoPura = esPreguntaInformativa(incomingMsg);
