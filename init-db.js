@@ -56,15 +56,20 @@ async function initDB() {
       )
     `);
     
-    await connection.query(`
-      ALTER TABLE estado_usuario 
-      ADD COLUMN IF NOT EXISTS tiene_pedido BOOLEAN DEFAULT FALSE
-    `).catch(() => {});
+    const [columnas] = await connection.query('SHOW COLUMNS FROM estado_usuario');
+    const nombresColumnas = columnas.map(c => c.Field);
     
-    await connection.query(`
-      ALTER TABLE estado_usuario 
-      ADD COLUMN IF NOT EXISTS ultimo_producto JSON
-    `).catch(() => {});
+    if (!nombresColumnas.includes('tiene_pedido')) {
+      await connection.query(`
+        ALTER TABLE estado_usuario ADD COLUMN tiene_pedido BOOLEAN DEFAULT FALSE
+      `);
+    }
+    
+    if (!nombresColumnas.includes('ultimo_producto')) {
+      await connection.query(`
+        ALTER TABLE estado_usuario ADD COLUMN ultimo_producto JSON
+      `);
+    }
     console.log('✅ Tabla estado_usuario creada o verificada');
 
     await connection.query(`
