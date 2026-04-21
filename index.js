@@ -1138,7 +1138,12 @@ function detectarCantidad(mensaje) {
     /quiero\s*(\d+)/i,
     /necesito\s*(\d+)/i,
     /me\s*llevo\s*(\d+)/i,
-    /(\d+)\s*de\s*(?:es[ae]s[ae]?s?)/i
+    /(\d+)\s*de\s*(?:es[ae]s[ae]?s?)/i,
+    /^si\s*(\d+)/i,
+    /^sí\s*(\d+)/i,
+    /si\s+(\d+)\s+unidades/i,
+    /sí\s+(\d+)\s+unidades/i,
+    /(\d+)\s+unidades/i
   ];
   
   for (const patron of patrones) {
@@ -2156,13 +2161,14 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
         await db.limpiarCarrito(from);
         
         console.log(`Cliente ${telefono} confirmó compra explícita: $${total}`);
-      } else if (esConfirmacionSimple) {
+} else if (esConfirmacionSimple) {
         const carritoData = await formatearCarrito(from);
         if (carritoData && carritoData.mensaje) {
           response = `${carritoData.mensaje}\n\n¿Confirmas la compra? Responde "si" o "confirmo" para proceder 😊`;
         } else if (pendiente) {
-          const cantidad = detectarCantidad(incomingMsg) || 1;
+          const cantidad = detectarCantidad(incomingMsg) || (pendiente.cantidad || 1);
           await agregarAlCarritoDB(from, pendiente.producto, pendiente.precio, cantidad);
+          await db.clearProductoPendiente(from);
           response = `${pendiente.producto} añadido al carrito (${cantidad} unidad${cantidad > 1 ? 'es' : ''}).\n\nPuedes seguir viendo productos o confirmar tu compra cuando quieras.\n\n¿Quieres ver el carrito? 😊`;
         } else {
           const ultimoProd = await db.getUltimoProducto(from);
@@ -2170,8 +2176,8 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
             const cantidad = detectarCantidad(incomingMsg) || 1;
             await agregarAlCarritoDB(from, ultimoProd.nombre, ultimoProd.precio, cantidad);
             await db.clearProductoPendiente(from);
-            response = `${ultimoProd.nombre} añadido al carrito (${cantidad} unidad${cantidad > 1 ? 'es' : ''}) por ${ultimoProd.precio}.\n\nPuedes seguir viendo productos o confirmar tu compra cuando quieras.\n\n¿Quieres ver el carrito? 😊`;
-          } else {
+            response = `${ultimoProd.nombre} añadido al carrito (${cantidad} unidad${cantidad > 1 ? 'es' : ''}) por ${ultimoProd.precio}.\n\nPuedes seguir viendo productos o confirmar tu compra cuando quieres.\n\n¿Quieres ver el carrito? 😊`;
+} else {
             response = "No hay productos en el carrito. ¿Qué te gustaría comprar? 😊";
           }
         }
@@ -2266,8 +2272,13 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
           });
           
           if (productoInfo) {
-            await db.guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
-            response = `${productoDetectado.nombre}\n💰 Precio: ${productoDetectado.precio}\n📏 Medidas: ${productoInfo.medidas || 'No disponible'}\n🪵 Material: ${productoInfo.material || 'No disponible'}\n\n¿Confirmas agregar al carrito? Responde "sí" para confirmar 😊`;
+            const cantidadDetectada = detectarCantidad(incomingMsg);
+            await db.guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio, cantidadDetectada);
+            if (cantidadDetectada) {
+              response = `${productoDetectado.nombre}\n💰 Precio: ${productoDetectado.precio}\n📏 Medidas: ${productoInfo.medidas || 'No disponible'}\n🪵 Material: ${productoInfo.material || 'No disponible'}\n\nConfirmas ${cantidadDetectada} unidades a $${productoDetectado.precio.replace('$','').replace('.','')} cada una?\nResponde "sí" para confirmar 😊`;
+            } else {
+              response = `${productoDetectado.nombre}\n💰 Precio: ${productoDetectado.precio}\n📏 Medidas: ${productoInfo.medidas || 'No disponible'}\n🪵 Material: ${productoInfo.material || 'No disponible'}\n\n¿Confirmas agregar al carrito? Responde "sí" para confirmar 😊`;
+            }
           } else {
             const cantidad = cantidadDetectada || 1;
             const result = await agregarAlCarritoDB(from, productoDetectado.nombre, productoDetectado.precio, cantidad);

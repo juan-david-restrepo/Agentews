@@ -241,8 +241,8 @@ async function limpiarCarrito(telefono) {
   await updateEstado(telefono, { carrito: [] });
 }
 
-async function guardarProductoPendiente(telefono, producto, precio) {
-  await updateEstado(telefono, { producto_pendiente: { producto, precio } });
+async function guardarProductoPendiente(telefono, producto, precio, cantidad = null) {
+  await updateEstado(telefono, { producto_pendiente: { producto, precio, cantidad } });
 }
 
 async function getProductoPendiente(telefono) {
