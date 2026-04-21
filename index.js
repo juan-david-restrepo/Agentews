@@ -218,12 +218,12 @@ function detectarCategoriaEnMensaje(mensaje) {
     'bases': 'bases_comedores',
     'cama': 'camas',
     'camas': 'camas',
-    'silla': 'sillas_comedor',
-    'sillas': 'sillas_comedor',
+    'silla': null,
+    'sillas': null,
     'sofa': 'sofas',
     'sofas': 'sofas',
-    'mesa': 'mesas_centro',
-    'mesas': 'mesas_centro',
+    'mesa': null,
+    'mesas': null,
     'mesa noche': 'mesas_noche',
     'mesa de noche': 'mesas_noche',
     'mesa tv': 'mesas_tv',
@@ -242,6 +242,49 @@ function detectarCategoriaEnMensaje(mensaje) {
     if (msg.includes(palabra)) {
       return clave;
     }
+  }
+  return null;
+}
+
+function necesitaSubtipo(mensaje, categoria) {
+  const msg = mensaje.toLowerCase();
+  if (categoria === 'sillas_comedor' || categoria === null) {
+    if (msg.includes('comedor') || msg.includes('comida') || msg.includes('para comer')) return null;
+    if (msg.includes('auxiliar') || msg.includes('rededora') || msg.includes('para sala')) return 'sillas_auxiliares';
+    if (msg.includes('barra') || msg.includes('alto') || msg.includes('mesón') || msg.includes('meson')) return 'sillas_barra';
+    const tieneSilla = msg.includes('silla') || msg.includes('sillas');
+    if (tieneSilla && (msg === 'silla' || msg === 'sillas' || msg.includes('quiero una silla') || msg.includes('Quiero una') || msg.includes('busco una silla'))) {
+      return 'PEDIR_SUBTIPO';
+    }
+  }
+  if (categoria === 'mesas_centro' || categoria === null) {
+    if (msg.includes('centro') || msg.includes('sala')) return 'mesas_centro';
+    if (msg.includes('auxiliar')) return 'mesas_auxiliares';
+    if (msg.includes('noche')) return 'mesas_noche';
+    if (msg.includes('tv') || msg.includes('televisor') || msg.includes('televisión')) return 'mesas_tv';
+    const tieneMesa = msg.includes('mesa') || msg.includes('mesas');
+    if (tieneMesa && (msg === 'mesa' || msg === 'mesas' || msg.includes('quiero una mesa') || msg.includes('busco una mesa'))) {
+      return 'PEDIR_SUBTIPO';
+    }
+  }
+  return null;
+}
+
+function formatearPreguntaSubtipo(categoria) {
+  if (categoria === 'sillas_comedor') {
+    return `¿Qué tipo de silla buscas?
+• De comedor (para el diario)
+• Auxiliares/rededoras (para la sala)
+• De barra (para cocina)
+¿Cuál te interesa? 😊`;
+  }
+  if (categoria === 'mesas_centro') {
+    return `¿Qué tipo de mesa buscas?
+• De centro (para la sala)
+• Auxiliar
+• De noche
+• De TV
+¿Cuál te interesa? 😊`;
   }
   return null;
 }
@@ -1791,6 +1834,19 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
       }
     } else if (detectarConsultaPrecio(incomingMsg)) {
       const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
+      const subtipo = necesitaSubtipo(incomingMsg, categoriaDetectada);
+      if (subtipo === 'PEDIR_SUBTIPO') {
+        response = formatearPreguntaSubtipo(categoriaDetectada);
+      } else if (subtipo) {
+        const productosSubtipo = knowledge.inventario[subtipo]?.productos || [];
+        if (productosSubtipo.length > 0) {
+          await db.setCategoriaActual(from, subtipo);
+          response = formatearProductosVenta(productosSubtipo);
+        }
+      }
+      if (response) {
+        // Ya se manejó
+      } else {
       let producto = buscarProductoPorNombre(incomingMsg, categoriaDetectada);
       
       if (!producto) {
@@ -1814,7 +1870,24 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
           categoria: producto.categoria
         });
         response = `${producto.nombre} | ${producto.precio}. ¿Te interesa? 😊`;
+      }
+      }
+      } else if (detectarConsultaInfo(incomingMsg)) {
+      const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
+      const subtipo = necesitaSubtipo(incomingMsg, categoriaDetectada);
+      if (subtipo === 'PEDIR_SUBTIPO') {
+        response = formatearPreguntaSubtipo(categoriaDetectada);
+      } else if (subtipo) {
+        const productosSubtipo = knowledge.inventario[subtipo]?.productos || [];
+        if (productosSubtipo.length > 0) {
+          await db.setCategoriaActual(from, subtipo);
+          response = formatearProductosVenta(productosSubtipo);
+        }
+      }
+      if (response) {
+        // Ya se manejó
       } else {
+      const productoInfo = buscarInfoProducto(incomingMsg, categoriaDetectada);
         const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
         const porCategoria = resultadoCategoria.productos;
         if (porCategoria.length > 0) {
