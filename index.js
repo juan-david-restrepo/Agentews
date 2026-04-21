@@ -566,6 +566,8 @@ function detectarCompra(mensaje) {
 function detectarConsultaInfo(mensaje) {
   if (detectarAsesor(mensaje)) return false;
   if (detectarCompra(mensaje)) return false;
+  if (detectarVerCarrito(mensaje)) return false;
+  if (detectarLimpiarCarrito(mensaje)) return false;
   
   const msg = mensaje.toLowerCase();
   const patronesInfo = [
@@ -605,7 +607,40 @@ function detectarConsultaInfo(mensaje) {
     /hfabricad/i,
     /hay en/i,
     /tiene en/i,
-    /tienen en/i
+    /tienen en/i,
+    /m[áa]s informaci[óa]n/i,
+    /m[áa]s info/i,
+    /m[áa]s detalles/i,
+    /detalles de/i,
+    /informaci[óa]n del/i,
+    /informaci[óa]n de la/i,
+    /saber m[áa]s/i,
+    /saber de/i,
+    /saber sobre/i,
+    /quisiera saber/i,
+    /quiero saber/i,
+    /dime de/i,
+    /dime sobre/i,
+    /hablar de/i,
+    /hablar sobre/i,
+    /m[é]strame.*inform/i,
+    /m[é]strame.*detalles/i,
+    /ver.*detalles/i,
+    /ver.*especificac/i,
+    /caracter[íá]sticas/i,
+    /que tiene el/i,
+    /que tiene la/i,
+    /que incluye/i,
+    /me puedes/i,
+    /me podr[íá]as/i,
+    /podr[íá]as/i,
+    /\binfo\b/i,
+    /\bdetails?\b/i,
+    /\bspecs?\b/i,
+    /^el\b/i,
+    /^la\b/i,
+    /^\s*el\s+\w+/i,
+    /^\s*la\s+\w+/i
   ];
   
   for (const patron of patronesInfo) {
@@ -614,11 +649,11 @@ function detectarConsultaInfo(mensaje) {
     }
   }
   
-  const palabrasVer = ['ver', 'mostrar', 'ver fotos', 'ver imágenes', 'quisiera', 'quiero'];
+  const palabrasVer = ['ver', 'mostrar', 'ver fotos', 'ver imágenes', 'quisiera', 'quiero', 'información', 'info', 'detalles', 'saber', 'conocer'];
   const tienePalabraVer = palabrasVer.some(p => msg.includes(p));
   const tieneCategoria = msg.includes('silla') || msg.includes('comedor') || msg.includes('base') || 
                         msg.includes('cama') || msg.includes('mesa') || msg.includes('sof') ||
-                        msg.includes('catálogo') || msg.includes('precio');
+                        msg.includes('catálogo') || msg.includes('precio') || msg.includes('el ') || msg.includes('la ');
   
   return tienePalabraVer && tieneCategoria;
 }
@@ -847,17 +882,33 @@ function detectarVerCarrito(mensaje) {
   const patrones = [
     /ver.*carrito/i,
     /mi carrito/i,
-    /carrito/i,
+    /\bcarrito\b/i,
     /que tengo/i,
     /qué tengo/i,
     /qué hay/i,
     /que hay/i,
     /ver lo que tengo/i,
+    /ver lo que hay/i,
     /mostrar carrito/i,
     /dame el carrito/i,
-    /ver mis productos/i
+    /ver mis productos/i,
+    /ver\s+mi\s+carrito/i,
+    /ver\s+el\s+carrito/i,
+    /quiero\s+ver.*carrito/i,
+    /dime.*carrito/i,
+    /muestrame.*carrito/i,
+    /hay\s+en\s+mi\s+carrito/i,
+    /hay\s+en\s+el\s+carrito/i,
+    /que\s+hay\s+en/i,
+    /qué\s+hay\s+en/i
   ];
-  return patrones.some(p => p.test(msg));
+  
+  for (const patron of patrones) {
+    if (patron.test(msg)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function detectarLimpiarCarrito(mensaje) {
