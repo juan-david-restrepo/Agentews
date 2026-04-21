@@ -270,15 +270,17 @@ function necesitaSubtipo(mensaje, categoria) {
   return null;
 }
 
-function formatearPreguntaSubtipo(categoria) {
-  if (categoria === 'sillas_comedor') {
+function formatearPreguntaSubtipo(categoria, mensaje) {
+  const msg = mensaje?.toLowerCase() || '';
+  
+  if (categoria === 'sillas_comedor' || msg.includes('silla')) {
     return `¿Qué tipo de silla buscas?
 • De comedor (para el diario)
 • Auxiliares/rededoras (para la sala)
 • De barra (para cocina)
 ¿Cuál te interesa? 😊`;
   }
-  if (categoria === 'mesas_centro') {
+  if (categoria === 'mesas_centro' || msg.includes('mesa')) {
     return `¿Qué tipo de mesa buscas?
 • De centro (para la sala)
 • Auxiliar
@@ -1836,7 +1838,7 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
       const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
       const subtipo = necesitaSubtipo(incomingMsg, categoriaDetectada);
       if (subtipo === 'PEDIR_SUBTIPO') {
-        response = formatearPreguntaSubtipo(categoriaDetectada);
+        response = formatearPreguntaSubtipo(categoriaDetectada, incomingMsg);
       } else if (subtipo) {
         const productosSubtipo = knowledge.inventario[subtipo]?.productos || [];
         if (productosSubtipo.length > 0) {
@@ -1876,7 +1878,7 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
       const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
       const subtipo = necesitaSubtipo(incomingMsg, categoriaDetectada);
       if (subtipo === 'PEDIR_SUBTIPO') {
-        response = formatearPreguntaSubtipo(categoriaDetectada);
+        response = formatearPreguntaSubtipo(categoriaDetectada, incomingMsg);
       } else if (subtipo) {
         const productosSubtipo = knowledge.inventario[subtipo]?.productos || [];
         if (productosSubtipo.length > 0) {
@@ -2137,13 +2139,26 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
             response = "Perdona, ¿a qué producto te refieres? 😊";
           }
         } else if (!productoDetectado && quiereAgregar) {
-          const ultimoProd = await db.getUltimoProducto(from);
-          if (ultimoProd && ultimoProd.nombre) {
-            productoDetectado = {
-              nombre: ultimoProd.nombre,
-              precio: ultimoProd.precio,
-              categoria: ultimoProd.categoria
-            };
+          const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
+          const subtipo = necesitaSubtipo(incomingMsg, categoriaDetectada);
+          if (subtipo === 'PEDIR_SUBTIPO') {
+            response = formatearPreguntaSubtipo(categoriaDetectada, incomingMsg);
+          } else if (subtipo) {
+            const productosSubtipo = knowledge.inventario[subtipo]?.productos || [];
+            if (productosSubtipo.length > 0) {
+              await db.setCategoriaActual(from, subtipo);
+              response = formatearProductosVenta(productosSubtipo);
+            }
+          }
+          if (!response) {
+            const ultimoProd = await db.getUltimoProducto(from);
+            if (ultimoProd && ultimoProd.nombre) {
+              productoDetectado = {
+                nombre: ultimoProd.nombre,
+                precio: ultimoProd.precio,
+                categoria: ultimoProd.categoria
+              };
+            }
           }
         }
         
