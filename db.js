@@ -145,6 +145,7 @@ async function getEstado(telefono) {
   return {
     categoria_actual: estado.categoria_actual,
     producto_pendiente: parseJSONField(estado.producto_pendiente),
+    ultimo_producto: parseJSONField(estado.ultimo_producto),
     carrito: parseJSONField(estado.carrito),
     transferido: !!estado.transferido,
     greeting_sent: !!estado.greeting_sent,
@@ -271,6 +272,15 @@ async function getCategoriaActual(telefono) {
 
 async function setCategoriaActual(telefono, categoria) {
   await updateEstado(telefono, { categoria_actual: categoria });
+}
+
+async function getUltimoProducto(telefono) {
+  const estado = await getEstado(telefono);
+  return estado.ultimo_producto;
+}
+
+async function setUltimoProducto(telefono, producto) {
+  await updateEstado(telefono, { ultimo_producto: producto });
 }
 
 async function guardarPedido(telefono, producto, precio, cantidad = 1) {
@@ -408,6 +418,8 @@ module.exports = {
   marcarSaludoEnviado,
   getCategoriaActual,
   setCategoriaActual,
+  getUltimoProducto,
+  setUltimoProducto,
   guardarPedido,
   getPedidos,
   limpiarConversaciones,

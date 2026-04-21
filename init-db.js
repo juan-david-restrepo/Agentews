@@ -60,6 +60,11 @@ async function initDB() {
       ALTER TABLE estado_usuario 
       ADD COLUMN IF NOT EXISTS tiene_pedido BOOLEAN DEFAULT FALSE
     `).catch(() => {});
+    
+    await connection.query(`
+      ALTER TABLE estado_usuario 
+      ADD COLUMN IF NOT EXISTS ultimo_producto JSON
+    `).catch(() => {});
     console.log('✅ Tabla estado_usuario creada o verificada');
 
     await connection.query(`

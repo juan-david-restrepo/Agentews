@@ -813,7 +813,43 @@ function detectarLimpiarCarrito(mensaje) {
     /eliminar.*todo/i,
     /empezar.*de nuevo/i,
     /limpiar.*carrito/i,
-    /cancelar.*pedido/i
+    /cancelar.*pedido/i,
+    /eliminar.*producto/i,
+    /eliminar.*silla/i,
+    /eliminar.*base/i,
+    /eliminar.*cama/i,
+    /eliminar.*mesa/i,
+    /eliminar.*sofa/i,
+    /quitar.*carrito/i,
+    /quitar.*producto/i,
+    /quitar.*del/i,
+    /borrar.*producto/i,
+    /borrar.*silla/i,
+    /borrar.*base/i,
+    /sacar.*carrito/i,
+    /sacar.*producto/i,
+    /\bno\s+lo\s+quiero\b/i,
+    /\bno\s+la\s+quiero\b/i,
+    /\bno\s+lo\s+llev[oe]\b/i,
+    /\bno\s+la\s+llev[oe]\b/i,
+    /\bno\s+lo\s+compro\b/i,
+    /cambiar.*producto/i,
+    /cambiar.*silla/i,
+    /cambiar.*mueble/i,
+    /otro.*producto/i,
+    /diferente.*producto/i
+];
+  return patrones.some(p => p.test(msg));
+}
+
+function detectarCalculoTotal(mensaje) {
+  const msg = mensaje.toLowerCase();
+  const patrones = [
+    /cu[áa]nto.*(total|suma|mont[oa])/i,
+    /total.*(de|m[áa]s)/i,
+    /suma.*de/i,
+    /cu[áa]nto.*(valen|cuestan)/i,
+    /cu[áa]l.*(es )?el.*total/i
   ];
   return patrones.some(p => p.test(msg));
 }
@@ -851,18 +887,6 @@ function generarMensajeInstagram() {
 
 function generarMensajeDespedida() {
   return "\n\n📱 Síguenos en Instagram: @muebles_decasa\n🔔 ¡Mantente al día con nuestros productos y ofertas!\n\nQue tengas un lindo día! 😊";
-}
-
-function detectarCalculoTotal(mensaje) {
-  const msg = mensaje.toLowerCase();
-  const patrones = [
-    /cu[áa]nto.*(total|suma|mont[oa])/i,
-    /total.*(de|m[áa]s)/i,
-    /suma.*de/i,
-    /cu[áa]nto.*(valen|cuestan)/i,
-    /cu[áa]l.*(es )?el.*total/i
-  ];
-  return patrones.some(p => p.test(msg));
 }
 
 function calcularTotalProductos(mensaje, from) {
@@ -1008,7 +1032,9 @@ function detectarIntentionAddCarrito(mensaje) {
     /bien\s+me\s+comprar/i,
     /lo\s+quiero\s+comprar/i,
     /lo\s+quiero\b/i,
+    /la\s+quiero\b/i,
     /me\s+lo\s+llevo/i,
+    /me\s+la\s+llevo/i,
     /comprar\s+ese/i,
     /comprar\s+este/i,
     /comprar\s+la/i,
@@ -1028,7 +1054,36 @@ function detectarIntentionAddCarrito(mensaje) {
     /y agrégale/i,
     /add\s+.*al\s+carrito/i,
     /ponle/i,
-    /me\h+completa/i
+    /me\h+completa/i,
+    /lo\s+añado/i,
+    /la\s+añado/i,
+    /añadir.*carrito/i,
+    /meter.*carrito/i,
+    /meter al/i,
+    /meterle/i,
+    /quisiera\s+(comprar|añadir|agregar)/i,
+    /deseo\s+(comprar|añadir|agregar)/i,
+    /quiero\s+(añadir|agregar)/i,
+    /\bcarrito\b.*\b(añadir|agregar)/i,
+    /\b(lo|la|les)\b/i,
+    /\b(es|este|esta)\s+(producto|mueble)/i,
+    /me\s+(lo|la)\s+(llevo|quiero|compro)/i,
+    /confirmar.*compra/i,
+    /proceder.*compra/i,
+    /si.*comprar/i,
+    /si.*quiero/i,
+    /si.* Llevo/i,
+    /si.* llevo/i,
+    /si.*confirmo/i,
+    /\bcomprar\b/i,
+    /\bllevar\b/i,
+    /\bañadir\b/i,
+    /\bagregar\b/i,
+    /me\s+lo\s+(añad|agreg)/i,
+    /me\s+la\s+(añad|agreg)/i,
+    /lo\s+(añad|agreg)/i,
+    /la\s+(añad|agreg)/i,
+    /si\s+(me|gustaria|quiero)/i
   ];
   return patrones.some(p => p.test(msg));
 }
@@ -1595,11 +1650,19 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
         if (cat.categoria) {
           await db.setCategoriaActual(from, cat.categoria);
         }
+        
+        await db.setUltimoProducto(from, {
+          nombre: productoInfo.nombre,
+          precio: productoInfo.precio,
+          medidas: productoInfo.medidas,
+          material: productoInfo.material
+        });
+        
         const es_buscar_info = /medidas|material|de qué|características|es de|es de qué|que trae|viene/i.test(incomingMsg);
         if (es_buscar_info) {
-          response = `${productoInfo.nombre}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n💰 Precio: ${productoInfo.precio}\n\nEsta pieza estáurada en ${productoInfo.material.split(',')[0].toLowerCase()}, lo que garantiza resistencia y durabilidad.¿Te gustaría verlo en persona o saber más? 😊`;
+          response = `${productoInfo.nombre}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n💰 Precio: ${productoInfo.precio}\n\nEsta pieza está hecha en ${productoInfo.material.split(',')[0].toLowerCase()}, lo que garantiza resistencia y durabilidad.\n\n¿Procedemos a añadirla al carrito por ${productoInfo.precio}? 😊`;
         } else {
-          response = `${productoInfo.nombre}\n💰 Precio: ${productoInfo.precio}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n\n¡Excelente opción! Esta pieza está hecha en ${productoInfo.material.split(',')[0].toLowerCase()}, muy resistente y elegante. ¿Te gustaría más información o coordinar una cita para verlo? 😊`;
+          response = `${productoInfo.nombre}\n💰 Precio: ${productoInfo.precio}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n\n¡Excelente opción! Esta pieza está hecha en ${productoInfo.material.split(',')[0].toLowerCase()}, muy resistente y elegante.\n\n¿Procedemos a añadirla al carrito por ${productoInfo.precio}? 😊`;
         }
       } else {
         const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
@@ -1647,9 +1710,30 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
         response = "Tu carrito está vacío. ¿Qué producto te gustaría comprar? 😊";
       }
     } else if (detectarLimpiarCarrito(incomingMsg)) {
-      await db.limpiarCarrito(from);
-      await db.clearProductoPendiente(from);
-      response = "Carrito vaciado. ¿Qué te gustaría comprar? 😊";
+      const itemsCarrito = await db.verCarrito(from);
+      
+      if (itemsCarrito.length === 0) {
+        response = "Tu carrito está vacío. ¿Qué te gustaría comprar? 😊";
+      } else if (itemsCarrito.length === 1) {
+        await db.limpiarCarrito(from);
+        await db.clearProductoPendiente(from);
+        response = `${itemsCarrito[0].producto} eliminado del carrito.\n\nTu carrito ahora está vacío. ¿Qué te gustaría comprar? 😊`;
+      } else {
+        const productoAEliminar = buscarProductoPorNombre(incomingMsg, detectarCategoriaEnMensaje(incomingMsg));
+        
+        if (productoAEliminar) {
+          await db.limpiarCarrito(from);
+          await db.clearProductoPendiente(from);
+          response = `${productoAEliminar.nombre} eliminado del carrito.\n\n¿Te gustaría ver el catálogo de productos para elegir otro? 😊`;
+        } else {
+          const carritoFormateado = await formatearCarrito(from);
+          if (carritoFormateado && carritoFormateado.mensaje) {
+            response = `${carritoFormateado.mensaje}\n\nPara eliminar un producto específico, dime cuál quieres quitar. 😊`;
+          } else {
+            response = "Tu carrito tiene productos. ¿Cuál quieres eliminar? 😊";
+          }
+        }
+      }
     } else if (!(await db.estaTransferida(from))) {
       const pendiente = await db.getProductoPendiente(from);
       const itemsEnCarrito = await db.verCarrito(from);
@@ -1745,9 +1829,32 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
       } else {
         const esInfoPura = esPreguntaInformativa(incomingMsg);
         const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
-        const productoDetectado = buscarProductoPorNombre(incomingMsg, categoriaDetectada);
+        let productoDetectado = buscarProductoPorNombre(incomingMsg, categoriaDetectada);
+        
+        const esPronombreReferido = /^\s*(lo|la|les|este|esta|estos|estas)\s*$/i.test(incomingMsg) ||
+          incomingMsg.toLowerCase().includes('lo quiero') ||
+          incomingMsg.toLowerCase().includes('la quiero') ||
+          incomingMsg.toLowerCase().includes('me gusta') ||
+          incomingMsg.toLowerCase().includes('me gustaría') ||
+          incomingMsg.toLowerCase().includes('comprar') && !productoDetectado;
+        
+        if (!productoDetectado && esPronombreReferido) {
+          const ultimoProd = await db.getUltimoProducto(from);
+          if (ultimoProd) {
+            productoDetectado = {
+              nombre: ultimoProd.nombre,
+              precio: ultimoProd.precio,
+              categoria: ultimoProd.categoria || categoriaDetectada
+            };
+          }
+        }
         
         if (esInfoPura && productoDetectado) {
+          await db.setUltimoProducto(from, {
+            nombre: productoDetectado.nombre,
+            precio: productoDetectado.precio,
+            categoria: productoDetectado.categoria
+          });
           const argumentos = [
             "Madera Flor Morado: 3x más resistente que otras maderas",
             "Fabricación propia en Armenia: Control de calidad directo",
@@ -1756,13 +1863,20 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
             "Delivery gratis en Armenia: Entrega sin costo adicional"
           ];
           const argRandom = argumentos[Math.floor(Math.random() * argumentos.length)];
-          response = `${productoDetectado.nombre} por ${productoDetectado.precio} es una excelente elección. ${argRandom}. ¿Te gustaría una foto o verlo en persona? 😊`;
-        } else if (productoDetectado && (detectarCompra(incomingMsg) || detectarIntentionAddCarrito(incomingMsg) || incomingMsg.toLowerCase().includes('comprar') || incomingMsg.toLowerCase().includes('agregar') || incomingMsg.toLowerCase().includes('agregarle') || incomingMsg.toLowerCase().includes('nido'))) {
+          response = `${productoDetectado.nombre} por ${productoDetectado.precio} es una excelente elección. ${argRandom}.\n\n¿Procedemos a añadirla al carrito por ${productoDetectado.precio}? 😊`;
+        } else if (productoDetectado && (detectarCompra(incomingMsg) || detectarIntentionAddCarrito(incomingMsg) || incomingMsg.toLowerCase().includes('comprar') || incomingMsg.toLowerCase().includes('agregar') || incomingMsg.toLowerCase().includes('agregarle') || incomingMsg.toLowerCase().includes('nido') || incomingMsg.toLowerCase().includes('lo') || incomingMsg.toLowerCase().includes('la'))) {
           const cantidadDetectada = detectarCantidad(incomingMsg);
           const cat = buscarProductosPorCategoria(incomingMsg);
-          if (cat.categoria) {
-            await db.setCategoriaActual(from, cat.categoria);
+          const catActual = cat.categoria || productoDetectado.categoria;
+          if (catActual) {
+            await db.setCategoriaActual(from, catActual);
           }
+          
+          await db.setUltimoProducto(from, {
+            nombre: productoDetectado.nombre,
+            precio: productoDetectado.precio,
+            categoria: catActual
+          });
           
           const cantidad = cantidadDetectada || 1;
           const result = await agregarAlCarritoDB(from, productoDetectado.nombre, productoDetectado.precio, cantidad);
