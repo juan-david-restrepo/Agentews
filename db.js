@@ -278,7 +278,8 @@ async function getCategoriaActual(telefono) {
 }
 
 async function setCategoriaActual(telefono, categoria) {
-  await updateEstado(telefono, { categoria_actual: categoria });
+  const catString = typeof categoria === 'string' ? categoria : (categoria?.nombre || categoria?.categoria || String(categoria) || null);
+  await updateEstado(telefono, { categoria_actual: catString });
 }
 
 async function getUltimoProducto(telefono) {

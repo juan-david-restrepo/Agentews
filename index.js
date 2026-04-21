@@ -2257,10 +2257,24 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
           const argRandom = argumentos[Math.floor(Math.random() * argumentos.length)];
           response = `${productoDetectado.nombre} por ${productoDetectado.precio} es una excelente elección. ${argRandom}.\n\n¿Procedemos a añadirla al carrito por ${productoDetectado.precio}? 😊`;
         } else if (productoDetectado && (detectarCompra(incomingMsg) || detectarIntentionAddCarrito(incomingMsg) || incomingMsg.toLowerCase().includes('comprar') || incomingMsg.toLowerCase().includes('agregar') || incomingMsg.toLowerCase().includes('agregarle') || incomingMsg.toLowerCase().includes('nido') || incomingMsg.toLowerCase().includes('lo') || incomingMsg.toLowerCase().includes('la'))) {
-          const cantidadDetectada = detectarCantidad(incomingMsg);
+          let cantidadDetectada = detectarCantidad(incomingMsg);
+          let catActual = productoDetectado.categoria;
+          
+          if (!productoDetectado.nombre || productoDetectado.nombre.includes('undefined')) {
+            const pendiente = await db.getProductoPendiente(from);
+            if (pendiente && pendiente.producto && !pendiente.producto.includes('undefined')) {
+              productoDetectado = {
+                nombre: pendiente.producto,
+                precio: pendiente.precio,
+                categoria: pendiente.categoria
+              };
+              cantidadDetectada = cantidadDetectada || pendiente.cantidad;
+            }
+          }
+          
           const cat = buscarProductosPorCategoria(incomingMsg);
-          const catActual = cat.categoria || productoDetectado.categoria;
-          if (catActual) {
+          catActual = cat.categoria || productoDetectado.categoria;
+          if (catActual && typeof catActual === 'string') {
             await db.setCategoriaActual(from, catActual);
           }
           
