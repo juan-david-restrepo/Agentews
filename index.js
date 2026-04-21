@@ -2054,7 +2054,16 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
         const esSoloPronombre = /^si$|^sí$|^si$|^lo$|^la$|^les$|^este$|^esta$|^estos$|^estas$|^comprarlo$|^comprarla$|^quiero$|^me\s+gustaría$|^me\s+gustaria$/i.test(incomingMsg.trim());
         const quiereAgregar = detectarCompra(incomingMsg) || detectarIntentionAddCarrito(incomingMsg) || incomingMsg.toLowerCase().includes('comprar') || incomingMsg.toLowerCase().includes('agregar') || incomingMsg.toLowerCase().includes('agregarle') || incomingMsg.toLowerCase().includes('lo') || incomingMsg.toLowerCase().includes('la');
         
-        if (!productoDetectado && quiereAgregar) {
+        const mensajeAmbiguo = /conocerla|conocerlo|conorarla|conorarlo|agregarla|agregarlo|conocella|conocellar/i.test(incomingMsg.toLowerCase());
+        
+        if (mensajeAmbiguo && !productoDetectado) {
+          const ultimoProd = await db.getUltimoProducto(from);
+          if (ultimoProd && ultimoProd.nombre) {
+            response = `¿Te refieres a la ${ultimoProd.nombre} que estuvimos viendo? Confirma con "sí" para agregarla al carrito 😊`;
+          } else {
+            response = "Perdona, ¿a qué producto te refieres? 😊";
+          }
+        } else if (!productoDetectado && quiereAgregar) {
           const ultimoProd = await db.getUltimoProducto(from);
           if (ultimoProd && ultimoProd.nombre) {
             productoDetectado = {
