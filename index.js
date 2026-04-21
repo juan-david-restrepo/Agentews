@@ -458,6 +458,45 @@ function detectarUbicacion(mensaje) {
   return patrones.some(p => p.test(msg));
 }
 
+function detectarSaludo(mensaje) {
+  const msg = mensaje.toLowerCase();
+  const patrones = [
+    /\bhola\b/i,
+    /\bholis\b/i,
+    /\bholi\b/i,
+    /\bbuenos\s+dias\b/i,
+    /\bbuenas\s+dias\b/i,
+    /\bbuenos\s+días\b/i,
+    /\bbuenas\s+días\b/i,
+    /\bbuenas\b/i,
+    /\bbueno\s+dias\b/i,
+    /\bbuena\s+dias\b/i,
+    /\bbuena\s+días\b/i,
+    /\bque\s+tal\b/i,
+    /\bqué\s+tal\b/i,
+    /\bque\s+tales\b/i,
+    /\bqué\s+tales\b/i,
+    /\bsaludos\b/i,
+    /\bhello\b/i,
+    /\bhi\b/i,
+    /\bhey\b/i,
+    /\bbuenas\s+tardes\b/i,
+    /\bbuenas\s+noches\b/i,
+    /\bbuena\s+tarde\b/i,
+    /\bbuena\s+noche\b/i,
+    /\bcomo\s+estas\b/i,
+    /\bcómo\s+estás\b/i,
+    /\bcomo\s+está\b/i,
+    /\bcomo\s+va\b/i,
+    /\bqué\s+hay\b/i,
+    /\bque\s+hay\b/i,
+    /^\s*hola\s*$/i,
+    /^\s*buenas?\s*$/i,
+    /^\s*buenos\s*$/i
+  ];
+  return patrones.some(p => p.test(msg));
+}
+
 function detectarAsesor(mensaje) {
   const msg = mensaje.toLowerCase();
   const triggers_exactos = [
@@ -1538,6 +1577,70 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
         console.log(`Cliente ${telefono} transferido a asesor sin pedido`);
       }
       imagenURL = null;
+    } else if (detectarSaludo(incomingMsg)) {
+      const tieneSaludo = true;
+      let respuestaSecundaria = '';
+      
+      if (detectarUbicacion(incomingMsg)) {
+        respuestaSecundaria = `Puedes visitarnos en cualquiera de nuestras tres tiendas en Armenia, Quindío:
+*   **Avenida Bolívar # 16 N 26, Armenia, Quindío**
+*   **Km 2 vía El Edén, Armenia, Quindío**
+*   **Km 1 vía Jardines, Armenia, Quindío**
+¿Te gustaría que te agendara una visita a alguna de ellas? 😊`;
+      } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
+        const porCategoria = buscarProductosPorCategoria(incomingMsg);
+        if (porCategoria.categoria && knowledge.catalogos[porCategoria.categoria]) {
+          respuestaSecundaria = `Claro! Aquí tienes el catálogo de ${formatearNombreCategoria(porCategoria.categoria)} 😊`;
+          imagenURL = knowledge.catalogos[porCategoria.categoria];
+          await db.setCategoriaActual(from, porCategoria.categoria);
+        } else if (porCategoria.productos && porCategoria.productos.length > 0) {
+          respuestaSecundaria = formatearProductosVenta(porCategoria.productos);
+          if (porCategoria.categoria) {
+            await db.setCategoriaActual(from, porCategoria.categoria);
+          }
+        }
+      } else if (detectarConsultaPrecio(incomingMsg)) {
+        const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
+        const producto = buscarProductoPorNombre(incomingMsg, categoriaDetectada);
+        if (producto) {
+          if (producto.categoria) {
+            await db.setCategoriaActual(from, producto.categoria);
+          }
+          respuestaSecundaria = `${producto.nombre} | ${producto.precio}. ¿Te interesa? 😊`;
+        } else {
+          const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
+          if (resultadoCategoria.productos && resultadoCategoria.productos.length > 0) {
+            respuestaSecundaria = formatearProductosVenta(resultadoCategoria.productos);
+            if (resultadoCategoria.categoria) {
+              await db.setCategoriaActual(from, resultadoCategoria.categoria);
+            }
+          }
+        }
+      } else if (detectarConsultaInfo(incomingMsg)) {
+        const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
+        const productoInfo = buscarInfoProducto(incomingMsg, categoriaDetectada);
+        if (productoInfo) {
+          if (buscarProductosPorCategoria(incomingMsg).categoria) {
+            await db.setCategoriaActual(from, buscarProductosPorCategoria(incomingMsg).categoria);
+          }
+          await db.setUltimoProducto(from, {
+            nombre: productoInfo.nombre,
+            precio: productoInfo.precio,
+            medidas: productoInfo.medidas,
+            material: productoInfo.material
+          });
+          respuestaSecundaria = `${productoInfo.nombre}\n💰 Precio: ${productoInfo.precio}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n\n¿Procedemos a añadirla al carrito por ${productoInfo.precio}? 😊`;
+        }
+      }
+      
+      if (respuestaSecundaria) {
+        response = `${SALUDO_INICIAL}\n\n${respuestaSecundaria}`;
+      } else {
+        response = SALUDO_INICIAL;
+      }
+      if (!(await db.haEnviadoSaludo(from))) {
+        await db.marcarSaludoEnviado(from);
+      }
     } else if (detectarUbicacion(incomingMsg)) {
       response = `¡Claro que sí! Puedes visitarnos en cualquiera de nuestras tres tiendas en Armenia, Quindío:
 *   **Avenida Bolívar # 16 N 26, Armenia, Quindío**
