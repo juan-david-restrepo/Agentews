@@ -270,10 +270,12 @@ function buscarProductoPorNombre(mensaje, categoriaPref = null) {
       
       let score = 0;
       
-      if (mensajeLimpio.includes(nombreLimpio)) {
+      if (mensajeLimpio.includes(nombreLimpio) || nombreLimpio.includes(mensajeLimpio)) {
         score = 100;
-      } else if (nombreLimpio.includes(mensajeLimpio)) {
+      } else if (mensajeLimpio.length >= 3 && nombreLimpio.includes(mensajeLimpio)) {
         score = 90;
+      } else if (mensajeLimpio.length >= 4 && nombreLimpio.includes(mensajeLimpio.substring(0, Math.min(mensajeLimpio.length, 8)))) {
+        score = 80;
       } else {
         const palabrasMsj = mensajeLimpio.split(' ').filter(p => p.length > 2);
         const palabrasProd = nombreLimpio.split(' ').filter(p => p.length > 2);
@@ -281,9 +283,13 @@ function buscarProductoPorNombre(mensaje, categoriaPref = null) {
         for (const pm of palabrasMsj) {
           for (const pp of palabrasProd) {
             if (pp.includes(pm) || pm.includes(pp)) {
-              score += 20;
+              score += 25;
             }
           }
+        }
+        
+        if (mensajeLimpio.length >= 4 && nombreLimpio.startsWith(mensajeLimpio.substring(0, 4))) {
+          score += 30;
         }
       }
       
@@ -346,12 +352,22 @@ function buscarInfoProducto(nombreProducto, categoriaPref = null) {
       
       if (nombreBuscado.includes(nombreLimpio) || nombreLimpio.includes(nombreBuscado)) {
         score = 100;
+      } else if (nombreLimpio.includes(nombreBuscado) || nombreBuscado.includes(nombreLimpio)) {
+        score = 90;
       } else {
-        const palabras = nombreLimpio.split(' ').filter(p => p.length > 3);
-        for (const palabra of palabras) {
-          if (palabra.length > 3 && nombreBuscado.includes(palabra)) {
-            score += 30;
+        const palabrasMsg = nombreBuscado.split(' ').filter(p => p.length > 2);
+        const palabrasProd = nombreLimpio.split(' ').filter(p => p.length > 2);
+        
+        for (const pm of palabrasMsg) {
+          for (const pp of palabrasProd) {
+            if (pp.includes(pm) || pm.includes(pp)) {
+              score += 25;
+            }
           }
+        }
+        
+        if (nombreBuscado.length >= 4 && nombreLimpio.includes(nombreBuscado.substring(0, 6))) {
+          score += 40;
         }
       }
       
@@ -1724,11 +1740,28 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
       }
     } else if (detectarConsultaPrecio(incomingMsg)) {
       const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
-      const producto = buscarProductoPorNombre(incomingMsg, categoriaDetectada);
+      let producto = buscarProductoPorNombre(incomingMsg, categoriaDetectada);
+      
+      if (!producto) {
+        const ultimoProd = await db.getUltimoProducto(from);
+        if (ultimoProd) {
+          producto = {
+            nombre: ultimoProd.nombre,
+            precio: ultimoProd.precio,
+            categoria: ultimoProd.categoria || categoriaDetectada
+          };
+        }
+      }
+      
       if (producto) {
         if (producto.categoria) {
           await db.setCategoriaActual(from, producto.categoria);
         }
+        await db.setUltimoProducto(from, {
+          nombre: producto.nombre,
+          precio: producto.precio,
+          categoria: producto.categoria
+        });
         response = `${producto.nombre} | ${producto.precio}. ¿Te interesa? 😊`;
       } else {
         const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
@@ -1739,10 +1772,15 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
           }
           response = formatearProductosVenta(porCategoria);
         } else {
-          const catNombre = categoriaDetectada ? formatearNombreCategoria(categoriaDetectada) : 'comedores';
-          response = `No encontré "${incomingMsg}" en nuestro inventario. 
-          
+          const catActual = await db.getCategoriaActual(from);
+          if (catActual && knowledge.inventario[catActual]) {
+            response = formatearProductosVenta(knowledge.inventario[catActual].productos);
+          } else {
+            const catNombre = categoriaDetectada ? formatearNombreCategoria(categoriaDetectada) : 'comedores';
+            response = `No encontré "${incomingMsg}" en nuestro inventario. 
+            
 Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro catálogo de ${catNombre}? 😊`;
+          }
         }
       }
 } else if (detectarConsultaInfo(incomingMsg)) {
