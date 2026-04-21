@@ -1709,15 +1709,34 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
 *   **Km 1 vía Jardines, Armenia, Quindío**
 ¿Te gustaría que te agendara una visita a alguna de ellas? 😊`;
       } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
+        const msgLower = incomingMsg.toLowerCase();
+        const esMensajeGenericoSillas = /que.*sillas|tiene.*sillas|ver.*sillas|tipos.*silla|que.*tipos.*silla|sillas tienen|ver las sillas/i.test(msgLower);
+        const esMensajeGenericoMesas = /que.*mesas|tiene.*mesas|ver.*mesas|tipos.*mesa|que.*tipos.*mesa|mesas tienen|ver las mesas/i.test(msgLower);
+        
+        if (esMensajeGenericoSillas) {
+          response = formatearPreguntaSubtipo('sillas_comedor', incomingMsg);
+        } else if (esMensajeGenericoMesas) {
+          response = formatearPreguntaSubtipo('mesas_centro', incomingMsg);
+        } else {
         let porCategoria = buscarProductosPorCategoria(incomingMsg);
         let catalogo = null;
         
-        if (!porCategoria.categoria) {
-          const categoriaGuardada = await db.getCategoriaActual(from);
-          if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
-            catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
-          } else if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
+        const categoriaGuardada = await db.getCategoriaActual(from);
+        if (categoriaGuardada && knowledge.catalogos[categoriaGuardada] && !porCategoria.categoria) {
+          catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
+        }
+        
+        if (!porCategoria.categoria && !catalogo) {
+          if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
             porCategoria = { categoria: categoriaGuardada, productos: knowledge.inventario[categoriaGuardada].productos };
+          }
+        }
+        
+        if (!porCategoria.categoria && !catalogo) {
+          const catalogoBuscado = buscarCatalogo(incomingMsg);
+          if (catalogoBuscado && catalogoBuscado.url && catalogoBuscado.categoria) {
+            catalogo = catalogoBuscado;
+            porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
           }
         }
         
@@ -1738,6 +1757,7 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
           if (porCategoria.categoria) {
             await db.setCategoriaActual(from, porCategoria.categoria);
           }
+        }
         }
       } else if (detectarConsultaPrecio(incomingMsg)) {
         const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
@@ -1826,14 +1846,25 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
         response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
       }
     } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
+      const msgLower = incomingMsg.toLowerCase();
+      const esMensajeGenericoSillas = /que.*sillas|tiene.*sillas|ver.*sillas|tipos.*silla|que.*tipos.*silla|sillas tienen|ver las sillas/i.test(msgLower);
+      const esMensajeGenericoMesas = /que.*mesas|tiene.*mesas|ver.*mesas|tipos.*mesa|que.*tipos.*mesa|mesas tienen|ver las mesas/i.test(msgLower);
+      
+      if (esMensajeGenericoSillas) {
+        response = formatearPreguntaSubtipo('sillas_comedor', incomingMsg);
+      } else if (esMensajeGenericoMesas) {
+        response = formatearPreguntaSubtipo('mesas_centro', incomingMsg);
+      } else {
       let porCategoria = buscarProductosPorCategoria(incomingMsg);
       let catalogo = null;
       
-      if (!porCategoria.categoria) {
-        const categoriaGuardada = await db.getCategoriaActual(from);
-        if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
-          catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
-        } else if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
+      const categoriaGuardada = await db.getCategoriaActual(from);
+      if (categoriaGuardada && knowledge.catalogos[categoriaGuardada] && !porCategoria.categoria) {
+        catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
+      }
+      
+      if (!porCategoria.categoria && !catalogo) {
+        if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
           porCategoria = { categoria: categoriaGuardada, productos: knowledge.inventario[categoriaGuardada].productos };
         }
       }
@@ -1863,6 +1894,7 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
       } else {
         const categoriasDisponibles = Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ');
         response = `Claro! Estas son las categorías disponibles:\n${categoriasDisponibles}\n\n¿ cual te gustaría ver? 😊`;
+      }
       }
     } else if (detectarConsultaPrecio(incomingMsg)) {
       const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
