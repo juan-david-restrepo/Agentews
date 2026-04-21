@@ -204,7 +204,49 @@ function buscarProductoEnHistorial(history, mensaje) {
   return null;
 }
 
-function buscarProductoPorNombre(mensaje) {
+function detectarCategoriaEnMensaje(mensaje) {
+  const msg = mensaje.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-záéíóúñ\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  const mapeoCategorias = {
+    'comedor': 'bases_comedores',
+    'comedores': 'bases_comedores',
+    'base': 'bases_comedores',
+    'bases': 'bases_comedores',
+    'cama': 'camas',
+    'camas': 'camas',
+    'silla': 'sillas_comedor',
+    'sillas': 'sillas_comedor',
+    'sofa': 'sofas',
+    'sofas': 'sofas',
+    'mesa': 'mesas_centro',
+    'mesas': 'mesas_centro',
+    'mesa noche': 'mesas_noche',
+    'mesa de noche': 'mesas_noche',
+    'mesa tv': 'mesas_tv',
+    'mesa de tv': 'mesas_tv',
+    'mesa centro': 'mesas_centro',
+    'mesa de centro': 'mesas_centro',
+    'mesa auxiliar': 'mesas_auxiliares',
+    'mesa auxiliar': 'mesas_auxiliares',
+    'silla auxiliar': 'sillas_auxiliares',
+    'silla auxiliar': 'sillas_auxiliares',
+    'silla barra': 'sillas_barra',
+    'silla de barra': 'sillas_barra'
+  };
+  
+  for (const [palabra, clave] of Object.entries(mapeoCategorias)) {
+    if (msg.includes(palabra)) {
+      return clave;
+    }
+  }
+  return null;
+}
+
+function buscarProductoPorNombre(mensaje, categoriaPref = null) {
   const mensajeLimpio = mensaje.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
@@ -212,11 +254,14 @@ function buscarProductoPorNombre(mensaje) {
     .trim();
   
   const categorias = Object.values(knowledge.inventario || {});
+  const categoriaDetectada = categoriaPref || detectarCategoriaEnMensaje(mensaje);
   
   let mejoresCoincidencias = [];
+  let categoriaDelProducto = null;
   
-  for (const categoria of categorias) {
-    for (const producto of categoria.productos) {
+  const buscarEnCategoria = (cat) => {
+    if (!cat.productos) return;
+    for (const producto of cat.productos) {
       const nombreLimpio = producto.nombre.toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9\s]/g, ' ')
@@ -243,59 +288,108 @@ function buscarProductoPorNombre(mensaje) {
       }
       
       if (score > 0) {
-        mejoresCoincidencias.push({ producto, score, nombre: producto.nombre, precio: producto.precio });
+        mejoresCoincidencias.push({ producto, score, nombre: producto.nombre, precio: producto.precio, categoria: cat });
       }
     }
+  };
+  
+  if (categoriaDetectada && knowledge.inventario[categoriaDetectada]) {
+    buscarEnCategoria(knowledge.inventario[categoriaDetectada]);
+    if (mejoresCoincidencias.length > 0) {
+      mejoresCoincidencias.sort((a, b) => b.score - a.score);
+      return { 
+        nombre: mejoresCoincidencias[0].nombre, 
+        precio: mejoresCoincidencias[0].precio,
+        categoria: categoriaDetectada 
+      };
+    }
+  }
+  
+  for (const categoria of categorias) {
+    buscarEnCategoria(categoria);
   }
   
   if (mejoresCoincidencias.length > 0) {
     mejoresCoincidencias.sort((a, b) => b.score - a.score);
-    return { nombre: mejoresCoincidencias[0].nombre, precio: mejoresCoincidencias[0].precio };
+    return { 
+      nombre: mejoresCoincidencias[0].nombre, 
+      precio: mejoresCoincidencias[0].precio,
+      categoria: mejoresCoincidencias[0].categoria
+    };
   }
   
   return null;
 }
 
-function buscarInfoProducto(nombreProducto) {
+function buscarInfoProducto(nombreProducto, categoriaPref = null) {
   const nombreBuscado = nombreProducto.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
+  const categoriaDetectada = categoriaPref || detectarCategoriaEnMensaje(nombreProducto);
   const categorias = Object.values(knowledge.inventario || {});
+  
+  let mejoresCoincidencias = [];
 
-  for (const categoria of categorias) {
-    for (const producto of categoria.productos) {
+  const buscarEnCategoria = (cat) => {
+    if (!cat.productos) return;
+    for (const producto of cat.productos) {
       const nombreLimpio = producto.nombre.toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9\s]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 
+      let score = 0;
+      
       if (nombreBuscado.includes(nombreLimpio) || nombreLimpio.includes(nombreBuscado)) {
-        return {
-          nombre: producto.nombre,
-          precio: producto.precio,
-          medidas: producto.medidas || 'No disponible',
-          material: producto.material || 'No disponible',
-          imagen: producto.imagen || null
-        };
-      }
-
-      const palabras = nombreLimpio.split(' ').filter(p => p.length > 3);
-      for (const palabra of palabras) {
-        if (palabra.length > 3 && nombreBuscado.includes(palabra)) {
-          return {
-            nombre: producto.nombre,
-            precio: producto.precio,
-            medidas: producto.medidas || 'No disponible',
-            material: producto.material || 'No disponible',
-            imagen: producto.imagen || null
-          };
+        score = 100;
+      } else {
+        const palabras = nombreLimpio.split(' ').filter(p => p.length > 3);
+        for (const palabra of palabras) {
+          if (palabra.length > 3 && nombreBuscado.includes(palabra)) {
+            score += 30;
+          }
         }
       }
+      
+      if (score > 0) {
+        mejoresCoincidencias.push({ producto, score });
+      }
     }
+  };
+  
+  if (categoriaDetectada && knowledge.inventario[categoriaDetectada]) {
+    buscarEnCategoria(knowledge.inventario[categoriaDetectada]);
+    if (mejoresCoincidencias.length > 0) {
+      mejoresCoincidencias.sort((a, b) => b.score - a.score);
+      const prod = mejoresCoincidencias[0].producto;
+      return {
+        nombre: prod.nombre,
+        precio: prod.precio,
+        medidas: prod.medidas || 'No disponible',
+        material: prod.material || 'No disponible',
+        imagen: prod.imagen || null
+      };
+    }
+  }
+  
+  for (const categoria of categorias) {
+    buscarEnCategoria(categoria);
+  }
+  
+  if (mejoresCoincidencias.length > 0) {
+    mejoresCoincidencias.sort((a, b) => b.score - a.score);
+    const prod = mejoresCoincidencias[0].producto;
+    return {
+      nombre: prod.nombre,
+      precio: prod.precio,
+      medidas: prod.medidas || 'No disponible',
+      material: prod.material || 'No disponible',
+      imagen: prod.imagen || null
+    };
   }
   return null;
 }
@@ -341,6 +435,28 @@ const TRIGGERS_COMPRA = [
   'lo tomo', 'me quedo con',
   'me gustaría comprarlo', 'lo quiero Comprar'
 ];
+
+function detectarUbicacion(mensaje) {
+  const msg = mensaje.toLowerCase();
+  const patrones = [
+    /ubicaci[óa]n/i,
+    /ubicad[oa]s?\b/i,
+    /direcci[óa]n/i,
+    /direcciones/i,
+    /d[óa]nde.*est[áa]n/i,
+    /d[óa]nde.*est[áa] located/i,
+    /en.*d[óa]nde/i,
+    /en.*qu[é].*direcci[óa]n/i,
+    /puedo.*visitar/i,
+    /visitar.*tienda/i,
+    /ir.*tienda/i,
+    /tiendas.*ubic/i,
+    /qu[é].*direcci[óa]n/i,
+    /给出地址/i,
+    /地址/i
+  ];
+  return patrones.some(p => p.test(msg));
+}
 
 function detectarAsesor(mensaje) {
   const msg = mensaje.toLowerCase();
@@ -1367,6 +1483,13 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
         console.log(`Cliente ${telefono} transferido a asesor sin pedido`);
       }
       imagenURL = null;
+    } else if (detectarUbicacion(incomingMsg)) {
+      response = `¡Claro que sí! Puedes visitarnos en cualquiera de nuestras tres tiendas en Armenia, Quindío:
+*   **Avenida Bolívar # 16 N 26, Armenia, Quindío**
+*   **Km 2 vía El Edén, Armenia, Quindío**
+*   **Km 1 vía Jardines, Armenia, Quindío**
+¿Te gustaría que te agendara una visita a alguna de ellas? 😊`;
+      imagenURL = null;
     } else if (await estaTransferidaDB(from)) {
       const telefono = from.replace('whatsapp:', '');
       console.log(`Conversación transferida - Cliente ${telefono} dice: ${incomingMsg}`);
@@ -1442,11 +1565,11 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
         response = `Claro! Estas son las categorías disponibles:\n${categoriasDisponibles}\n\n¿ cual te gustaría ver? 😊`;
       }
     } else if (detectarConsultaPrecio(incomingMsg)) {
-      const producto = buscarProductoPorNombre(incomingMsg);
+      const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
+      const producto = buscarProductoPorNombre(incomingMsg, categoriaDetectada);
       if (producto) {
-        const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
-        if (resultadoCategoria.categoria) {
-          await db.setCategoriaActual(from, resultadoCategoria.categoria);
+        if (producto.categoria) {
+          await db.setCategoriaActual(from, producto.categoria);
         }
         response = `${producto.nombre} | ${producto.precio}. ¿Te interesa? 😊`;
       } else {
@@ -1458,11 +1581,15 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
           }
           response = formatearProductosVenta(porCategoria);
         } else {
-          response = "No encontré ese producto. ¿Te interesan las bases de compositor o las sillas de compositor? 😊";
+          const catNombre = categoriaDetectada ? formatearNombreCategoria(categoriaDetectada) : 'comedores';
+          response = `No encontré "${incomingMsg}" en nuestro inventario. 
+          
+Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro catálogo de ${catNombre}? 😊`;
         }
       }
 } else if (detectarConsultaInfo(incomingMsg)) {
-      const productoInfo = buscarInfoProducto(incomingMsg);
+      const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
+      const productoInfo = buscarInfoProducto(incomingMsg, categoriaDetectada);
       if (productoInfo) {
         const cat = buscarProductosPorCategoria(incomingMsg);
         if (cat.categoria) {
@@ -1485,7 +1612,12 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
         } else if (!esMensajeRelevante(incomingMsg)) {
           response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
         } else {
-          await addToHistoryDB(from, 'user', incomingMsg);
+          const catFallback = buscarProductosPorCategoria(incomingMsg);
+          if (catFallback.categoria && catFallback.productos && catFallback.productos.length > 0) {
+            await db.setCategoriaActual(from, catFallback.categoria);
+            response = formatearProductosVenta(catFallback.productos);
+          } else {
+            await addToHistoryDB(from, 'user', incomingMsg);
           response = await callGemini({
             history: history,
             currentMessage: incomingMsg
@@ -1503,6 +1635,7 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
             } else {
               response += "\n\n¿Te gustaría que te transferiera a un asesor para aclarar tu duda? 😊";
             }
+          }
           }
         }
       }
@@ -1611,7 +1744,8 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
         }
       } else {
         const esInfoPura = esPreguntaInformativa(incomingMsg);
-        const productoDetectado = buscarProductoPorNombre(incomingMsg);
+        const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
+        const productoDetectado = buscarProductoPorNombre(incomingMsg, categoriaDetectada);
         
         if (esInfoPura && productoDetectado) {
           const argumentos = [
@@ -1651,7 +1785,13 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
         } else if (detectarCompra(incomingMsg)) {
           response = "Para hacer un pedido, dime qué producto te interesa! 😊";
         } else if (!esMensajeRelevante(incomingMsg)) {
-          response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
+          const catFallback = buscarProductosPorCategoria(incomingMsg);
+          if (catFallback.categoria && catFallback.productos && catFallback.productos.length > 0) {
+            await db.setCategoriaActual(from, catFallback.categoria);
+            response = formatearProductosVenta(catFallback.productos);
+          } else {
+            response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
+          }
         } else {
           const catResult = buscarProductosPorCategoria(incomingMsg);
           if (catResult.categoria) {
@@ -1669,7 +1809,13 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
         response = SALUDO_INICIAL;
         await db.marcarSaludoEnviado(from);
       } else if (!esMensajeRelevante(incomingMsg)) {
-        response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
+        const catFallback = buscarProductosPorCategoria(incomingMsg);
+        if (catFallback.categoria && catFallback.productos && catFallback.productos.length > 0) {
+          await db.setCategoriaActual(from, catFallback.categoria);
+          response = formatearProductosVenta(catFallback.productos);
+        } else {
+          response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
+        }
       } else {
         await addToHistoryDB(from, 'user', incomingMsg);
 
