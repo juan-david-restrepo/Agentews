@@ -1282,6 +1282,10 @@ function buscarProductosPorCategoria(mensaje) {
     'sillas auxiliar': 'sillas_auxiliares',
     'silla barra': 'sillas_barra',
     'sillas barra': 'sillas_barra',
+    'barra': 'sillas_barra',
+    'silla de barra': 'sillas_barra',
+    'sillas de barra': 'sillas_barra',
+    'de barra': 'sillas_barra',
     'sofa': 'sofas',
     'sofas': 'sofas',
     'sofa cama': 'sofas_camas',
@@ -1700,11 +1704,30 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
 *   **Km 1 vía Jardines, Armenia, Quindío**
 ¿Te gustaría que te agendara una visita a alguna de ellas? 😊`;
       } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
-        const porCategoria = buscarProductosPorCategoria(incomingMsg);
-        if (porCategoria.categoria && knowledge.catalogos[porCategoria.categoria]) {
-          respuestaSecundaria = `Claro! Aquí tienes el catálogo de ${formatearNombreCategoria(porCategoria.categoria)} 😊`;
-          imagenURL = knowledge.catalogos[porCategoria.categoria];
-          await db.setCategoriaActual(from, porCategoria.categoria);
+        let porCategoria = buscarProductosPorCategoria(incomingMsg);
+        let catalogo = null;
+        
+        if (!porCategoria.categoria) {
+          const categoriaGuardada = await db.getCategoriaActual(from);
+          if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
+            catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
+          } else if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
+            porCategoria = { categoria: categoriaGuardada, productos: knowledge.inventario[categoriaGuardada].productos };
+          }
+        }
+        
+        if (!catalogo && !porCategoria.categoria) {
+          const catalogoBuscado = buscarCatalogo(incomingMsg);
+          if (catalogoBuscado && catalogoBuscado.url && catalogoBuscado.categoria) {
+            catalogo = catalogoBuscado;
+            porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
+          }
+        }
+        
+        if (catalogo && catalogo.url) {
+          respuestaSecundaria = `Claro! Aquí tienes el catálogo de ${formatearNombreCategoria(catalogo.categoria)} 😊`;
+          imagenURL = catalogo.url;
+          await db.setCategoriaActual(from, catalogo.categoria);
         } else if (porCategoria.productos && porCategoria.productos.length > 0) {
           respuestaSecundaria = formatearProductosVenta(porCategoria.productos);
           if (porCategoria.categoria) {
