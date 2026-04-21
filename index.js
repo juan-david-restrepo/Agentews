@@ -1634,7 +1634,7 @@ app.post('/webhook', async (req, res) => {
 
   try {
     await db.getOrCreateUsuario(from);
-    await db.verificarYLimpiarInactividad(from, 20);
+    await db.verificarYLimpiarInactividad(from, 10);
     
     const estaTransferidoAhora = await db.estaTransferida(from);
     const esTransferencia = detectarAsesor(incomingMsg);
@@ -1686,6 +1686,11 @@ if (debeTransferir && !(await estaTransferidaDB(from))) {
       } else {
         await enviarNotificacionTelegram(telefono, incomingMsg, history, 'asesor');
         await marcarTransferidaDB(from);
+        
+        await db.limpiarConversaciones(from);
+        await db.clearProductoPendiente(from);
+        await db.setCategoriaActual(from, null);
+        await db.limpiarCarrito(from);
         
         response = `Te transfiero con un asesor, espera un momento 😊
 Un asesor te atenderá personalmente para ayudarte con tu compra.`;
@@ -2013,12 +2018,22 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
         await db.clearProductoPendiente(from);
         response = `${itemsCarrito[0].producto} eliminado del carrito.\n\nTu carrito ahora está vacío. ¿Qué te gustaría comprar? 😊`;
       } else {
-        const productoAEliminar = buscarProductoPorNombre(incomingMsg, detectarCategoriaEnMensaje(incomingMsg));
+        const msgLower = incomingMsg.toLowerCase();
+        let productoEliminado = null;
         
-        if (productoAEliminar) {
-          await db.limpiarCarrito(from);
+        for (const item of itemsCarrito) {
+          const nombreLimpio = item.producto.toLowerCase();
+          if (msgLower.includes(nombreLimpio.substring(0, 10))) {
+            productoEliminado = item;
+            break;
+          }
+        }
+        
+        if (productoEliminado) {
+          const itemsActualizados = itemsCarrito.filter(item => item.producto !== productoEliminado.producto);
+          await db.updateEstado(from, { carrito: itemsActualizados });
           await db.clearProductoPendiente(from);
-          response = `${productoAEliminar.nombre} eliminado del carrito.\n\n¿Te gustaría ver el catálogo de productos para elegir otro? 😊`;
+          response = `${productoEliminado.producto} eliminado del carrito.\n\nTu carrito ahora tiene ${itemsActualizados.length} producto(s).`;
         } else {
           const carritoFormateado = await formatearCarrito(from);
           if (carritoFormateado && carritoFormateado.mensaje) {
@@ -2211,29 +2226,35 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
             await db.setCategoriaActual(from, catActual);
           }
           
+          const productoInfo = buscarInfoProducto(productoDetectado.nombre, catActual);
           await db.setUltimoProducto(from, {
             nombre: productoDetectado.nombre,
             precio: productoDetectado.precio,
             categoria: catActual
           });
           
-          const cantidad = cantidadDetectada || 1;
-          const result = await agregarAlCarritoDB(from, productoDetectado.nombre, productoDetectado.precio, cantidad);
-          
-          if (result.success) {
-            const itemsCarrito = await db.verCarrito(from);
-            if (itemsCarrito.length === 1) {
-              response = `${productoDetectado.nombre} añadido al carrito (${cantidad} unidad${cantidad > 1 ? 'es' : ''}) por ${productoDetectado.precio}.\n\n¿Quieres ver más productos o confirmar tu compra? 😊`;
-            } else {
-              const carritoActual = await formatearCarrito(from);
-              if (carritoActual && carritoActual.mensaje) {
-                response = `${productoDetectado.nombre} añadido.\n\n${carritoActual.mensaje}\n\n¿Confirmas la compra? Responde "si" o "confirmo" para proceder 😊`;
-              } else {
-                response = `${productoDetectado.nombre} añadido al carrito.\n\n¿Quieres ver más productos o confirmar tu compra? 😊`;
-              }
-            }
+          if (productoInfo) {
+            await db.guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
+            response = `${productoDetectado.nombre}\n💰 Precio: ${productoDetectado.precio}\n📏 Medidas: ${productoInfo.medidas || 'No disponible'}\n🪵 Material: ${productoInfo.material || 'No disponible'}\n\n¿Confirmas agregar al carrito? Responde "sí" para confirmar 😊`;
           } else {
-            response = result.mensaje;
+            const cantidad = cantidadDetectada || 1;
+            const result = await agregarAlCarritoDB(from, productoDetectado.nombre, productoDetectado.precio, cantidad);
+            
+            if (result.success) {
+              const itemsCarrito = await db.verCarrito(from);
+              if (itemsCarrito.length === 1) {
+                response = `${productoDetectado.nombre} añadido al carrito (${cantidad} unidad${cantidad > 1 ? 'es' : ''}) por ${productoDetectado.precio}.\n\n¿Quieres ver más productos o confirmar tu compra? 😊`;
+              } else {
+                const carritoActual = await formatearCarrito(from);
+                if (carritoActual && carritoActual.mensaje) {
+                  response = `${productoDetectado.nombre} añadido.\n\n${carritoActual.mensaje}\n\n¿Confirmas la compra? Responde "si" o "confirmo" para proceder 😊`;
+                } else {
+                  response = `${productoDetectado.nombre} añadido al carrito.\n\n¿Quieres ver más productos o confirmar tu compra? 😊`;
+                }
+              }
+            } else {
+              response = result.mensaje;
+            }
           }
         } else if (detectarCompra(incomingMsg)) {
           response = "Para hacer un pedido, dime qué producto te interesa! 😊";
