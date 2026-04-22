@@ -420,7 +420,58 @@ async function actualizarLastInteraction(telefono) {
   await pool.query(
     'UPDATE usuarios SET last_interaction = NOW() WHERE id = ?',
     [usuarios[0].id]
+);
+}
+
+async function iniciarAgendacion(telefono) {
+  await updateEstado(telefono, { agendando_cita: true, paso_agenda: 1, datos_agenda: { nombre: '', dia: '', hora: '', razon: '', ubicacion: null } });
+}
+
+async function cancelarAgendacion(telefono) {
+  await updateEstado(telefono, { agendando_cita: false, paso_agenda: 0, datos_agenda: null });
+}
+
+async function getEstaAgendando(telefono) {
+  const estado = await getEstado(telefono);
+  return !!estado.agendando_cita;
+}
+
+async function getPasoAgendacion(telefono) {
+  const estado = await getEstado(telefono);
+  return estado.paso_agenda || 0;
+}
+
+async function setPasoAgendacion(telefono, paso) {
+  await updateEstado(telefono, { paso_agenda: paso });
+}
+
+async function getDatosAgendacion(telefono) {
+  const estado = await getEstado(telefono);
+  return estado.datos_agenda || { nombre: '', dia: '', hora: '', razon: '', ubicacion: null };
+}
+
+async function guardarDatosAgendacion(telefono, datos) {
+  await updateEstado(telefono, { datos_agenda: datos });
+}
+
+async function guardarCita(telefono, datos) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+  
+  const [usuarios] = await pool.query(
+    'SELECT id FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
   );
+
+  if (usuarios.length === 0) return false;
+  
+  await pool.query(
+    `INSERT INTO citas (usuario_id, telefono, nombre, dia, hora, razon, ubicacion) 
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [usuarios[0].id, telefonoLimpio, datos.nombre, datos.dia, datos.hora, datos.razon, datos.ubicacion]
+  );
+  
+  await cancelarAgendacion(telefono);
+  return true;
 }
 
 module.exports = {
@@ -451,5 +502,13 @@ module.exports = {
   marcarPedidoConfirmado,
   resetearEstadoSinPedido,
   verificarYLimpiarInactividad,
-  actualizarLastInteraction
+  actualizarLastInteraction,
+  iniciarAgendacion,
+  cancelarAgendacion,
+  getEstaAgendando,
+  getPasoAgendacion,
+  setPasoAgendacion,
+  getDatosAgendacion,
+  guardarDatosAgendacion,
+  guardarCita
 };

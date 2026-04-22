@@ -86,6 +86,44 @@ async function initDB() {
     `);
     console.log('✅ Tabla pedidos creada o verificada');
 
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS citas (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        usuario_id INT NOT NULL,
+        telefono VARCHAR(20) NOT NULL,
+        nombre VARCHAR(100),
+        dia VARCHAR(20),
+        hora VARCHAR(20),
+        razon TEXT,
+        ubicacion INT,
+        estado ENUM('pendiente', 'confirmada', 'cancelada') DEFAULT 'pendiente',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('✅ Tabla citas creada o verificada');
+
+    const [colsEstado] = await connection.query('SHOW COLUMNS FROM estado_usuario');
+    const nombresColsEstado = colsEstado.map(c => c.Field);
+    if (!nombresColsEstado.includes('agendando_cita')) {
+      await connection.query(`
+        ALTER TABLE estado_usuario ADD COLUMN agendando_cita BOOLEAN DEFAULT FALSE
+      `);
+      console.log('✅ Columna agendando_cita añadida');
+    }
+    if (!nombresColsEstado.includes('paso_agenda')) {
+      await connection.query(`
+        ALTER TABLE estado_usuario ADD COLUMN paso_agenda INT DEFAULT 0
+      `);
+      console.log('✅ Columna paso_agenda añadida');
+    }
+    if (!nombresColsEstado.includes('datos_agenda')) {
+      await connection.query(`
+        ALTER TABLE estado_usuario ADD COLUMN datos_agenda JSON
+      `);
+      console.log('✅ Columna datos_agenda añadida');
+    }
+
     console.log('\n🎉 Base de datos lista!\n');
     
   } catch (error) {

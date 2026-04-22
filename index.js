@@ -637,11 +637,93 @@ function detectarCompra(mensaje) {
   return TRIGGERS_COMPRA.some(t => msg.includes(t));
 }
 
+function detectarAgendar(mensaje) {
+  const msg = mensaje.toLowerCase();
+  const patrones = [
+    /^agendar\s*cita/i,
+    /^agendar\s*una\s*cita/i,
+    /^agendar$/i,
+    /^agenda$/i,
+    /^pedir\s*cita/i,
+    /^reservar\s*cita/i,
+    /^reservar$/i,
+    /^quiero\s*agendar/i,
+    /^necesito\s*agendar/i,
+    /^como\s*agre[nd]ar/i,
+    /^puedo\s*agendar/i,
+    /^quisiera\s*agendar/i
+  ];
+  return patrones.some(p => p.test(msg));
+}
+
+function detectarCancelarAgendacion(mensaje) {
+  const msg = mensaje.toLowerCase();
+  return msg === 'cancelar' || msg === 'cancelar agendacion' || msg === 'cancelar agenda' || 
+         msg.includes('cancelar la cita') || msg.includes('cancelar agendacion');
+}
+
+function esDiaValido(mensaje) {
+  const msg = mensaje.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const diasValidos = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+  return diasValidos.some(d => msg === d || msg === 'el ' + d || msg.includes(d));
+}
+
+function esHoraValida(mensaje) {
+  const msg = mensaje.toLowerCase().trim();
+  const patron12h = /^(0?[1-9]|1[0-2]):([0-5]\d)\s*(am|pm)?$/i;
+  const patron24h = /^(0?[0-9]|1[0-9]|2[0-3]):([0-5]\d)$/i;
+  const patronTexto = /^(0?[1-9]|1[0-2])\s*(am|pm)$/i;
+  return patron12h.test(msg) || patron24h.test(msg) || patronTexto.test(msg);
+}
+
+function formatearHora(hora) {
+  const msg = hora.toLowerCase().trim();
+  let match = msg.match(/^(0?[1-9]|1[0-2]):([0-5]\d)\s*(am|pm)?$/i);
+  if (!match) match = msg.match(/^(0?[0-9]|1[0-9]|2[0-3]):([0-5]\d)$/i);
+  if (!match) match = msg.match(/^(0?[1-9]|1[0-2])\s*(am|pm)$/i);
+  if (!match) return hora;
+  let horas = parseInt(match[1]);
+  let minutos = match[2] || '00';
+  const ampm = match[3] || (msg.includes('pm') ? 'pm' : 'am');
+  if (ampm === 'pm' && horas < 12) horas += 12;
+  if (ampm === 'am' && horas === 12) horas = 0;
+  return `${horas.toString().padStart(2, '0')}:${minutos}`;
+}
+
+function esUbicacionValida(mensaje) {
+  const msg = mensaje.trim();
+  return msg === '1' || msg === '2' || msg === '3';
+}
+
+function formatearNombreUbicacion(num) {
+  const ubicaciones = {
+    1: 'Av. Bolívar # 16 N 26',
+    2: 'Km 2 vía El Edén',
+    3: 'Km 1 vía Jardines'
+  };
+  return ubicaciones[num] || 'No especificada';
+}
+
+const UBICACIONES_LISTA = `📍 Nuestras ubicaciones:
+1. Av. Bolívar # 16 N 26, Armenia
+2. Km 2 vía El Edén, Armenia
+3. Km 1 vía Jardines, Armenia`;
+
+const MSJ_ERROR_DIA = `Por favor ingresa un día válido: lunes, martes, miercoles, jueves, viernes o sabado.`;
+const MSJ_ERROR_HORA = `Por favor ingresa la hora en formato como: 2:30 pm, 9:00 am, 14:00`;
+const MSJ_ERROR_UBICACION = `Por favor ingresa el número de la ubicación: 1, 2 o 3.`;
+const MSJ_CANCELAR = `Para cancelar escribe "cancelar" o "cancelar agendacion".`;
+
 function detectarConsultaInfo(mensaje) {
   if (detectarAsesor(mensaje)) return false;
   if (detectarCompra(mensaje)) return false;
   if (detectarVerCarrito(mensaje)) return false;
   if (detectarLimpiarCarrito(mensaje)) return false;
+  if (detectarAgendar(mensaje)) return false;
   
   const msg = mensaje.toLowerCase();
   const patronesInfo = [
@@ -1740,6 +1822,83 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
         console.log(`Cliente ${telefono} transferido a asesor sin pedido`);
       }
       imagenURL = null;
+    } else if (await db.getEstaAgendando(from)) {
+      const paso = await db.getPasoAgendacion(from);
+      const datos = await db.getDatosAgendacion(from);
+      
+      if (detectarCancelarAgendacion(incomingMsg)) {
+        await db.cancelarAgendacion(from);
+        response = `✅ Has cancelado la agendación de cita.\n\n¿Hay algo más en lo que pueda ayudarte? 😊`;
+      } else if (paso === 1) {
+        const nombre = incomingMsg.trim();
+        if (nombre.length < 2) {
+          response = `Por favor ingresa tu nombre completo (mínimo 2 caracteres).\n\n${MSJ_CANCELAR}`;
+        } else {
+          datos.nombre = nombre;
+          await db.guardarDatosAgendacion(from, datos);
+          await db.setPasoAgendacion(from, 2);
+          response = `¿Qué día te queda disponible?\n(Días válidos: lunes, martes, miercoles, jueves, viernes o sabado)\n\nEjemplo: miercoles\n\n${MSJ_CANCELAR}`;
+        }
+      } else if (paso === 2) {
+        if (!esDiaValido(incomingMsg)) {
+          response = `${MSJ_ERROR_DIA}\n\nEjemplo: miercoles o viernes\n\n${MSJ_CANCELAR}`;
+        } else {
+          const msg = incomingMsg.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/^el\s+/, '');
+          datos.dia = msg.charAt(0).toUpperCase() + msg.slice(1);
+          await db.guardarDatosAgendacion(from, datos);
+          await db.setPasoAgendacion(from, 3);
+          response = `¿A qué hora? (Horario: L-V 8am-5pm, sáb 8am-12pm)\n\nEjemplo: 2:30 pm, 9:00 am\n\n${MSJ_CANCELAR}`;
+        }
+      } else if (paso === 3) {
+        if (!esHoraValida(incomingMsg)) {
+          response = `${MSJ_ERROR_HORA}\n\nEjemplo: 2:30 pm, 14:00\n\n${MSJ_CANCELAR}`;
+        } else {
+          datos.hora = formatearHora(incomingMsg);
+          await db.guardarDatosAgendacion(from, datos);
+          await db.setPasoAgendacion(from, 4);
+          response = `¿Cuál es el motivo de la visita?\n\nEjemplo: ver productos en persona, cotizar una mesa\n\n${MSJ_CANCELAR}`;
+        }
+      } else if (paso === 4) {
+        const razon = incomingMsg.trim();
+        if (razon.length < 3) {
+          response = `Por favor ingresa una descripción más completa (mínimo 3 caracteres).\n\n${MSJ_CANCELAR}`;
+        } else {
+          datos.razon = razon;
+          await db.guardarDatosAgendacion(from, datos);
+          await db.setPasoAgendacion(from, 5);
+          response = `${UBICACIONES_LISTA}\n\n¿Cuál prefieres? (escribe 1, 2 o 3)\n\n${MSJ_CANCELAR}`;
+        }
+      } else if (paso === 5) {
+        if (!esUbicacionValida(incomingMsg)) {
+          response = `${MSJ_ERROR_UBICACION}\n\n${UBICACIONES_LISTA}\n\n${MSJ_CANCELAR}`;
+        } else {
+          datos.ubicacion = parseInt(incomingMsg.trim());
+          await db.guardarDatosAgendacion(from, datos);
+          await db.setPasoAgendacion(from, 6);
+          const resumen = `📅 *RESUMEN DE TU CITA*\n━━━━━━━━━━━━━━━━━━━━━━\n👤 Nombre: ${datos.nombre}\n📞 Teléfono: ${from.replace('whatsapp:', '')}\n📅 Día: ${datos.dia}\n🕐 Hora: ${datos.hora}\n📝 Motivo: ${datos.razon}\n📍 Ubicación: ${datos.ubicacion}. ${formatearNombreUbicacion(datos.ubicacion)}\n━━━━━━━━━━━━━━━━━━━━━━\n\n¿Confirmas esta cita? Responde "sí" o "confirmar"`;
+          response = resumen;
+        }
+      } else if (paso === 6) {
+        const confirm = incomingMsg.toLowerCase().trim();
+        if (confirm === 'sí' || confirm === 'si' || confirm === 'confirmar' || confirm === 'si, confirmar') {
+          await db.guardarCita(from, datos);
+          const telefonoClean = from.replace('whatsapp:', '');
+          response = `✅ ¡Cita agendada exitosamente!\n\n📅 *DETALLES*\n👤 Nombre: ${datos.nombre}\n📅 Día: ${datos.dia}\n🕐 Hora: ${datos.hora}\n📍 Ubicación: ${formatearNombreUbicacion(datos.ubicacion)}\n\nTe esperamos! 😊`;
+          
+          const msgTelegram = `📅 *NUEVA CITA - DeCasa*\n━━━━━━━━━━━━━━━━━━━━━━\n👤 Cliente: ${datos.nombre} (${telefonoClean})\n📅 Día: ${datos.dia}\n🕐 Hora: ${datos.hora}\n📝 Motivo: ${datos.razon}\n📍 Ubicación: ${datos.ubicacion}. ${formatearNombreUbicacion(datos.ubicacion)}\n━━━━━━━━━━━━━━━━━━━━━━\n💡 Contactar: wa.me/${telefonoClean}`;
+          await enviarNotificacionTelegram(telefonoClean, msgTelegram, [], 'cita');
+        } else {
+          response = `❌ No se guardó la cita.\n\nPara confirmar escribe "sí" o "confirmar".\n\nO escribe "cancelar" para cancelar la agendación.`;
+        }
+      }
+    } else if (detectarAgendar(incomingMsg)) {
+      await db.iniciarAgendacion(from);
+      response = `📅 *AGENDAR CITA*\n\nCon gusto te ayudo a agendar una cita.\n\nPrimero, ¿cuál es tu nombre?\n\n${MSJ_CANCELAR}`;
     } else if (detectarSaludo(incomingMsg)) {
       const tieneSaludo = true;
       let respuestaSecundaria = '';
@@ -2066,6 +2225,11 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
           response = `${productoInfo.nombre}\n💰 Precio: ${productoInfo.precio}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n\n¡Excelente opción! Esta pieza está hecha en ${productoInfo.material.split(',')[0].toLowerCase()}, muy resistente y elegante.\n\n¿Procedemos a añadirla al carrito por ${productoInfo.precio}? 😊`;
         }
       } else {
+        const catBD = await db.getCategoriaActual(from);
+        const productosBD = catBD && knowledge.inventario[catBD]?.productos;
+        if (productosBD && productosBD.length > 0) {
+          response = formatearProductosVenta(productosBD);
+        } else {
         const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
         const porCategoria = resultadoCategoria.productos;
         if (porCategoria.length > 0) {
@@ -2101,6 +2265,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
             }
           }
           }
+        }
         }
       }
     } else if (detectarVerCarrito(incomingMsg)) {
