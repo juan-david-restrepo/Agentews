@@ -306,7 +306,7 @@ function formatearPreguntaSubtipo(categoria, mensaje) {
   return null;
 }
 
-function buscarProductoPorNombre(mensaje, categoriaPref = null) {
+function buscarProductoPorNombre(mensaje, categoriaPref = null, categoriaBD = null) {
   const mensajeLimpio = mensaje.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
@@ -315,11 +315,12 @@ function buscarProductoPorNombre(mensaje, categoriaPref = null) {
   
   const categorias = Object.values(knowledge.inventario || {});
   const categoriaDetectada = categoriaPref || detectarCategoriaEnMensaje(mensaje);
+  const categoriaPreferida = categoriaDetectada || categoriaBD;
   
   let mejoresCoincidencias = [];
   let categoriaDelProducto = null;
   
-  const buscarEnCategoria = (cat) => {
+  const buscarEnCategoria = (cat, esPreferida = false) => {
     if (!cat.productos) return;
     for (const producto of cat.productos) {
       const nombreLimpio = producto.nombre.toLowerCase()
@@ -354,25 +355,31 @@ function buscarProductoPorNombre(mensaje, categoriaPref = null) {
       }
       
       if (score > 0) {
-        mejoresCoincidencias.push({ producto, score, nombre: producto.nombre, precio: producto.precio, categoria: cat });
+        mejoresCoincidencias.push({ producto, score, nombre: producto.nombre, precio: producto.precio, categoria: cat, esCategoriaPreferida: esPreferida });
       }
     }
   };
   
-  if (categoriaDetectada && knowledge.inventario[categoriaDetectada]) {
-    buscarEnCategoria(knowledge.inventario[categoriaDetectada]);
+  if (categoriaPreferida && knowledge.inventario[categoriaPreferida]) {
+    buscarEnCategoria(knowledge.inventario[categoriaPreferida], true);
     if (mejoresCoincidencias.length > 0) {
-      mejoresCoincidencias.sort((a, b) => b.score - a.score);
+      mejoresCoincidencias.sort((a, b) => {
+        if (b.esCategoriaPreferida !== a.esCategoriaPreferida) {
+          return b.esCategoriaPreferida ? 1 : -1;
+        }
+        return b.score - a.score;
+      });
       return { 
         nombre: mejoresCoincidencias[0].nombre, 
         precio: mejoresCoincidencias[0].precio,
-        categoria: categoriaDetectada 
+        categoria: categoriaPreferida 
       };
     }
   }
   
   for (const categoria of categorias) {
-    buscarEnCategoria(categoria);
+    if (categoriaPreferida && categoria === knowledge.inventario[categoriaPreferida]) continue;
+    buscarEnCategoria(categoria, false);
   }
   
   if (mejoresCoincidencias.length > 0) {
@@ -387,7 +394,7 @@ function buscarProductoPorNombre(mensaje, categoriaPref = null) {
   return null;
 }
 
-function buscarInfoProducto(nombreProducto, categoriaPref = null) {
+function buscarInfoProducto(nombreProducto, categoriaPref = null, categoriaBD = null) {
   const nombreBuscado = nombreProducto.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
@@ -395,11 +402,12 @@ function buscarInfoProducto(nombreProducto, categoriaPref = null) {
     .trim();
 
   const categoriaDetectada = categoriaPref || detectarCategoriaEnMensaje(nombreProducto);
+  const categoriaPreferida = categoriaDetectada || categoriaBD;
   const categorias = Object.values(knowledge.inventario || {});
   
   let mejoresCoincidencias = [];
 
-  const buscarEnCategoria = (cat) => {
+  const buscarEnCategoria = (cat, esPreferida = false) => {
     if (!cat.productos) return;
     for (const producto of cat.productos) {
       const nombreLimpio = producto.nombre.toLowerCase()
@@ -432,15 +440,20 @@ function buscarInfoProducto(nombreProducto, categoriaPref = null) {
       }
       
       if (score > 0) {
-        mejoresCoincidencias.push({ producto, score });
+        mejoresCoincidencias.push({ producto, score, esCategoriaPreferida: esPreferida });
       }
     }
   };
   
-  if (categoriaDetectada && knowledge.inventario[categoriaDetectada]) {
-    buscarEnCategoria(knowledge.inventario[categoriaDetectada]);
+  if (categoriaPreferida && knowledge.inventario[categoriaPreferida]) {
+    buscarEnCategoria(knowledge.inventario[categoriaPreferida], true);
     if (mejoresCoincidencias.length > 0) {
-      mejoresCoincidencias.sort((a, b) => b.score - a.score);
+      mejoresCoincidencias.sort((a, b) => {
+        if (b.esCategoriaPreferida !== a.esCategoriaPreferida) {
+          return b.esCategoriaPreferida ? 1 : -1;
+        }
+        return b.score - a.score;
+      });
       const prod = mejoresCoincidencias[0].producto;
       return {
         nombre: prod.nombre,
@@ -453,7 +466,8 @@ function buscarInfoProducto(nombreProducto, categoriaPref = null) {
   }
   
   for (const categoria of categorias) {
-    buscarEnCategoria(categoria);
+    if (categoriaPreferida && categoria === knowledge.inventario[categoriaPreferida]) continue;
+    buscarEnCategoria(categoria, false);
   }
   
   if (mejoresCoincidencias.length > 0) {
@@ -1799,7 +1813,8 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
         }
       } else if (detectarConsultaPrecio(incomingMsg)) {
         const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
-        const producto = buscarProductoPorNombre(incomingMsg, categoriaDetectada);
+        const catBD = await db.getCategoriaActual(from);
+        const producto = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD);
         if (producto) {
           if (producto.categoria) {
             await db.setCategoriaActual(from, producto.categoria);
@@ -1816,7 +1831,8 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
         }
       } else if (detectarConsultaInfo(incomingMsg)) {
         const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
-        const productoInfo = buscarInfoProducto(incomingMsg, categoriaDetectada);
+        const catBD = await db.getCategoriaActual(from);
+        const productoInfo = buscarInfoProducto(incomingMsg, categoriaDetectada, catBD);
         if (productoInfo) {
           if (buscarProductosPorCategoria(incomingMsg).categoria) {
             await db.setCategoriaActual(from, buscarProductosPorCategoria(incomingMsg).categoria);
@@ -1948,13 +1964,18 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
         const productosSubtipo = knowledge.inventario[subtipo]?.productos || [];
         if (productosSubtipo.length > 0) {
           await db.setCategoriaActual(from, subtipo);
+          const tienePdf = knowledge.catalogos[subtipo];
           response = formatearProductosVenta(productosSubtipo);
+          if (tienePdf) {
+            response += "\n\n¿Quieres ver el catálogo completo en PDF? 😊";
+          }
         }
       }
       if (response) {
         // Ya se manejó
       } else {
-      let producto = buscarProductoPorNombre(incomingMsg, categoriaDetectada);
+      const catBD2 = await db.getCategoriaActual(from);
+      let producto = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD2);
       
       if (!producto) {
         const ultimoProd = await db.getUltimoProducto(from);
@@ -1988,13 +2009,18 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
         const productosSubtipo = knowledge.inventario[subtipo]?.productos || [];
         if (productosSubtipo.length > 0) {
           await db.setCategoriaActual(from, subtipo);
+          const tienePdf = knowledge.catalogos[subtipo];
           response = formatearProductosVenta(productosSubtipo);
+          if (tienePdf) {
+            response += "\n\n¿Quieres ver el catálogo completo en PDF? 😊";
+          }
         }
       }
       if (response) {
         // Ya se manejó
       } else {
-      const productoInfo = buscarInfoProducto(incomingMsg, categoriaDetectada);
+      const catBD2 = await db.getCategoriaActual(from);
+      const productoInfo = buscarInfoProducto(incomingMsg, categoriaDetectada, catBD2);
         const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
         const porCategoria = resultadoCategoria.productos;
         if (porCategoria.length > 0) {
@@ -2016,7 +2042,8 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
       }
 } else if (detectarConsultaInfo(incomingMsg)) {
       const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
-      const productoInfo = buscarInfoProducto(incomingMsg, categoriaDetectada);
+      const catBD = await db.getCategoriaActual(from);
+      const productoInfo = buscarInfoProducto(incomingMsg, categoriaDetectada, catBD);
       if (productoInfo) {
         const cat = buscarProductosPorCategoria(incomingMsg);
         if (cat.categoria) {
@@ -2222,7 +2249,8 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
       } else {
         const esInfoPura = esPreguntaInformativa(incomingMsg);
         const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
-        let productoDetectado = buscarProductoPorNombre(incomingMsg, categoriaDetectada);
+        const catBD3 = await db.getCategoriaActual(from);
+        let productoDetectado = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD3);
         
         const esPronombreReferido = /^\s*(lo|la|les|este|esta|estos|estas)\s*$/i.test(incomingMsg) ||
           incomingMsg.toLowerCase().includes('lo quiero') ||
