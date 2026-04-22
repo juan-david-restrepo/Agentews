@@ -673,18 +673,33 @@ function esDiaValido(mensaje) {
 }
 
 function esHoraValida(mensaje) {
-  const msg = mensaje.toLowerCase().trim();
-  const patron12h = /^(0?[1-9]|1[0-2]):([0-5]\d)\s*(am|pm)?$/i;
+  const msg = mensaje.toLowerCase().trim()
+    .replace(/^a las\s+/i, '')
+    .replace(/^(las|la)\s+/i, '')
+    .replace(/^a\s+/i, '')
+    .replace(/\s*(am|pm)\s*$/i, '')
+    .trim();
+  const patron12h = /^(0?[1-9]|1[0-2]):([0-5]\d)$/i;
   const patron24h = /^(0?[0-9]|1[0-9]|2[0-3]):([0-5]\d)$/i;
-  const patronTexto = /^(0?[1-9]|1[0-2])\s*(am|pm)$/i;
-  return patron12h.test(msg) || patron24h.test(msg) || patronTexto.test(msg);
+  const patronSoloNumero = /^(0?[1-9]|1[0-9]|2[0-3])$/i;
+  return patron12h.test(msg) || patron24h.test(msg) || patronSoloNumero.test(msg);
 }
 
 function formatearHora(hora) {
-  const msg = hora.toLowerCase().trim();
+  const msg = hora.toLowerCase().trim()
+    .replace(/^a las\s+/i, '')
+    .replace(/^(las|la)\s+/i, '')
+    .replace(/^a\s+/i, '');
+  
   let match = msg.match(/^(0?[1-9]|1[0-2]):([0-5]\d)\s*(am|pm)?$/i);
   if (!match) match = msg.match(/^(0?[0-9]|1[0-9]|2[0-3]):([0-5]\d)$/i);
   if (!match) match = msg.match(/^(0?[1-9]|1[0-2])\s*(am|pm)$/i);
+  if (!match) {
+    const soloNumero = msg.match(/^(0?[1-9]|1[0-9]|2[0-3])$/i);
+    if (soloNumero) {
+      match = [msg, soloNumero[1], '00', msg.includes('pm') ? 'pm' : 'am'];
+    }
+  }
   if (!match) return hora;
   let horas = parseInt(match[1]);
   let minutos = match[2] || '00';
@@ -714,7 +729,7 @@ const UBICACIONES_LISTA = `📍 Nuestras ubicaciones:
 3. Km 1 vía Jardines, Armenia`;
 
 const MSJ_ERROR_DIA = `Por favor ingresa un día válido: lunes, martes, miercoles, jueves, viernes o sabado.`;
-const MSJ_ERROR_HORA = `Por favor ingresa la hora en formato como: 2:30 pm, 9:00 am, 14:00`;
+const MSJ_ERROR_HORA = `No entendí. Por favor ingresa la hora así:\n• 2:30 pm / 9:00 am\n• 14:00 (formato 24h)\n• Solo la hora: 2 / 3 / 10`;
 const MSJ_ERROR_UBICACION = `Por favor ingresa el número de la ubicación: 1, 2 o 3.`;
 const MSJ_CANCELAR = `Para cancelar escribe "cancelar" o "cancelar agendacion".`;
 
@@ -1852,11 +1867,11 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
           datos.dia = msg.charAt(0).toUpperCase() + msg.slice(1);
           await db.guardarDatosAgendacion(from, datos);
           await db.setPasoAgendacion(from, 3);
-          response = `¿A qué hora? (Horario: L-V 8am-5pm, sáb 8am-12pm)\n\nEjemplo: 2:30 pm, 9:00 am\n\n${MSJ_CANCELAR}`;
+          response = `¿A qué hora? (Horario: L-V 8am-5pm, sáb 8am-12pm)\n\nPuedes decir:\n• 2:30 pm / 9:00 am\n• 14:00 / 10:30\n• Solo: 2 / 3 / 10\n\n${MSJ_CANCELAR}`;
         }
       } else if (paso === 3) {
         if (!esHoraValida(incomingMsg)) {
-          response = `${MSJ_ERROR_HORA}\n\nEjemplo: 2:30 pm, 14:00\n\n${MSJ_CANCELAR}`;
+          response = `${MSJ_ERROR_HORA}\n\nPor ejemplo: "2:30 pm", "14:00" o solo "2"\n\n${MSJ_CANCELAR}`;
         } else {
           datos.hora = formatearHora(incomingMsg);
           await db.guardarDatosAgendacion(from, datos);
