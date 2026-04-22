@@ -207,6 +207,21 @@ async function updateEstado(telefono, datos) {
     valores.push(datos.tiene_pedido);
   }
 
+  if (datos.agendando_cita !== undefined) {
+    campos.push('agendando_cita = ?');
+    valores.push(datos.agendando_cita);
+  }
+
+  if (datos.paso_agenda !== undefined) {
+    campos.push('paso_agenda = ?');
+    valores.push(datos.paso_agenda);
+  }
+
+  if (datos.datos_agenda !== undefined) {
+    campos.push('datos_agenda = ?');
+    valores.push(datos.datos_agenda ? JSON.stringify(datos.datos_agenda) : null);
+  }
+
   if (campos.length === 0) return;
 
   valores.push(usuarioId);
