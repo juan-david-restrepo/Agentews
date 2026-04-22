@@ -407,6 +407,22 @@ async function verificarYLimpiarInactividad(telefono, timeoutMinutos = 20) {
   }
 }
 
+async function actualizarLastInteraction(telefono) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+  
+  const [usuarios] = await pool.query(
+    'SELECT id FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return;
+  
+  await pool.query(
+    'UPDATE usuarios SET last_interaction = NOW() WHERE id = ?',
+    [usuarios[0].id]
+  );
+}
+
 module.exports = {
   pool,
   getOrCreateUsuario,
@@ -434,5 +450,6 @@ module.exports = {
   tienePedido,
   marcarPedidoConfirmado,
   resetearEstadoSinPedido,
-  verificarYLimpiarInactividad
+  verificarYLimpiarInactividad,
+  actualizarLastInteraction
 };

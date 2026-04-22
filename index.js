@@ -238,6 +238,21 @@ function detectarCategoriaEnMensaje(mensaje) {
     'silla de barra': 'sillas_barra'
   };
   
+  const tieneSilla = msg.includes('silla') || msg.includes('sillas');
+  const tieneComedor = msg.includes('comedor') || msg.includes('comida') || msg.includes('para comer') || msg.includes('para comer');
+  const tieneSala = msg.includes('sala') || msg.includes('auxiliar') || msg.includes('rededora');
+  const tieneBarra = msg.includes('barra') || msg.includes('alto') || msg.includes('mesón') || msg.includes('meson');
+  
+  if (tieneSilla && tieneComedor) {
+    return 'sillas_comedor';
+  }
+  if (tieneSilla && tieneSala) {
+    return 'sillas_auxiliares';
+  }
+  if (tieneSilla && tieneBarra) {
+    return 'sillas_barra';
+  }
+  
   for (const [palabra, clave] of Object.entries(mapeoCategorias)) {
     if (msg.includes(palabra)) {
       return clave;
@@ -1432,6 +1447,7 @@ function formatearNombreCategoria(nombre) {
 
 function buscarCatalogo(mensaje) {
   const catalogos = knowledge.catalogos || {};
+  const inventario = knowledge.inventario || {};
   const mensajeLower = mensaje.toLowerCase();
   
   const mapeoCategorias = {
@@ -1484,6 +1500,10 @@ function buscarCatalogo(mensaje) {
     'silla de plancha': 'sillas_barra',
     'silla de meson': 'sillas_barra',
     'silla de mesón': 'sillas_barra',
+    'silla': 'sillas_comedor',
+    'sillas': 'sillas_comedor',
+    'silla comedor': 'sillas_comedor',
+    'sillas de comedor': 'sillas_comedor',
     'sofa': 'sofas',
     'sofas': 'sofas',
     'sofa cama': 'sofas_camas',
@@ -1512,6 +1532,9 @@ function buscarCatalogo(mensaje) {
       const url = catalogos[clave];
       if (url) {
         return { url: url, categoria: clave };
+      }
+      if (inventario[clave] && inventario[clave].productos) {
+        return { sinPdf: true, categoria: clave, productos: inventario[clave].productos };
       }
     }
   }
@@ -1739,17 +1762,27 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
         
         if (!porCategoria.categoria && !catalogo) {
           const catalogoBuscado = buscarCatalogo(incomingMsg);
-          if (catalogoBuscado && catalogoBuscado.url && catalogoBuscado.categoria) {
-            catalogo = catalogoBuscado;
-            porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
+          if (catalogoBuscado) {
+            if (catalogoBuscado.url && catalogoBuscado.categoria) {
+              catalogo = catalogoBuscado;
+              porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
+            } else if (catalogoBuscado.sinPdf && catalogoBuscado.categoria && catalogoBuscado.productos) {
+              porCategoria = { categoria: catalogoBuscado.categoria, productos: catalogoBuscado.productos };
+              await db.setCategoriaActual(from, catalogoBuscado.categoria);
+            }
           }
         }
         
         if (!catalogo && !porCategoria.categoria) {
           const catalogoBuscado = buscarCatalogo(incomingMsg);
-          if (catalogoBuscado && catalogoBuscado.url && catalogoBuscado.categoria) {
-            catalogo = catalogoBuscado;
-            porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
+          if (catalogoBuscado) {
+            if (catalogoBuscado.url && catalogoBuscado.categoria) {
+              catalogo = catalogoBuscado;
+              porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
+            } else if (catalogoBuscado.sinPdf && catalogoBuscado.categoria && catalogoBuscado.productos) {
+              porCategoria = { categoria: catalogoBuscado.categoria, productos: catalogoBuscado.productos };
+              await db.setCategoriaActual(from, catalogoBuscado.categoria);
+            }
           }
         }
         
@@ -1876,9 +1909,14 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
       
       if (!porCategoria.categoria && !catalogo) {
         const catalogoBuscado = buscarCatalogo(incomingMsg);
-        if (catalogoBuscado && catalogoBuscado.url && catalogoBuscado.categoria) {
-          catalogo = catalogoBuscado;
-          porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
+        if (catalogoBuscado) {
+          if (catalogoBuscado.url && catalogoBuscado.categoria) {
+            catalogo = catalogoBuscado;
+            porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
+          } else if (catalogoBuscado.sinPdf && catalogoBuscado.categoria && catalogoBuscado.productos) {
+            porCategoria = { categoria: catalogoBuscado.categoria, productos: catalogoBuscado.productos };
+            await db.setCategoriaActual(from, catalogoBuscado.categoria);
+          }
         }
       }
       
@@ -2366,6 +2404,8 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
     }
 
     await addToHistoryDB(from, 'assistant', response);
+
+    await db.actualizarLastInteraction(from);
 
     console.log(`Respuesta: ${response}`);
 
