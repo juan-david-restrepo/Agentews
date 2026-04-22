@@ -795,35 +795,35 @@
           "medidas": "Standard",
           "material": "Flor Morado Natural",
           "precio": "$780.000",
-          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438678/mesa_aux_ostel_jzkrlo.jpg"
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776888797/MESA_OSTEL_arwv8d.jpg"
         },
         {
           "nombre": "MESA AUX CILINDRO",
           "medidas": "Standard",
           "material": "Base Metalica, Cubierta Flor Morado",
           "precio": "$580.000",
-          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438674/mesa_aux_cilindro_bcq30w.jpg"
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776888801/MESA_CILINDRO_jur2vg.jpg"
         },
         {
           "nombre": "MESA AUX CUBO",
           "medidas": "Standard",
           "material": "Base Metalica, Cubierta Flor Morado",
           "precio": "$680.000",
-          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438676/mesa_aux_cubo_ulhjrg.jpg"
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776888805/MESA_CUBO_zyuxnl.jpg"
         },
         {
           "nombre": "MESA AUX TT",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
           "precio": "$780.000",
-          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438673/mesa_aux_tt_uprgpq.jpg"
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776888793/MESA_TT_hrivd1.jpg"
         },
         {
           "nombre": "MESA AUX REJILLA REDONDA",
           "medidas": "Standard",
           "material": "Flor Morado Natural",
           "precio": "$880.000",
-          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776438680/mesa_aux_rejilla_redonda_gnguwu.jpg"
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776888805/MESA_REJILLA_REDONDA_zmt64f.jpg"
         }
       ]
     },
@@ -1430,49 +1430,96 @@
           "medidas": "1.20 x 0.40",
           "material": "Lamina Flor Morado Natural",
           "precio": "$1.980.000",
-          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443619/cajonero_san_diego_v8j5gc.jpg"
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776890476/CAJONERO_SAN_DIEGO_ycwmkl.jpg"
         },
         {
           "nombre": "CAJONERO ANGEL",
           "medidas": "1.20 x 0.40",
           "material": "Madera Flor Morado",
           "precio": "$2.880.000",
-          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443657/cajonero_angel_s0fo4b.jpg"
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776890505/CAJONERO_ANGEL_ywkbxr.jpg"
         },
         {
           "nombre": "CAJONERO 6 CAJONES",
           "medidas": "1.30 x 0.40",
           "material": "Madera Flor Morado",
           "precio": "$2.880.000",
-          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443645/cajonero_6_cajones_w5pl6i.png"
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776890494/CAJONERO_6_CAJONES_kebbpx.jpg"
         },
         {
           "nombre": "CAJONERO FIGY",
           "medidas": "1.20 x 0.55",
           "material": "Lamina Flor Morado Natural",
           "precio": "$2.980.000",
-          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443668/cajonero_figy_knukdk.png"
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776890493/CAJONERO_FIGY_t8z3oo.jpg"
         },
         {
           "nombre": "BIFE CLASICO",
           "medidas": "1.50",
           "material": "Pintado Color Wash Fondo Natural, Pino/Cedro",
           "precio": "$2.080.000",
-          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443663/cajonero_clasico_frulnn.jpg"
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776890486/BIFE_CLASICO_pyxgtg.jpg"
         },
         {
           "nombre": "BIFE ALISTONADO",
           "medidas": "1.40 x 0.45",
           "material": "Flor Morado Natural",
           "precio": "$3.280.000",
-          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443651/cajonero_alistonado_ibyztx.png"
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776890501/BIFE_ALISTONADO_ytelfu.jpg"
         },
         {
           "nombre": "BIFE NATURAL",
           "medidas": "1.50 x 0.40",
           "material": "Chapilla Flor Morado Natural",
           "precio": "$2.980.000",
-          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776443675/cajonero_natural_x3bbqw.png"
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776890502/BIFE_NATURAL_s4xwdi.jpg"
+        }
+      ]
+    },
+    "escritorios": {
+      "nombre": "Escritorios",
+      "productos": [
+        {
+          "nombre": "ESCRITORIO FLOR MORADO",
+          "medidas": "1.20 x 0.50",
+          "material": "Madera Flor Morado",
+          "precio": "$1.580.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776889594/ESCRITORIO_FLOR_MORADO_1_bi9lvc.jpg"
+        },
+        {
+          "nombre": "ESCRITORIO OREGON",
+          "medidas": "1.20 x 0.50",
+          "material": "Pino / Flor Morado",
+          "precio": "$1.180.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776889446/ESCRITORIO_OREGON_q1hhov.jpg"
+        },
+        {
+          "nombre": "ESCRITORIO NATURAL",
+          "medidas": "1.20 x 0.50",
+          "material": "Pino",
+          "precio": "$1.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776889448/ESCRITORIO_NATURAL_lc40ku.jpg"
+        },
+        {
+          "nombre": "NATURAL BASIC",
+          "medidas": "1.20 x 0.50",
+          "material": "Pino / Flor Morado",
+          "precio": "$1.480.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776889450/ESCRITORIO_NATURAL_BASIC_yabcxd.jpg"
+        },
+        {
+          "nombre": "ESCRITORIO NORDICO",
+          "medidas": "1.20 x 0.50",
+          "material": "Cedro Rosado",
+          "precio": "$1.380.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776889460/ESCRITORIO_NORDICO_gexya2.jpg"
+        },
+        {
+          "nombre": "ESCRITORIO ALISTONADO",
+          "medidas": "1.20 x 0.50",
+          "material": "Madera Flor Morado",
+          "precio": "$1.580.000",
+          "imagen": "https://res.cloudinary.com/dj5dehk8y/image/upload/v1776889452/ESCRITORIO_ALISTONADO_oolgvy.jpg"
         }
       ]
     },
