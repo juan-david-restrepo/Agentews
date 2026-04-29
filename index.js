@@ -4,6 +4,7 @@ const { MessagingResponse } = require('twilio').twiml;
 const knowledge = require('./knowledge.json');
 const { initDB } = require('./init-db');
 const db = require('./db');
+const { processRoomImage } = require('./image-processor');
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
@@ -1978,6 +1979,62 @@ app.post('/webhook', async (req, res) => {
     const history = await getHistoryDB(from);
     let response;
     let imagenURL = null;
+    
+    // Check if message contains image
+    const mediaUrl = req.body.MediaUrl0;
+    const mediaContentType = req.body.MediaContentType0;
+    
+    if (mediaUrl && mediaContentType && mediaContentType.startsWith('image/')) {
+      console.log('Image received from:', from, 'URL:', mediaUrl);
+      
+      // Send initial response
+      const twiml = new MessagingResponse();
+      twiml.message('⏳ Recibí tu foto! Estoy procesando la imagen para agregar un sofá... ⏳');
+      res.type('text/xml').send(twiml.toString());
+      
+      // Process image asynchronously
+      try {
+        const result = await processRoomImage(mediaUrl);
+        
+        if (result.success) {
+          const twiml2 = new MessagingResponse();
+          twiml2.message({
+            body: '¡Aquí tienes tu sala con el nuevo sofá! 😊 ¿Te gustaría ver más opciones de sofás en nuestro catálogo?',
+            mediaUrl: [result.imageUrl]
+          });
+          
+          // Send via Twilio API (since we already sent initial response)
+          const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+          await twilioClient.messages.create({
+            from: req.body.To,
+            to: from,
+            body: '¡Aquí tienes tu sala con el nuevo sofá! 😊 ¿Te gustaría ver más opciones de sofás en nuestro catálogo?',
+            mediaUrl: [result.imageUrl]
+          });
+        } else {
+          const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+          await twilioClient.messages.create({
+            from: req.body.To,
+            to: from,
+            body: 'Disculpa, tuve un problema procesando la imagen. Por favor intenta de nuevo más tarde. 😊'
+          });
+        }
+      } catch (error) {
+        console.error('Error processing image:', error);
+        try {
+          const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+          await twilioClient.messages.create({
+            from: req.body.To,
+            to: from,
+            body: 'Disculpa, ocurrió un error procesando la imagen. Por favor intenta más tarde. 😊'
+          });
+        } catch (e) {
+          console.error('Error sending error message:', e);
+        }
+      }
+      
+      return; // Stop processing - we've handled the image
+    }
     
     const esAsesorDetectado = detectarAsesor(incomingMsg);
     let intencionClasificada = null;
