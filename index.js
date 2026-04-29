@@ -2100,6 +2100,15 @@ app.post('/webhook', async (req, res) => {
         response = `Entiendo que necesitas una personalización para ${producto}. ¿Te gustaría que te transfiera con un asesor especializado en diseño a medida? 😊`;
         console.log(`Ofreciendo transferencia por personalización: ${from} - Producto: ${producto}`);
         imagenURL = null;
+        
+        // Enviar respuesta y salir para evitar que se sobreescriba
+        await addToHistoryDB(from, 'assistant', response);
+        await db.actualizarLastInteraction(from);
+        console.log(`Respuesta: ${response}`);
+        const twiml = new MessagingResponse();
+        twiml.message(response);
+        res.type('text/xml').send(twiml.toString());
+        return;
       }
     }
     
