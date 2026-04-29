@@ -654,6 +654,7 @@ function detectarSaludo(mensaje) {
     /\bcómo\s+estás\b/i,
     /\bcomo\s+está\b/i,
     /\bcomo\s+va\b/i,
+    /\bcomo\s+van\b/i,
     /\bqué\s+hay\b/i,
     /\bque\s+hay\b/i,
     /^\s*hola\s*$/i,
@@ -964,7 +965,12 @@ function detectarConsultaInfo(mensaje) {
     /^el\b/i,
     /^la\b/i,
     /^\s*el\s+\w+/i,
-    /^\s*la\s+\w+/i
+    /^\s*la\s+\w+/i,
+    /por el\s+\w+/i,
+    /por la\s+\w+/i,
+    /sobre el\s+\w+/i,
+    /sobre la\s+\w+/i,
+    /consultar.*\w+/i
   ];
   
   for (const patron of patronesInfo) {
@@ -1980,10 +1986,6 @@ app.post('/webhook', async (req, res) => {
     let response;
     let imagenURL = null;
     
-    // Check if message contains image
-    const mediaUrl = req.body.MediaUrl0;
-    const mediaContentType = req.body.MediaContentType0;
-    
     if (mediaUrl && mediaContentType && mediaContentType.startsWith('image/')) {
       console.log('Image received from:', from, 'URL:', mediaUrl);
       
@@ -1996,66 +1998,52 @@ app.post('/webhook', async (req, res) => {
       try {
         const result = await processRoomImage(mediaUrl);
         
+        const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+        
         if (result.success) {
-          const twiml2 = new MessagingResponse();
-          twiml2.message({
-            body: '¡Aquí tienes tu sala con el nuevo sofá! 😊 ¿Te gustaría ver más opciones de sofás en nuestro catálogo?',
-            mediaUrl: [result.imageUrl]
-          });
-          
-          // Send via Twilio API (since we already sent initial response)
-          const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
           await twilioClient.messages.create({
             from: req.body.To,
             to: from,
             body: '¡Aquí tienes tu sala con el nuevo sofá! 😊 ¿Te gustaría ver más opciones de sofás en nuestro catálogo?',
             mediaUrl: [result.imageUrl]
           });
-        } else {
-          // Check if it's a credit error
-          if (result.error === 'NO_CREDIT') {
-            // Look for recently mentioned sofa in history
-            const recentHistory = await db.getHistorial(from, 5);
-            let sofaMentioned = null;
-            
-            for (const msg of recentHistory) {
-              if (msg.role === 'user') {
-                const msgLower = msg.content.toLowerCase();
-                // Check if user mentioned a specific sofa from catalog
-                const sofas = knowledge.inventario?.sofas?.productos || [];
-                for (const sofa of sofas) {
-                  if (msgLower.includes(sofa.nombre.toLowerCase().split(' ')[0].toLowerCase())) {
-                    sofaMentioned = sofa;
-                    break;
-                  }
+        } else if (result.error === 'NO_CREDIT') {
+          const recentHistory = await db.getHistorial(from, 5);
+          let sofaMentioned = null;
+          
+          for (const msg of recentHistory) {
+            if (msg.role === 'user') {
+              const msgLower = msg.content.toLowerCase();
+              const sofas = knowledge.inventario?.sofas?.productos || [];
+              for (const sofa of sofas) {
+                if (msgLower.includes(sofa.nombre.toLowerCase().split(' ')[0].toLowerCase())) {
+                  sofaMentioned = sofa;
+                  break;
                 }
-                if (sofaMentioned) break;
               }
+              if (sofaMentioned) break;
             }
-            
-            const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-            
-            if (sofaMentioned) {
-              await twilioClient.messages.create({
-                from: req.body.To,
-                to: from,
-                body: `Disculpa, nuestro servicio de visualización está temporalmente no disponible 😊\n\nMientras tanto, aquí tienes la información del ${sofaMentioned.nombre}:\n💰 Precio: ${sofaMentioned.precio}\n📏 Medidas: ${sofaMentioned.medidas || 'Consultar'}\n🪵 Material: ${sofaMentioned.material || 'Tapizado'}\n\n¿Te gustaría agregarlo al carrito? 😊`
-              });
-            } else {
-              await twilioClient.messages.create({
-                from: req.body.To,
-                to: from,
-                body: `Disculpa, nuestro servicio de visualización de muebles está temporalmente no disponible 😊\n\nMientras tanto, tenemos estos sofás disponibles:\n• SOFÁ TERRA - $3.480.000\n• SOFÁ NUBE - $3.480.000\n• SOFÁ CHESTER - $3.380.000\n• SOFÁ LONDRES - $3.980.000\n\n¿Te gustaría ver el catálogo completo? 😊`
-              });
-            }
-          } else {
-            const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+          }
+          
+          if (sofaMentioned) {
             await twilioClient.messages.create({
               from: req.body.To,
               to: from,
-              body: 'Disculpa, tuve un problema procesando tu foto 😊\n\n¿Te gustaría ver nuestro catálogo de sofás mientras tanto? Tenemos más de 15 modelos disponibles. 😊'
+              body: `Disculpa, nuestro servicio de visualización está temporalmente no disponible 😊\n\nMientras tanto, aquí tienes la información del ${sofaMentioned.nombre}:\n💰 Precio: ${sofaMentioned.precio}\n📏 Medidas: ${sofaMentioned.medidas || 'Consultar'}\n🪵 Material: ${sofaMentioned.material || 'Tapizado'}\n\n¿Te gustaría agregarlo al carrito? 😊`
+            });
+          } else {
+            await twilioClient.messages.create({
+              from: req.body.To,
+              to: from,
+              body: `Disculpa, nuestro servicio de visualización de muebles está temporalmente no disponible 😊\n\nMientras tanto, tenemos estos sofás disponibles:\n• SOFÁ TERRA - $3.480.000\n• SOFÁ NUBE - $3.480.000\n• SOFÁ CHESTER - $3.380.000\n• SOFÁ LONDRES - $3.980.000\n\n¿Te gustaría ver el catálogo completo? 😊`
             });
           }
+        } else {
+          await twilioClient.messages.create({
+            from: req.body.To,
+            to: from,
+            body: 'Disculpa, tuve un problema procesando tu foto 😊\n\n¿Te gustaría ver nuestro catálogo de sofás mientras tanto? Tenemos más de 15 modelos disponibles. 😊'
+          });
         }
       } catch (error) {
         console.error('Error processing image:', error);
@@ -2331,7 +2319,7 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
 *   **CC Unicentro Pereira, Pereira, Risaralda**
 *   **Cra. 14 #11 - 93. Pereira, Risaralda**
 ¿Te gustaría que te agendara una visita a alguna de ellas? 😊`;
-      } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
+} else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('comedor') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
         const msgLower = incomingMsg.toLowerCase();
         const esMensajeGenericoSillas = /que.*sillas|tiene.*sillas|ver.*sillas|tipos.*silla|que.*tipos.*silla|sillas tienen|ver las sillas/i.test(msgLower);
         const esMensajeGenericoMesas = /que.*mesas|tiene.*mesas|ver.*mesas|tipos.*mesa|que.*tipos.*mesa|mesas tienen|ver las mesas/i.test(msgLower);
@@ -2340,14 +2328,71 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
           response = formatearPreguntaSubtipo('sillas_comedor', incomingMsg);
         } else if (esMensajeGenericoMesas) {
           response = formatearPreguntaSubtipo('mesas_centro', incomingMsg);
-        } else {
+      } else {
         let porCategoria = buscarProductosPorCategoria(incomingMsg);
         let catalogo = null;
         
-        const categoriaGuardada = await db.getCategoriaActual(from);
-        if (categoriaGuardada && knowledge.catalogos[categoriaGuardada] && !porCategoria.categoria) {
-          catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
+        // Si detectamos categoría, verificar si mencionó un producto específico
+        if (porCategoria.categoria) {
+          const productoEspecifico = buscarProductoPorNombre(incomingMsg, porCategoria.categoria);
+          if (productoEspecifico) {
+            await db.setCategoriaActual(from, porCategoria.categoria);
+            await db.setUltimoProducto(from, {
+              nombre: productoEspecifico.nombre,
+              precio: productoEspecifico.precio,
+              categoria: porCategoria.categoria
+            });
+            response = `${productoEspecifico.nombre}\n💰 Precio: ${productoEspecifico.precio}\n📏 Medidas: ${productoEspecifico.medidas || 'No disponible'}\n🪵 Material: ${productoEspecifico.material || 'No disponible'}\n\n¿Te interesa? 😊`;
+            imagenURL = productoEspecifico.imagen || null;
+          }
         }
+        
+        // Si no se encontró producto específico, continuar con lógica original
+        if (!response) {
+          const categoriaGuardada = await db.getCategoriaActual(from);
+          if (categoriaGuardada && knowledge.catalogos[categoriaGuardada] && !porCategoria.categoria) {
+            catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
+          }
+          
+          if (!porCategoria.categoria && !catalogo) {
+            if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
+              porCategoria = { categoria: categoriaGuardada, productos: knowledge.inventario[categoriaGuardada].productos };
+            }
+          }
+          
+          if (!porCategoria.categoria && !catalogo) {
+            const catalogoBuscado = buscarCatalogo(incomingMsg);
+            if (catalogoBuscado) {
+              if (catalogoBuscado.url && catalogoBuscado.categoria) {
+                catalogo = catalogoBuscado;
+                porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
+              } else if (catalogoBuscado.sinPdf && catalogoBuscado.categoria && catalogoBuscado.productos) {
+                porCategoria = { categoria: catalogoBuscado.categoria, productos: catalogoBuscado.productos };
+                await db.setCategoriaActual(from, catalogoBuscado.categoria);
+              }
+            }
+          }
+          
+          if (!catalogo && porCategoria.categoria && knowledge.catalogos[porCategoria.categoria]) {
+            catalogo = { categoria: porCategoria.categoria, url: knowledge.catalogos[porCategoria.categoria] };
+            await db.setCategoriaActual(from, porCategoria.categoria);
+          }
+          
+          if (catalogo && catalogo.url) {
+            imagenURL = catalogo.url;
+            let nombreCat = formatearNombreCategoria(catalogo.categoria);
+            response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊`;
+          } else if (porCategoria.productos && porCategoria.productos.length > 0) {
+            if (porCategoria.categoria) {
+              await db.setCategoriaActual(from, porCategoria.categoria);
+            }
+            response = formatearProductosVenta(porCategoria.productos);
+          } else {
+            const categoriasDisponibles = Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ');
+            response = `Claro! Estas son las categorías disponibles:\n${categoriasDisponibles}\n\n¿Cuál te gustaría ver? 😊`;
+          }
+        }
+      }
         
         if (!porCategoria.categoria && !catalogo) {
           if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
@@ -2482,7 +2527,7 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
       } else {
         response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
       }
-    } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
+    } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('comedor') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
       const msgLower = incomingMsg.toLowerCase();
       const esMensajeGenericoSillas = /que.*sillas|tiene.*sillas|ver.*sillas|tipos.*silla|que.*tipos.*silla|sillas tienen|ver las sillas/i.test(msgLower);
       const esMensajeGenericoMesas = /que.*mesas|tiene.*mesas|ver.*mesas|tipos.*mesa|que.*tipos.*mesa|mesas tienen|ver las mesas/i.test(msgLower);
@@ -3147,7 +3192,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
 
     const twiml = new MessagingResponse();
     twiml.message('Disculpa, estoy teniendo problemas tecnicos. Por favor intenta mas tarde.');
-res.type('text/xml').send(twiml.toString());
+  res.type('text/xml').send(twiml.toString());
   }
 });
 
