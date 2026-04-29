@@ -75,6 +75,19 @@ async function processRoomImage(mediaUrl, sofaInfo) {
     return { success: true, imageUrl: resultUrl };
   } catch (error) {
     console.error('Error processing image:', error);
+    
+    // Detect Replicate credit error (402 Payment Required)
+    const errorStr = error.message || '';
+    const isCreditError = errorStr.includes('402') || errorStr.includes('Insufficient credit') || errorStr.includes('Payment Required');
+    
+    if (isCreditError) {
+      return { 
+        success: false, 
+        error: 'NO_CREDIT', 
+        message: 'Nuestro servicio de IA esta temporalmente no disponible por mantenimiento.' 
+      };
+    }
+    
     return { success: false, error: error.message };
   }
 }

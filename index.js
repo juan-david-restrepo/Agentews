@@ -2012,12 +2012,50 @@ app.post('/webhook', async (req, res) => {
             mediaUrl: [result.imageUrl]
           });
         } else {
-          const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-          await twilioClient.messages.create({
-            from: req.body.To,
-            to: from,
-            body: 'Disculpa, tuve un problema procesando la imagen. Por favor intenta de nuevo más tarde. 😊'
-          });
+          // Check if it's a credit error
+          if (result.error === 'NO_CREDIT') {
+            // Look for recently mentioned sofa in history
+            const recentHistory = await db.getHistorial(from, 5);
+            let sofaMentioned = null;
+            
+            for (const msg of recentHistory) {
+              if (msg.role === 'user') {
+                const msgLower = msg.content.toLowerCase();
+                // Check if user mentioned a specific sofa from catalog
+                const sofas = knowledge.inventario?.sofas?.productos || [];
+                for (const sofa of sofas) {
+                  if (msgLower.includes(sofa.nombre.toLowerCase().split(' ')[0].toLowerCase())) {
+                    sofaMentioned = sofa;
+                    break;
+                  }
+                }
+                if (sofaMentioned) break;
+              }
+            }
+            
+            const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+            
+            if (sofaMentioned) {
+              await twilioClient.messages.create({
+                from: req.body.To,
+                to: from,
+                body: `Disculpa, nuestro servicio de visualización está temporalmente no disponible 😊\n\nMientras tanto, aquí tienes la información del ${sofaMentioned.nombre}:\n💰 Precio: ${sofaMentioned.precio}\n📏 Medidas: ${sofaMentioned.medidas || 'Consultar'}\n🪵 Material: ${sofaMentioned.material || 'Tapizado'}\n\n¿Te gustaría agregarlo al carrito? 😊`
+              });
+            } else {
+              await twilioClient.messages.create({
+                from: req.body.To,
+                to: from,
+                body: `Disculpa, nuestro servicio de visualización de muebles está temporalmente no disponible 😊\n\nMientras tanto, tenemos estos sofás disponibles:\n• SOFÁ TERRA - $3.480.000\n• SOFÁ NUBE - $3.480.000\n• SOFÁ CHESTER - $3.380.000\n• SOFÁ LONDRES - $3.980.000\n\n¿Te gustaría ver el catálogo completo? 😊`
+              });
+            }
+          } else {
+            const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+            await twilioClient.messages.create({
+              from: req.body.To,
+              to: from,
+              body: 'Disculpa, tuve un problema procesando tu foto 😊\n\n¿Te gustaría ver nuestro catálogo de sofás mientras tanto? Tenemos más de 15 modelos disponibles. 😊'
+            });
+          }
         }
       } catch (error) {
         console.error('Error processing image:', error);
@@ -2026,7 +2064,7 @@ app.post('/webhook', async (req, res) => {
           await twilioClient.messages.create({
             from: req.body.To,
             to: from,
-            body: 'Disculpa, ocurrió un error procesando la imagen. Por favor intenta más tarde. 😊'
+            body: 'Disculpa, tuve un problema procesando tu foto 😊\n\n¿Te gustaría ver nuestro catálogo de sofás mientras tanto? Tenemos más de 15 modelos disponibles. 😊'
           });
         } catch (e) {
           console.error('Error sending error message:', e);
