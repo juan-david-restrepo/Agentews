@@ -2512,7 +2512,26 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
         let catNombre = catActual ? formatearNombreCategoria(catActual) : 'producto';
         response = `${elegido.nombre}\n💰 Precio: ${elegido.precio}\n📏 Medidas: ${elegido.medidas || 'No disponible'}\n🪵 Material: ${elegido.material || 'No disponible'}\n\n¡Excelente opción! ${catNombre} de gran calidad.\n\n¿Procedemos a añadirlo al carrito por ${elegido.precio}? 😊`;
       } else {
-        response = formatearMensajeAmbiguo(pendientes.candidatos);
+        const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
+        const catBD = await db.getCategoriaActual(from);
+        const nuevoProducto = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD);
+        if (nuevoProducto && !nuevoProducto.ambiguo) {
+          await db.clearCandidatosPendientes(from);
+          const cat = nuevoProducto.categoria || categoriaDetectada || catBD;
+          await db.setCategoriaActual(from, cat);
+          await db.setUltimoProducto(from, { nombre: nuevoProducto.nombre, precio: nuevoProducto.precio, categoria: cat });
+          await db.guardarProductoPendiente(from, nuevoProducto.nombre, nuevoProducto.precio);
+          const info = buscarInfoProducto(nuevoProducto.nombre, cat);
+          response = `${nuevoProducto.nombre}\n💰 Precio: ${nuevoProducto.precio}\n📏 Medidas: ${info?.medidas || 'No disponible'}\n🪵 Material: ${info?.material || 'No disponible'}\n\n¿Te interesa? 😊`;
+        } else if (nuevoProducto && nuevoProducto.ambiguo && nuevoProducto.candidatos) {
+          await db.clearCandidatosPendientes(from);
+          const cat = nuevoProducto.categoria || categoriaDetectada || catBD;
+          await db.setCategoriaActual(from, cat);
+          await db.guardarCandidatosPendientes(from, nuevoProducto.candidatos, incomingMsg);
+          response = formatearMensajeAmbiguo(nuevoProducto.candidatos);
+        } else {
+          response = formatearMensajeAmbiguo(pendientes.candidatos);
+        }
       }
     } else if (detectarAgendar(incomingMsg)) {
       await db.iniciarAgendacion(from);
