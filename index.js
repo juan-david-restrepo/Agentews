@@ -106,6 +106,13 @@ REGLA IMPORTANTE SOBRE SILLAS Y COMEDORES:
 - Siempre que muestres sillas, menciona que el precio es por unidad y que se venden aparte de la base del comedor.
 - Cuando el cliente consulte sobre bases de comedores, menciona que se venden sin sillas incluidas y que puede elegir sillas por separado.
 
+REGLA IMPORTANTE SOBRE COMPARACIONES:
+- Si el cliente está indeciso entre varios productos, compara los productos mencionados recientemente en la conversación mostrando nombre, precio, material y medidas.
+- Recomienda siempre la opción más económica como "mejor relación precio-calidad" y la más cara como "opción premium".
+- Si no tienes contexto de qué productos comparar, pregunta al cliente: presupuesto, estilo preferido, y para qué espacio es.
+- Basa tu recomendación en lo que el cliente necesita: si busca economía, recomienda el más barato; si busca calidad premium, recomienda el más caro.
+- Mantén un tono persuasivo pero honesto, nunca inventes características.
+
 SINONIMOS Y TERMINOS GENERICOS - Como interpretar al cliente:
 - "muebles" o "mueble" = cualquier producto de DeCasa (sofás, camas, mesas, sillas, etc.)
 - "para la sala" = sofás modulares, sofás camas, mesas de centro, sillas auxiliares, mesas de TV
@@ -580,6 +587,78 @@ function esPreguntaInformativa(mensaje) {
     /separado/i, /apart/i, /sale/i, /salen/i, /trae/i, /traen/i
   ];
   return patrones.some(p => p.test(msg));
+}
+
+function detectarComparacion(mensaje) {
+  const msg = mensaje.toLowerCase();
+  const patrones = [
+    /cual.*mejor/i, /cu(a|á)l.*mejor/i, /cual.*recomiend/i, /cu(a|á)l.*recomiend/i,
+    /cual.*me.*conviene/i, /cual.*escojo/i, /cual.*elijo/i,
+    /cual.*deber/i, /cual.*me.*llevo/i, /cual.*mejor.*opcion/i,
+    /estoy.*entre/i, /no.*me.*decido/i, /no.*se.*cual/i,
+    /indecis/i, /duda.*entre/i, /diferencia.*entre/i, /diferencias.*entre/i,
+    /comparar/i, /compara/i, /comparacion/i, /compar/i,
+    /recomiend/i, /mejor.*opcion/i, /cual.*elegir/i,
+    /cual.*compro/i, /cual.*me.*llev/i, /cual.*mas.*vale/i,
+    /cual.*mas.*barat/i, /cual.*mas.*car/i, /cual.*mas.*resistent/i,
+    /que.*me.*conviene/i, /que.*me.*recomend/i, /ayudame.*elegir/i,
+    /ayudame.*decidir/i, /me.*puedes.*ayudar.*elegir/i
+  ];
+  return patrones.some(p => p.test(msg));
+}
+
+async function compararProductos(from) {
+  const historial = await db.getHistorial(from, 8);
+  const productosMencionados = [];
+  const inventario = knowledge.inventario;
+
+  for (const msg of historial) {
+    if (msg.role === 'assistant') {
+      for (const [catKey, catData] of Object.entries(inventario)) {
+        for (const prod of catData.productos) {
+          if (msg.content.includes(prod.nombre) && !productosMencionados.find(p => p.nombre === prod.nombre)) {
+            productosMencionados.push({ ...prod, categoria: catKey });
+          }
+        }
+      }
+    }
+  }
+
+  const productosRecientes = productosMencionados.slice(-3);
+
+  if (productosRecientes.length >= 2) {
+    let comparacion = "📊 *Comparación de productos:*\n\n";
+
+    const productosConPrecio = productosRecientes.map(p => ({
+      ...p,
+      precioNumerico: parseInt(String(p.precio).replace(/[^0-9]/g, '')) || 0
+    }));
+
+    const ordenados = [...productosConPrecio].sort((a, b) => a.precioNumerico - b.precioNumerico);
+    const masBarato = ordenados[0];
+    const masCaro = ordenados[ordenados.length - 1];
+
+    productosRecientes.forEach((prod, i) => {
+      comparacion += `${i + 1}. *${prod.nombre}*\n`;
+      comparacion += `   💰 Precio: ${prod.precio}\n`;
+      if (prod.material) comparacion += `   🪵 Material: ${prod.material}\n`;
+      if (prod.medidas) comparacion += `   📏 Medidas: ${prod.medidas}\n`;
+      comparacion += `\n`;
+    });
+
+    comparacion += `💡 *Mi recomendación:*\n`;
+    comparacion += `• Si buscas la mejor relación precio-calidad: *${masBarato.nombre}* (${masBarato.precio})\n`;
+
+    if (masBarato.nombre !== masCaro.nombre) {
+      comparacion += `• Si buscas la opción premium: *${masCaro.nombre}* (${masCaro.precio})\n`;
+    }
+
+    comparacion += `\n¿Qué es lo que más te importa? ¿Presupuesto, material, tamaño o diseño? 😊`;
+
+    return comparacion;
+  }
+
+  return null;
 }
 
 const MAX_ITEMS_CARRITO = 10;
@@ -2310,6 +2389,13 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
         } else {
           response = `No se guardó la cita.\n\nPara confirmar escribe "sí" o "confirmar"\n\nPara cancelar escribe "cancelar"`;
         }
+      }
+    } else if (detectarComparacion(incomingMsg)) {
+      const comparacion = await compararProductos(from);
+      if (comparacion) {
+        response = comparacion;
+      } else {
+        response = "¡Claro! Te ayudo a elegir. 😊\n\nPara recomendarte mejor, cuéntame:\n\n1. 💰 ¿Cuál es tu presupuesto aproximado?\n2. 🎨 ¿Qué estilo prefieres: moderno, clásico, minimalista?\n3. 📏 ¿Para qué espacio es? (sala, comedor, dormitorio)\n\nCon eso te puedo dar la mejor recomendación. 😊";
       }
     } else if (detectarAgendar(incomingMsg)) {
       await db.iniciarAgendacion(from);
