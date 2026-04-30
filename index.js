@@ -2228,12 +2228,11 @@ app.post('/webhook', async (req, res) => {
         // Pure greeting → always send full SALUDO_INICIAL
         console.log(`[GREETING] Pure greeting detected, sending SALUDO_INICIAL`);
         let response = SALUDO_INICIAL;
+        console.log(`[GREETING] Message content (first 100 chars):`, response.substring(0, 100) + '...');
 
-        // Send response FIRST to ensure user gets it immediately
-        const twiml = new MessagingResponse();
-        twiml.message(response);
-        res.type('text/xml').send(twiml.toString());
-        console.log(`[GREETING] TwiML sent successfully`);
+        // Send response using REST API (better error reporting) with TwiML fallback
+        await enviarMensajeSeguro(from, req.body.To, response, res);
+        console.log(`[GREETING] Message send completed`);
 
         // Then do DB operations asynchronously (don't block the response)
         addToHistoryDB(from, 'user', incomingMsg).catch(e => console.error('[GREETING] Error saving user message:', e));
@@ -3716,6 +3715,24 @@ app.get('/health', async (req, res) => {
   }
   res.json({ status: 'ok', activeUsers });
 });
+
+async function enviarMensajeSeguro(to, from, body, res) {
+  try {
+    const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    const mensaje = await twilioClient.messages.create({
+      from: from,
+      to: to,
+      body: body
+    });
+    console.log(`[MSG] Mensaje enviado por REST API. SID: ${mensaje.sid}`);
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error(`[MSG] REST API falló: ${error.message}. Usando TwiML fallback.`);
+    const twiml = new MessagingResponse();
+    twiml.message(body);
+    res.type('text/xml').send(twiml.toString());
+  }
+}
 
 const PORT = process.env.PORT || 3000;
 
