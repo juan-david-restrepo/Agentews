@@ -2256,6 +2256,43 @@ app.post('/webhook', async (req, res) => {
     const mediaUrl = req.body.MediaUrl0;
     const mediaContentType = req.body.MediaContentType0;
 
+    // CATALOG/PDF REQUEST CHECK - Before any other processing
+    // This ensures "El pdf", "El catálogo", etc. are handled correctly
+    if (detectarSolicitudCatalogo(incomingMsg)) {
+      console.log(`[CATALOG] Solicitud de catálogo detectada: "${incomingMsg}"`);
+      const categoriaGuardada = await db.getCategoriaActual(from);
+      console.log(`[CATALOG] Categoria guardada: ${categoriaGuardada}`);
+      if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
+        imagenURL = knowledge.catalogos[categoriaGuardada];
+        let nombreCat = formatearNombreCategoria(categoriaGuardada);
+        response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊`;
+        console.log(`[CATALOG] Enviando PDF: ${nombreCat}`);
+      } else {
+        // No saved category, show available categories
+        const categoriasDisponibles = Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ');
+        response = `¿De qué categoría te gustaría ver el catálogo? 😊\n\nCategorías disponibles:\n${categoriasDisponibles}`;
+        console.log(`[CATALOG] Sin categoria guardada, mostrando categorias disponibles`);
+      }
+      
+      // Save to history and send response immediately
+      await addToHistoryDB(from, 'user', incomingMsg);
+      await addToHistoryDB(from, 'assistant', response);
+      await db.actualizarLastInteraction(from);
+      
+      const twiml = new MessagingResponse();
+      if (imagenURL) {
+        twiml.message({
+          body: response,
+          mediaUrl: [imagenURL]
+        });
+        console.log(`[CATALOG] Enviando imagen: ${imagenURL}`);
+      } else {
+        twiml.message(response);
+      }
+      res.type('text/xml').send(twiml.toString());
+      return; // Stop processing - we've handled the catalog request
+    }
+
     if (mediaUrl && mediaContentType && mediaContentType.startsWith('image/')) {
       console.log('Image received from:', from, 'URL:', mediaUrl);
 
