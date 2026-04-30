@@ -609,13 +609,18 @@ function detectarComparacion(mensaje) {
 
 async function compararProductos(from) {
   const historial = await db.getHistorial(from, 8);
+  const categoriaActual = await db.getCategoriaActual(from);
+  const itemsCarrito = await db.verCarrito(from);
   const productosMencionados = [];
   const inventario = knowledge.inventario;
+  const nombresEnCarrito = new Set(itemsCarrito.map(item => item.producto.toLowerCase()));
 
   for (const msg of historial) {
     if (msg.role === 'assistant') {
       for (const [catKey, catData] of Object.entries(inventario)) {
+        if (categoriaActual && catKey !== categoriaActual) continue;
         for (const prod of catData.productos) {
+          if (nombresEnCarrito.has(prod.nombre.toLowerCase())) continue;
           if (msg.content.includes(prod.nombre) && !productosMencionados.find(p => p.nombre === prod.nombre)) {
             productosMencionados.push({ ...prod, categoria: catKey });
           }
@@ -624,7 +629,7 @@ async function compararProductos(from) {
     }
   }
 
-  const productosRecientes = productosMencionados.slice(-3);
+  const productosRecientes = productosMencionados.slice(-2);
 
   if (productosRecientes.length >= 2) {
     let comparacion = "📊 *Comparación de productos:*\n\n";
@@ -714,7 +719,6 @@ function detectarSaludo(mensaje) {
     /\bholi\b/i,
     /\bholaa\b/i,
     /\bholaaa\b/i,
-    /\bola\b/i,  // "Ola" misspelling
     /\bholas\b/i,
     /\bbuenos\s+dias\b/i,
     /\bbuenas\s+dias\b/i,
@@ -746,7 +750,7 @@ function detectarSaludo(mensaje) {
     /^\s*hola\s*$/i,
     /^\s*buenas?\s*$/i,
     /^\s*buenos\s*$/i,
-    /^\s*ola\s*$/i  // Just "Ola"
+    /^\s*buenos\s*$/i
   ];
   return patrones.some(p => p.test(msg));
 }
@@ -2414,6 +2418,22 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
 *   **CC Unicentro Pereira, Pereira, Risaralda**
 *   **Cra. 14 #11 - 93. Pereira, Risaralda**
 ¿Te gustaría que te agendara una visita a alguna de ellas? 😊`;
+      } else if ((detectarCompra(incomingMsg) || detectarIntentionAddCarrito(incomingMsg)) && incomingMsg.toLowerCase().includes('comedor')) {
+        // User wants to buy a specific dining table base - route to purchase flow
+        const productoEspecifico = buscarProductoPorNombre(incomingMsg, 'bases_comedores');
+        if (productoEspecifico) {
+          const cantidad = detectarCantidad(incomingMsg) || 1;
+          await db.setCategoriaActual(from, 'bases_comedores');
+          await db.setUltimoProducto(from, {
+            nombre: productoEspecifico.nombre,
+            precio: productoEspecifico.precio,
+            categoria: 'bases_comedores'
+          });
+          await db.guardarProductoPendiente(from, productoEspecifico.nombre, productoEspecifico.precio, cantidad);
+          respuestaSecundaria = `${productoEspecifico.nombre}\n💰 Precio: ${productoEspecifico.precio}\n📏 Medidas: ${productoEspecifico.medidas || 'No disponible'}\n🪵 Material: ${productoEspecifico.material || 'No disponible'}\n\n¿Confirmas agregar al carrito? Responde "sí" para confirmar 😊`;
+        } else {
+          respuestaSecundaria = '¿Cuál modelo de comedor te interesa? 😊';
+        }
       } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('comedor') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
         const msgLower = incomingMsg.toLowerCase();
         const esMensajeGenericoSillas = /que.*sillas|tiene.*sillas|ver.*sillas|tipos.*silla|que.*tipos.*silla|sillas tienen|ver las sillas/i.test(msgLower);
