@@ -839,6 +839,8 @@ async function compararProductos(from, incomingMsg = null) {
 
     comparacion += `\n¿Qué es lo que más te importa? ¿Presupuesto, material, tamaño o diseño? 😊`;
 
+    await db.setComparacionProductos(from, productosRecientes.map(p => ({ nombre: p.nombre, imagen: p.imagen, categoria: p.categoria })));
+
     return comparacion;
   }
 
@@ -1015,7 +1017,7 @@ function recomendarPorPreferencias(prefs) {
   return respuesta;
 }
 
-async function generarComparacionDirecta(productosEncontrados) {
+async function generarComparacionDirecta(from, productosEncontrados) {
   if (!productosEncontrados || productosEncontrados.length < 2) return null;
 
   let comparacion = "📊 *Comparación de productos:*\n\n";
@@ -1039,7 +1041,77 @@ async function generarComparacionDirecta(productosEncontrados) {
   }
   comparacion += "\n¿Cuál te interesa? 😊";
 
+  await db.setComparacionProductos(from, productosEncontrados.map(p => ({ nombre: p.nombre, imagen: p.imagen, categoria: p.categoria })));
+
   return comparacion;
+}
+
+function detectarFotoMultiple(mensaje) {
+  const msg = mensaje.toLowerCase();
+  const patrones = [
+    /foto.*de.*(las|los)\s*(dos|ambos|2)/i,
+    /foto.*ambos/i,
+    /foto.*ambas/i,
+    /foto.*de.*los\s*dos/i,
+    /foto.*de.*las\s*dos/i,
+    /fotos.*de.*(ambos|ambas|los\s*dos|las\s*dos)/i,
+    /mandar.*foto.*dos/i,
+    /enviar.*foto.*dos/i,
+    /foto.*de.*cada/i,
+    /foto.*de.*tod/i,
+    /foto.*de.*todo/i,
+    /foto.*de\s*(los|las)\s*(2|dos)/i
+  ];
+  return patrones.some(p => p.test(msg));
+}
+
+function extraerFotoMultiple(mensaje, productosComparacion) {
+  const msg = mensaje.toLowerCase();
+  if (!productosComparacion || productosComparacion.length === 0) return null;
+
+  const refPrimera = /primera|primer\b/i.test(msg);
+  const refSegunda = /segunda|segundo\b/i.test(msg);
+  const refUltima = /ultima|última|ultim/i.test(msg);
+  const refDos = /las\s*dos|los\s*dos|ambos|ambas/i.test(msg);
+
+  if (refDos) {
+    return productosComparacion;
+  }
+  if (refPrimera) {
+    return [productosComparacion[0]];
+  }
+  if (refSegunda && productosComparacion.length >= 2) {
+    return [productosComparacion[1]];
+  }
+  if (refUltima) {
+    return [productosComparacion[productosComparacion.length - 1]];
+  }
+
+  const palabras = msg.split(/\s+/).filter(p => p.length > 2 && !/foto|foto|mandar|enviar|imagen|ver|foto|de|las|los|dos|ambos|ambas|porfa|porfavor|please/i.test(p));
+
+  if (palabras.length > 0) {
+    const filtrados = productosComparacion.filter(p => {
+      const nombreLimpio = p.nombre.toLowerCase();
+      return palabras.some(pal => nombreLimpio.includes(pal));
+    });
+    if (filtrados.length > 0) return filtrados;
+  }
+
+  return productosComparacion;
+}
+
+async function enviarSegundaFoto(from, imagenURL, texto) {
+  try {
+    const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    await twilioClient.messages.create({
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: from,
+      body: texto,
+      mediaUrl: [imagenURL]
+    });
+  } catch (e) {
+    console.error('Error enviando segunda foto:', e.message);
+  }
 }
 
 const MAX_ITEMS_CARRITO = 10;
@@ -2183,6 +2255,7 @@ function buscarImagenProducto(mensaje) {
   const categorias = Object.values(knowledge.inventario || {});
   const mensajeLower = mensaje.toLowerCase().replace(/[^a-záéíóúñ\s]/g, ' ');
 
+  const stopWords = ['dos', 'ambos', 'ambas', 'las', 'los', 'del', 'una', 'unos', 'unas', 'que', 'este', 'esta', 'ese', 'esa', 'aquel', 'aquella', 'otra', 'otro', 'todas', 'todos', 'cada', 'foto', 'fotos', 'imagen', 'imagenes', 'mandar', 'enviar', 'puedes', 'podrías', 'porfa', 'favor'];
   const productosConImagen = [];
 
   for (const categoria of categorias) {
@@ -2190,7 +2263,7 @@ function buscarImagenProducto(mensaje) {
       if (!producto.imagen) continue;
 
       const nombreLimpio = producto.nombre.toLowerCase().replace(/[^a-záéíóúñ\s]/g, ' ').replace(/\s+/g, ' ').trim();
-      const palabrasClave = nombreLimpio.split(' ').filter(p => p.length > 2);
+      const palabrasClave = nombreLimpio.split(' ').filter(p => p.length > 2 && !stopWords.includes(p));
 
       let score = 0;
       for (const palabra of palabrasClave) {
@@ -2939,6 +3012,29 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
         await db.setComparacionPendiente(from, {});
         response = "¡Claro! Te ayudo a elegir. 😊\n\nPara recomendarte mejor, cuéntame:\n\n1. 💰 ¿Cuál es tu presupuesto aproximado?\n2. 🎨 ¿Qué estilo prefieres: moderno, clásico, minimalista?\n3. 📏 ¿Para qué espacio es? (sala, comedor, dormitorio)\n\nCon eso te puedo dar la mejor recomendación. 😊";
       }
+    } else if (detectarFotoMultiple(incomingMsg)) {
+      const productosComp = await db.getComparacionProductos(from);
+      if (productosComp && productosComp.length >= 2) {
+        const seleccionados = extraerFotoMultiple(incomingMsg, productosComp);
+        if (seleccionados && seleccionados.length >= 2) {
+          imagenURL = seleccionados[0].imagen;
+          response = `Aquí tienes las fotos de ${seleccionados.map(p => p.nombre).join(' y ')} 😊`;
+          for (let i = 1; i < seleccionados.length; i++) {
+            if (seleccionados[i].imagen) {
+              await enviarSegundaFoto(from, seleccionados[i].imagen, '');
+            }
+          }
+          await db.clearComparacionProductos(from);
+        } else if (seleccionados && seleccionados.length === 1) {
+          imagenURL = seleccionados[0].imagen;
+          response = `Aquí tienes la foto de ${seleccionados[0].nombre} 😊`;
+          await db.clearComparacionProductos(from);
+        } else {
+          response = "No encontré las fotos que buscas 😊 ¿Qué producto te interesa?";
+        }
+      } else {
+        response = "¿De qué productos quieres ver la foto? 😊";
+      }
     } else if (await db.getCandidatosPendientes(from)) {
       // Check if this is a photo request first, before treating it as candidate selection
       if (detectarSolicitudFoto(incomingMsg)) {
@@ -3205,6 +3301,29 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
         } else {
           response = "¿De qué categoría quieres la opción más económica? 😊";
         }
+      }
+    } else if (detectarFotoMultiple(incomingMsg)) {
+      const productosComp = await db.getComparacionProductos(from);
+      if (productosComp && productosComp.length >= 2) {
+        const seleccionados = extraerFotoMultiple(incomingMsg, productosComp);
+        if (seleccionados && seleccionados.length >= 2) {
+          imagenURL = seleccionados[0].imagen;
+          response = `Aquí tienes las fotos de ${seleccionados.map(p => p.nombre).join(' y ')} 😊`;
+          for (let i = 1; i < seleccionados.length; i++) {
+            if (seleccionados[i].imagen) {
+              await enviarSegundaFoto(from, seleccionados[i].imagen, '');
+            }
+          }
+          await db.clearComparacionProductos(from);
+        } else if (seleccionados && seleccionados.length === 1) {
+          imagenURL = seleccionados[0].imagen;
+          response = `Aquí tienes la foto de ${seleccionados[0].nombre} 😊`;
+          await db.clearComparacionProductos(from);
+        } else {
+          response = "No encontré las fotos que buscas 😊 ¿Qué producto te interesa?";
+        }
+      } else {
+        response = "¿De qué productos quieres ver la foto? 😊";
       }
     } else if (detectarSolicitudFoto(incomingMsg)) {
       const producto = buscarImagenProducto(incomingMsg);

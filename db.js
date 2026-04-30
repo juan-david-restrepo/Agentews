@@ -165,7 +165,8 @@ async function getEstado(telefono) {
     datos_agenda: parseJSONField(estado.datos_agenda),
     candidatos_pendientes: parseJSONField(estado.candidatos_pendientes),
     subtipo_pendiente: parseJSONField(estado.subtipo_pendiente),
-    comparacion_pendiente: parseJSONField(estado.comparacion_pendiente)
+    comparacion_pendiente: parseJSONField(estado.comparacion_pendiente),
+    comparacion_productos: parseJSONField(estado.comparacion_productos)
   };
 }
 
@@ -244,6 +245,11 @@ async function updateEstado(telefono, datos) {
   if (datos.comparacion_pendiente !== undefined) {
     campos.push('comparacion_pendiente = ?');
     valores.push(datos.comparacion_pendiente ? JSON.stringify(datos.comparacion_pendiente) : null);
+  }
+
+  if (datos.comparacion_productos !== undefined) {
+    campos.push('comparacion_productos = ?');
+    valores.push(datos.comparacion_productos ? JSON.stringify(datos.comparacion_productos) : null);
   }
 
   if (campos.length === 0) return;
@@ -445,7 +451,8 @@ async function resetearEstadoSinPedido(telefono) {
     datos_agenda: null,
     candidatos_pendientes: null,
     subtipo_pendiente: null,
-    comparacion_pendiente: null
+    comparacion_pendiente: null,
+    comparacion_productos: null
   });
 }
 
@@ -603,6 +610,25 @@ async function clearComparacionPendiente(telefono) {
   await updateEstado(telefono, { comparacion_pendiente: null });
 }
 
+async function setComparacionProductos(telefono, productos) {
+  await updateEstado(telefono, { comparacion_productos: productos, comparacion_productos_ts: Date.now() });
+}
+
+async function getComparacionProductos(telefono) {
+  const estado = await getEstado(telefono);
+  if (!estado.comparacion_productos) return null;
+  const MAX_AGE_MS = 10 * 60 * 1000;
+  if (Date.now() - (estado.comparacion_productos_ts || 0) > MAX_AGE_MS) {
+    await clearComparacionProductos(telefono);
+    return null;
+  }
+  return estado.comparacion_productos;
+}
+
+async function clearComparacionProductos(telefono) {
+  await updateEstado(telefono, { comparacion_productos: null });
+}
+
 module.exports = {
   pool,
   getOrCreateUsuario,
@@ -652,5 +678,8 @@ module.exports = {
   clearSubtipoPendiente,
   setComparacionPendiente,
   getComparacionPendiente,
-  clearComparacionPendiente
+  clearComparacionPendiente,
+  setComparacionProductos,
+  getComparacionProductos,
+  clearComparacionProductos
 };
