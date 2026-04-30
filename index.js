@@ -2774,6 +2774,53 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
           response = `Claro! Estas son las categorías disponibles:\n${Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ')}\n\n¿Cuál te gustaría ver? 😊`;
         }
       }
+    } else if (/vienen\s+por\s+separado|se\s+venden\s+(por|de)\s+separado|inclu(ye|yen)|trae|traen|con\s+silla|sin\s+silla|silla\s+(incluida|suelta)|demora|entrega|domicilio|envio|pago|cuota|financiaci|plazo|color|tama|personaliz|medida\s+especial|medida\s+a\s+medida|a\s+medida/i.test(incomingMsg)) {
+      const catBD = await db.getCategoriaActual(from);
+      const ultimoProd = await db.getUltimoProducto(from);
+      const prodNombre = ultimoProd?.nombre || null;
+      const msgLower = incomingMsg.toLowerCase();
+
+      let respuestaPregunta = null;
+
+      if (/vienen\s+por\s+separado|se\s+venden\s+por\s+separado|inclu(ye|yen)|trae\s+silla|traen\s+silla/i.test(msgLower)) {
+        if (catBD === 'bases_comedores') {
+          respuestaPregunta = `No, las sillas se venden por separado de la base del comedor y el precio es por unidad. 🪑`;
+          if (prodNombre) {
+            respuestaPregunta += `\n\n${prodNombre} es solo la base. Puedes elegir las sillas que más te gusten de nuestro catálogo.`;
+          }
+          const sillas = knowledge.inventario.sillas_comedor?.productos || [];
+          if (sillas.length > 0) {
+            respuestaPregunta += `\n\nEstas son algunas sillas disponibles:\n`;
+            sillas.slice(0, 5).forEach(s => {
+              respuestaPregunta += `• ${s.nombre} | ${s.precio}\n`;
+            });
+            respuestaPregunta += `\n¿Te interesa alguna? 😊`;
+          }
+        } else if (catBD === 'camas') {
+          respuestaPregunta = `La cama viene con su base incluida. ¿Te gustaría ver más detalles? 😊`;
+        } else {
+          respuestaPregunta = `Cada producto tiene sus propias especificaciones. Cuéntame cuál te interesa y te doy más detalles. 😊`;
+        }
+      } else if (/entrega|domicilio|envio|demora/i.test(msgLower)) {
+        respuestaPregunta = `Los muebles se fabrican a pedido y el tiempo de entrega varía según el producto. Un asesor te puede dar información exacta sobre tiempos de entrega a tu ubicación. 😊`;
+      } else if (/pago|cuota|financiaci|plazo/i.test(msgLower)) {
+        respuestaPregunta = `Aceptamos diferentes métodos de pago. Un asesor te puede informar sobre opciones de financiación y plazos disponibles. 😊`;
+      } else if (/color|tama|personaliz|medida\s+especial|medida\s+a\s+medida|a\s+medida/i.test(msgLower)) {
+        respuestaPregunta = `Todos nuestros muebles pueden personalizarse en medidas, colores y materiales. ¿Te gustaría que te transfiera con un asesor para cotizar tu diseño a medida? 😊`;
+      }
+
+      if (respuestaPregunta) {
+        if (/silla|sillas/i.test(msgLower) && catBD === 'bases_comedores') {
+          // Already includes sillas list in respuestaPregunta, no need to append catalog
+          response = respuestaPregunta;
+        } else {
+          response = respuestaPregunta;
+        }
+      } else {
+        // Question pattern detected but not matched, fall through to Gemini
+        await addToHistoryDB(from, 'user', incomingMsg);
+        response = await callGemini({ history, currentMessage: incomingMsg });
+      }
     } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('comedor') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
       const msgLower = incomingMsg.toLowerCase();
       const esMensajeGenericoSillas = /que.*sillas|tiene.*sillas|ver.*sillas|tipos.*silla|que.*tipos.*silla|sillas tienen|ver las sillas/i.test(msgLower);
