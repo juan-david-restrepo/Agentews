@@ -52,6 +52,12 @@ async function initDB() {
         transferido BOOLEAN DEFAULT FALSE,
         greeting_sent BOOLEAN DEFAULT FALSE,
         tiene_pedido BOOLEAN DEFAULT FALSE,
+        ultimo_producto JSON,
+        agendando_cita BOOLEAN DEFAULT FALSE,
+        paso_agenda INT DEFAULT 0,
+        datos_agenda JSON,
+        transferencia_medida_pendiente JSON,
+        candidatos_pendientes JSON,
         FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
       )
     `);
@@ -128,6 +134,12 @@ async function initDB() {
         ALTER TABLE estado_usuario ADD COLUMN transferencia_medida_pendiente JSON
       `);
       console.log('✅ Columna transferencia_medida_pendiente añadida');
+    }
+    if (!nombresColsEstado.includes('candidatos_pendientes')) {
+      await connection.query(`
+        ALTER TABLE estado_usuario ADD COLUMN candidatos_pendientes JSON
+      `);
+      console.log('✅ Columna candidatos_pendientes añadida');
     }
 
     console.log('\n🎉 Base de datos lista!\n');

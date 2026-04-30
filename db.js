@@ -162,7 +162,8 @@ async function getEstado(telefono) {
     tiene_pedido: !!estado.tiene_pedido,
     agendando_cita: !!estado.agendando_cita,
     paso_agenda: estado.paso_agenda || 0,
-    datos_agenda: parseJSONField(estado.datos_agenda)
+    datos_agenda: parseJSONField(estado.datos_agenda),
+    candidatos_pendientes: parseJSONField(estado.candidatos_pendientes)
   };
 }
 
@@ -228,6 +229,11 @@ async function updateEstado(telefono, datos) {
     valores.push(datos.datos_agenda ? JSON.stringify(datos.datos_agenda) : null);
   }
 
+  if (datos.candidatos_pendientes !== undefined) {
+    campos.push('candidatos_pendientes = ?');
+    valores.push(datos.candidatos_pendientes ? JSON.stringify(datos.candidatos_pendientes) : null);
+  }
+
   if (campos.length === 0) return;
 
   valores.push(usuarioId);
@@ -286,6 +292,19 @@ async function getTransferenciaMedidaPendiente(telefono) {
 
 async function clearTransferenciaMedidaPendiente(telefono) {
   await updateEstado(telefono, { transferencia_medida_pendiente: null });
+}
+
+async function guardarCandidatosPendientes(telefono, candidatos, mensajeOriginal) {
+  await updateEstado(telefono, { candidatos_pendientes: { candidatos, mensajeOriginal, timestamp: Date.now() } });
+}
+
+async function getCandidatosPendientes(telefono) {
+  const estado = await getEstado(telefono);
+  return estado.candidatos_pendientes;
+}
+
+async function clearCandidatosPendientes(telefono) {
+  await updateEstado(telefono, { candidatos_pendientes: null });
 }
 
 async function estaTransferida(telefono) {
@@ -411,7 +430,8 @@ async function resetearEstadoSinPedido(telefono) {
     tiene_pedido: false,
     agendando_cita: false,
     paso_agenda: 0,
-    datos_agenda: null
+    datos_agenda: null,
+    candidatos_pendientes: null
   });
 }
 
@@ -571,5 +591,8 @@ module.exports = {
   limpiarConversacionesInactivas,
   setTransferenciaMedidaPendiente,
   getTransferenciaMedidaPendiente,
-  clearTransferenciaMedidaPendiente
+  clearTransferenciaMedidaPendiente,
+  guardarCandidatosPendientes,
+  getCandidatosPendientes,
+  clearCandidatosPendientes
 };
