@@ -2812,6 +2812,10 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
       } else if (/pago|cuota|financiaci|plazo/i.test(msgLower)) {
         respuestaPregunta = `Aceptamos diferentes métodos de pago. Un asesor te puede informar sobre opciones de financiación y plazos disponibles. 😊`;
       } else if (/color|tama|personaliz|medida\s+especial|medida\s+a\s+medida|a\s+medida/i.test(msgLower)) {
+        const prodPendiente = await db.getProductoPendiente(from);
+        const ultimoProd = await db.getUltimoProducto(from);
+        const prodParaPersonalizar = prodPendiente?.producto || ultimoProd?.nombre || 'Producto no especificado';
+        await db.setTransferenciaMedidaPendiente(from, { producto: prodParaPersonalizar, solicitud: incomingMsg });
         respuestaPregunta = `Todos nuestros muebles pueden personalizarse en medidas, colores y materiales. ¿Te gustaría que te transfiera con un asesor para cotizar tu diseño a medida? 😊`;
       }
 
