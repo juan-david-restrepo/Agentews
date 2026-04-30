@@ -131,13 +131,13 @@ function buscarMasBarato(categoria) {
   const inventario = knowledge.inventario || {};
   const productos = inventario[categoria]?.productos;
   if (!productos || productos.length === 0) return null;
-  
+
   const sorted = [...productos].sort((a, b) => {
     const precioA = parseInt(a.precio.replace(/[^0-9]/g, '')) || 0;
     const precioB = parseInt(b.precio.replace(/[^0-9]/g, '')) || 0;
     return precioA - precioB;
   });
-  
+
   return sorted[0];
 }
 
@@ -150,16 +150,16 @@ function buscarProductosRelacionados(categoria, limite = 3) {
 
 async function agregarAlCarritoDB(from, producto, precio, cantidad = 1) {
   const items = await db.verCarrito(from);
-  
+
   if (items.length >= MAX_ITEMS_CARRITO) {
     return { success: false, mensaje: `El carrito tiene máximo ${MAX_ITEMS_CARRITO} productos. Confirma tu compra o elimina algo.` };
   }
-  
+
   const yaExiste = items.find(item => item.producto === producto);
   if (yaExiste) {
     return { success: false, mensaje: "Este producto ya está en el carrito. ¿Quieres confirmar la compra?" };
   }
-  
+
   await db.agregarAlCarrito(from, producto, precio, cantidad);
   return { success: true, mensaje: null };
 }
@@ -175,10 +175,10 @@ async function limpiarCarritoDB(from) {
 async function formatearCarrito(from) {
   const items = await db.verCarrito(from);
   if (!items || items.length === 0) return null;
-  
+
   let mensaje = "🛒 Tu carrito:\n\n";
   let total = 0;
-  
+
   items.forEach((item, index) => {
     const cantidad = item.cantidad || 1;
     const precioUnitario = parseInt(item.precio.replace(/[^0-9]/g, '')) || 0;
@@ -190,16 +190,16 @@ async function formatearCarrito(from) {
     mensaje += `\n`;
     total += precioTotal;
   });
-  
+
   mensaje += `\n─────────────────\n💰 Total: $${total.toLocaleString()}`;
-  
+
   return { mensaje, total, items };
 }
 
 function buscarProductoEnHistorial(history, mensaje) {
   const mensajeLower = mensaje.toLowerCase();
   const categorias = Object.values(knowledge.inventario || {});
-  
+
   for (const categoria of categorias) {
     for (const producto of categoria.productos) {
       const nombreLower = producto.nombre.toLowerCase();
@@ -217,7 +217,7 @@ function detectarCategoriaEnMensaje(mensaje) {
     .replace(/[^a-záéíóúñ\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  
+
   const mapeoCategorias = {
     'comedor': 'bases_comedores',
     'comedores': 'bases_comedores',
@@ -244,12 +244,12 @@ function detectarCategoriaEnMensaje(mensaje) {
     'silla barra': 'sillas_barra',
     'silla de barra': 'sillas_barra'
   };
-  
+
   const tieneSilla = msg.includes('silla') || msg.includes('sillas');
   const tieneComedor = msg.includes('comedor') || msg.includes('comida') || msg.includes('para comer') || msg.includes('para comer');
   const tieneSala = msg.includes('sala') || msg.includes('auxiliar') || msg.includes('rededora');
   const tieneBarra = msg.includes('barra') || msg.includes('alto') || msg.includes('mesón') || msg.includes('meson');
-  
+
   if (tieneSilla && tieneComedor) {
     return 'sillas_comedor';
   }
@@ -259,7 +259,7 @@ function detectarCategoriaEnMensaje(mensaje) {
   if (tieneSilla && tieneBarra) {
     return 'sillas_barra';
   }
-  
+
   for (const [palabra, clave] of Object.entries(mapeoCategorias)) {
     if (msg.includes(palabra)) {
       return clave;
@@ -270,13 +270,13 @@ function detectarCategoriaEnMensaje(mensaje) {
 
 function necesitaSubtipo(mensaje, categoria) {
   const msg = mensaje.toLowerCase();
-  
+
   if (msg.includes('comedor') || msg.includes('comida') || msg.includes('para comer')) {
     if (categoria === 'sillas_comedor' || categoria === null || categoria === 'bases_comedores') {
       return 'sillas_comedor';
     }
   }
-  
+
   if (categoria === 'sillas_comedor' || categoria === null) {
     if (msg.includes('auxiliar') || msg.includes('rededora') || msg.includes('para sala')) return 'sillas_auxiliares';
     if (msg.includes('barra') || msg.includes('alto') || msg.includes('mesón') || msg.includes('meson')) return 'sillas_barra';
@@ -300,7 +300,7 @@ function necesitaSubtipo(mensaje, categoria) {
 
 function formatearPreguntaSubtipo(categoria, mensaje) {
   const msg = mensaje?.toLowerCase() || '';
-  
+
   if (categoria === 'sillas_comedor' || msg.includes('silla')) {
     return `¿Qué tipo de silla buscas?
 • De comedor (para el diario)
@@ -325,30 +325,30 @@ function buscarProductoPorNombre(mensaje, categoriaPref = null, categoriaBD = nu
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  
+
   // If message is too short (like "ola"), don't even search
   if (mensajeLimpio.length < 3) {
     return null;
   }
-  
+
   const categorias = Object.values(knowledge.inventario || {});
   const categoriaDetectada = categoriaPref || detectarCategoriaEnMensaje(mensaje);
   const categoriaPreferida = categoriaDetectada || categoriaBD;
-  
+
   let mejoresCoincidencias = [];
   let categoriaDelProducto = null;
-  
+
   const buscarEnCategoria = (cat, esPreferida = false) => {
     if (!cat.productos) return;
-      for (const producto of cat.productos) {
+    for (const producto of cat.productos) {
       const nombreLimpio = producto.nombre.toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9\s]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
-      
+
       let score = 0;
-      
+
       // STRICT MATCH: Only if message is a substantial part of product name
       // Prevent "ola" matching "cama" just because "ola" is inside "chocolatina"
       if (mensajeLimpio.length >= 4 && nombreLimpio.includes(mensajeLimpio) && mensajeLimpio.length >= nombreLimpio.length * 0.3) {
@@ -360,7 +360,7 @@ function buscarProductoPorNombre(mensaje, categoriaPref = null, categoriaBD = nu
       } else {
         const palabrasMsj = mensajeLimpio.split(' ').filter(p => p.length > 2);
         const palabrasProd = nombreLimpio.split(' ').filter(p => p.length > 2);
-        
+
         for (const pm of palabrasMsj) {
           for (const pp of palabrasProd) {
             // Only count if word is at least 50% of the product word
@@ -371,27 +371,27 @@ function buscarProductoPorNombre(mensaje, categoriaPref = null, categoriaBD = nu
             }
           }
         }
-        
+
         if (mensajeLimpio.length >= 4 && nombreLimpio.startsWith(mensajeLimpio.substring(0, 4))) {
           score += 30;
         }
       }
-      
+
       if (score > 0) {
         mejoresCoincidencias.push({ producto, score, nombre: producto.nombre, precio: producto.precio, categoria: cat, esCategoriaPreferida: esPreferida });
       }
     }
   };
-  
+
   if (categoriaPreferida && knowledge.inventario[categoriaPreferida]) {
     buscarEnCategoria(knowledge.inventario[categoriaPreferida], true);
   }
-  
+
   for (const categoria of categorias) {
     if (categoriaPreferida && categoria === knowledge.inventario[categoriaPreferida]) continue;
     buscarEnCategoria(categoria, false);
   }
-  
+
   if (mejoresCoincidencias.length > 0) {
     mejoresCoincidencias.sort((a, b) => {
       if (b.score !== a.score) {
@@ -402,37 +402,37 @@ function buscarProductoPorNombre(mensaje, categoriaPref = null, categoriaBD = nu
       }
       return 0;
     });
-    
+
     const mejorScore = mejoresCoincidencias[0].score;
     // Only return if confidence is high enough (≥ 50)
     if (mejorScore >= 50) {
-      return { 
-        nombre: mejoresCoincidencias[0].nombre, 
+      return {
+        nombre: mejoresCoincidencias[0].nombre,
         precio: mejoresCoincidencias[0].precio,
         categoria: mejoresCoincidencias[0].categoria
       };
     }
   }
-  
+
   return null;
 }
 
 function buscarInfoProducto(nombreProducto, categoriaPref = null, categoriaBD = null) {
   const nombreBuscado = nombreProducto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
-  
+
   const categoriaDetectada = categoriaPref || detectarCategoriaEnMensaje(nombreProducto);
   const categoriaPreferida = categoriaDetectada || categoriaBD;
   const categorias = Object.values(knowledge.inventario || {});
-  
+
   let mejoresCoincidencias = [];
-  
+
   const buscarEnCategoria = (cat, esPreferida = false) => {
     if (!cat.productos) return;
     for (const producto of cat.productos) {
       const nombreLimpio = producto.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
 
       let score = 0;
-      
+
       if (nombreBuscado.includes(nombreLimpio) || nombreLimpio.includes(nombreBuscado)) {
         score = 100;
       } else if (nombreLimpio.includes(nombreBuscado) || nombreBuscado.includes(nombreLimpio)) {
@@ -440,7 +440,7 @@ function buscarInfoProducto(nombreProducto, categoriaPref = null, categoriaBD = 
       } else {
         const palabrasMsg = nombreBuscado.split(' ').filter(p => p.length > 2);
         const palabrasProd = nombreLimpio.split(' ').filter(p => p.length > 2);
-        
+
         for (const pm of palabrasMsg) {
           for (const pp of palabrasProd) {
             if (pp.includes(pm) || pm.includes(pp)) {
@@ -448,18 +448,18 @@ function buscarInfoProducto(nombreProducto, categoriaPref = null, categoriaBD = 
             }
           }
         }
-        
+
         if (nombreBuscado.length >= 4 && nombreLimpio.includes(nombreBuscado.substring(0, 6))) {
           score += 40;
         }
       }
-      
+
       if (score > 0) {
         mejoresCoincidencias.push({ producto, score, esCategoriaPreferida: esPreferida });
       }
     }
   };
-  
+
   if (categoriaPreferida && knowledge.inventario[categoriaPreferida]) {
     buscarEnCategoria(knowledge.inventario[categoriaPreferida], true);
     if (mejoresCoincidencias.length > 0) {
@@ -479,12 +479,12 @@ function buscarInfoProducto(nombreProducto, categoriaPref = null, categoriaBD = 
       };
     }
   }
-  
+
   for (const categoria of categorias) {
     if (categoriaPreferida && categoria === knowledge.inventario[categoriaPreferida]) continue;
     buscarEnCategoria(categoria, false);
   }
-  
+
   if (mejoresCoincidencias.length > 0) {
     mejoresCoincidencias.sort((a, b) => b.score - a.score);
     const mejorScore = mejoresCoincidencias[0].score;
@@ -505,30 +505,30 @@ function buscarInfoProducto(nombreProducto, categoriaPref = null, categoriaBD = 
 
 function buscarPorDescripcion(descripcion, categoriaActual) {
   if (!descripcion || !categoriaActual) return null;
-  
+
   const msg = descripcion.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  
+
   const categoria = knowledge.inventario[categoriaActual];
   if (!categoria || !categoria.productos) return null;
-  
+
   let mejorCoincidencia = null;
   let mejorScore = 0;
-  
+
   for (const producto of categoria.productos) {
     const nombreLimpio = producto.nombre.toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9\s]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
-    
+
     let score = 0;
     const palabrasMsg = msg.split(' ').filter(p => p.length > 2);
     const palabrasProd = nombreLimpio.split(' ').filter(p => p.length > 2);
-    
+
     for (const pm of palabrasMsg) {
       for (const pp of palabrasProd) {
         if (pp.includes(pm) || pm.includes(pp)) {
@@ -536,7 +536,7 @@ function buscarPorDescripcion(descripcion, categoriaActual) {
         }
       }
     }
-    
+
     if (score > mejorScore) {
       mejorScore = score;
       mejorCoincidencia = {
@@ -548,7 +548,7 @@ function buscarPorDescripcion(descripcion, categoriaActual) {
       };
     }
   }
-  
+
   return mejorScore > 50 ? mejorCoincidencia : null;
 }
 
@@ -696,21 +696,21 @@ function detectarAsesor(mensaje) {
 }
 
 function detectarMedidaPersonalizada(mensaje) {
-  const msg = mensaje.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');  
-  
+  const msg = mensaje.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
   // First check if this is a catalog request (should NOT trigger medida personalizada)
-  const esConsultaCatalogo = /que.*tienen/i.test(msg) || 
-                             /que.*hay/i.test(msg) || 
-                             /mostrar.*catalogo/i.test(msg) ||
-                             /ver.*catalogo/i.test(msg) ||
-                             /saber que/i.test(msg) ||
-                             /^ver /i.test(msg) ||
-                             /^que /i.test(msg);  
-  
+  const esConsultaCatalogo = /que.*tienen/i.test(msg) ||
+    /que.*hay/i.test(msg) ||
+    /mostrar.*catalogo/i.test(msg) ||
+    /ver.*catalogo/i.test(msg) ||
+    /saber que/i.test(msg) ||
+    /^ver /i.test(msg) ||
+    /^que /i.test(msg);
+
   if (esConsultaCatalogo) {
     return false;
   }
-  
+
   const patrones = [
     /si la medida/i,
     /cambiar la medida/i,
@@ -744,10 +744,10 @@ function detectarMedidaPersonalizada(mensaje) {
 
 function detectarPersonalizacion(mensaje) {
   const msg = mensaje.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  
+
   const COLORES = ['negro', 'blanco', 'azul', 'rojo', 'verde', 'amarillo', 'gris', 'marron', 'beige', 'cafe', 'crema', 'champan', 'vino', 'burdeos', 'naranja', 'rosa', 'morado', 'lila'];
   const coloresRegex = COLORES.join('|');
-  
+
   const patrones = [
     // Color patterns
     new RegExp('en (' + coloresRegex + ')', 'i'),
@@ -766,7 +766,7 @@ function detectarPersonalizacion(mensaje) {
     /diferente/i,
     /especial/i
   ];
-  
+
   return patrones.some(p => p.test(msg));
 }
 
@@ -792,15 +792,15 @@ function detectarCompra(mensaje) {
 
 function detectarAgendar(mensaje) {
   const msg = mensaje.toLowerCase();
-  return msg.includes('agendar') || 
-    (msg.includes('cita') && (msg.includes('quisiera') || msg.includes('quiero') || 
-     msg.includes('necesito') || msg.includes('pedir') || msg.includes('reservar')));
+  return msg.includes('agendar') ||
+    (msg.includes('cita') && (msg.includes('quisiera') || msg.includes('quiero') ||
+      msg.includes('necesito') || msg.includes('pedir') || msg.includes('reservar')));
 }
 
 function detectarCancelarAgendacion(mensaje) {
   const msg = mensaje.toLowerCase();
-  return msg === 'cancelar' || msg === 'cancelar agendacion' || msg === 'cancelar agenda' || 
-         msg.includes('cancelar la cita') || msg.includes('cancelar agendacion');
+  return msg === 'cancelar' || msg === 'cancelar agendacion' || msg === 'cancelar agenda' ||
+    msg.includes('cancelar la cita') || msg.includes('cancelar agendacion');
 }
 
 function esDiaValido(mensaje) {
@@ -824,22 +824,22 @@ function esSabado(mensaje) {
 
 function esHoraValida(mensaje, esSabadoDia = false) {
   const msg = mensaje.toLowerCase().replace(/\s+/g, ' ').trim();
-  
+
   // Acepta: hora entera (9, 14) o hora:minuto (9:30, 14:50)
   const match = msg.match(/^(\d{1,2})(?::(\d{1,2}))?$/);
   if (!match) return false;
-  
+
   const hora = parseInt(match[1]);
   const minutos = match[2] ? parseInt(match[2]) : 0;
-  
+
   // Validar rango de hora
   const horaMin = 8;
   const horaMax = esSabadoDia ? 11 : 16;
   if (hora < horaMin || hora > horaMax) return false;
-  
+
   // Validar minutos (0-59)
   if (minutos < 0 || minutos > 59) return false;
-  
+
   return true;
 }
 
@@ -848,14 +848,14 @@ function formatearHora(hora) {
   // Acepta hora entera u hora:minuto
   const match = msg.match(/^(\d{1,2})(?::(\d{1,2}))?$/);
   if (!match) return hora;
-  
+
   const h = parseInt(match[1]);
   const m = match[2] ? parseInt(match[2]) : 0;
-  
+
   // Rellenar con ceros a la izquierda (2 dígitos)
   const hh = h.toString().padStart(2, '0');
   const mm = m.toString().padStart(2, '0');
-  
+
   return `${hh}:${mm}`;
 }
 
@@ -893,7 +893,7 @@ function detectarConsultaInfo(mensaje) {
   if (detectarVerCarrito(mensaje)) return false;
   if (detectarLimpiarCarrito(mensaje)) return false;
   if (detectarAgendar(mensaje)) return false;
-  
+
   const msg = mensaje.toLowerCase();
   const patronesInfo = [
     /^qui[é]iera ver/i,
@@ -972,19 +972,19 @@ function detectarConsultaInfo(mensaje) {
     /sobre la\s+\w+/i,
     /consultar.*\w+/i
   ];
-  
+
   for (const patron of patronesInfo) {
     if (patron.test(msg)) {
       return true;
     }
   }
-  
+
   const palabrasVer = ['ver', 'mostrar', 'ver fotos', 'ver imágenes', 'quisiera', 'quiero', 'información', 'info', 'detalles', 'saber', 'conocer'];
   const tienePalabraVer = palabrasVer.some(p => msg.includes(p));
-  const tieneCategoria = msg.includes('silla') || msg.includes('comedor') || msg.includes('base') || 
-                        msg.includes('cama') || msg.includes('mesa') || msg.includes('sof') ||
-                        msg.includes('catálogo') || msg.includes('precio') || msg.includes('el ') || msg.includes('la ');
-  
+  const tieneCategoria = msg.includes('silla') || msg.includes('comedor') || msg.includes('base') ||
+    msg.includes('cama') || msg.includes('mesa') || msg.includes('sof') ||
+    msg.includes('catálogo') || msg.includes('precio') || msg.includes('el ') || msg.includes('la ');
+
   return tienePalabraVer && tieneCategoria;
 }
 
@@ -1018,7 +1018,7 @@ async function enviarNotificacionTelegram(telefono, mensaje, historial, tipo = '
 
   let titulo = '🆘 SOLICITUD DE ASESOR';
   let emoji = '💬';
-  
+
   if (tipo === 'pedido') {
     titulo = '📦 NUEVO PEDIDO - DeCasa';
     emoji = '💰';
@@ -1026,12 +1026,12 @@ async function enviarNotificacionTelegram(telefono, mensaje, historial, tipo = '
     titulo = '🎨 PERSONALIZACIÓN - DeCasa';
     emoji = '🎨';
   }
-  
+
   let productoInfo = '';
   if (producto) {
     productoInfo = `\n📏 <b>Producto:</b> ${producto}`;
   }
-  
+
   let personalizacionInfo = '';
   if (tipoPersonalizacion) {
     personalizacionInfo = `\n🎨 <b>Tipo:</b> Personalización de ${tipoPersonalizacion}`;
@@ -1049,7 +1049,7 @@ ${emoji} <b>Mensaje:</b> "${mensaje}"
 ${historialTexto}
 ━━━━━━━━━━━━━━━━━━━━━━━
 
-💡 <a href="wa.me/${telefono.replace(/\D/g,'')}">Responder por WhatsApp</a>
+💡 <a href="wa.me/${telefono.replace(/\D/g, '')}">Responder por WhatsApp</a>
 `;
 
   const url = `https://api.telegram.org/bot${token}/sendMessage`;
@@ -1087,7 +1087,7 @@ async function enviarNotificacionPedido(telefono, productos, historial) {
 
   let listaProductos = '';
   let total = 0;
-  
+
   productos.forEach((item, index) => {
     const cantidad = item.cantidad || 1;
     const precioUnitario = parseInt(item.precio.replace(/[^0-9]/g, '')) || 0;
@@ -1106,7 +1106,7 @@ async function enviarNotificacionPedido(telefono, productos, historial) {
     return `${rol} ${contenido}`;
   }).join('\n');
 
-  const fechaActual = new Date().toLocaleString('es-CO', { 
+  const fechaActual = new Date().toLocaleString('es-CO', {
     timeZone: 'America/Bogota',
     dateStyle: 'full',
     timeStyle: 'short'
@@ -1127,7 +1127,7 @@ ${listaProductos}💰 <b>Total:</b> $${total.toLocaleString()}
 ${historialTexto}
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-💡 <a href="wa.me/${telefono.replace(/\D/g,'')}">Responder por WhatsApp</a>
+💡 <a href="wa.me/${telefono.replace(/\D/g, '')}">Responder por WhatsApp</a>
 `;
 
   const url = `https://api.telegram.org/bot${token}/sendMessage`;
@@ -1218,11 +1218,11 @@ function detectarConsultaPrecio(mensaje) {
 
 function detectarMasBarato(mensaje) {
   const msg = mensaje.toLowerCase();
-  return msg.includes('barato') || msg.includes('barata') || 
-         msg.includes('económico') || msg.includes('economica') ||
-         msg.includes('más barato') || msg.includes('mas barato') ||
-         msg.includes('más económico') || msg.includes('mas economico') ||
-         msg.includes('menor precio') || msg.includes('menor costo');
+  return msg.includes('barato') || msg.includes('barata') ||
+    msg.includes('económico') || msg.includes('economica') ||
+    msg.includes('más barato') || msg.includes('mas barato') ||
+    msg.includes('más económico') || msg.includes('mas economico') ||
+    msg.includes('menor precio') || msg.includes('menor costo');
 }
 
 function detectarVerCarrito(mensaje) {
@@ -1250,7 +1250,7 @@ function detectarVerCarrito(mensaje) {
     /que\s+hay\s+en/i,
     /qué\s+hay\s+en/i
   ];
-  
+
   for (const patron of patrones) {
     if (patron.test(msg)) {
       return true;
@@ -1292,7 +1292,7 @@ function detectarLimpiarCarrito(mensaje) {
     /cambiar.*mueble/i,
     /otro.*producto/i,
     /diferente.*producto/i
-];
+  ];
   return patrones.some(p => p.test(msg));
 }
 
@@ -1310,7 +1310,7 @@ function detectarCalculoTotal(mensaje) {
 
 function esMensajeRelevante(mensaje) {
   const msg = mensaje.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  
+
   const sinonimos = {
     productos: /silla[ s]?|mesa[ s]?|cama[ s]?|sofa[ s]?|sofas?|base[ s]?|cajon[eo][ s]?|colchon[es]?|escritorio[ s]?|mueble[ s]?|sillon|puff| banqueta/,
     compra: /precio|cuesta|val(?:e|er|or)|comprar|llevar|pedido|carrito|confirmar|pagar|ordenar|adquirir/,
@@ -1320,18 +1320,18 @@ function esMensajeRelevante(mensaje) {
     general: /catalogo[ s]?|pdf|foto[ s]?|imagen[ s]?|producto[ s]?|ver|mostrar|coleccion/,
     especifico: /flor morado|de casa|decasa/
   };
-  
+
   for (const [categoria, patron] of Object.entries(sinonimos)) {
     if (patron.test(msg)) {
       return true;
     }
   }
-  
+
   const preguntasIntencion = /cu[áa]nto|cu[áa]l|qu[é]|d[óa]nde|c[óa]mo|cu[áa]ndo|por qu[é]/;
   if (preguntasIntencion.test(msg)) {
     return false;
   }
-  
+
   return msg.length < 15;
 }
 
@@ -1347,7 +1347,7 @@ function calcularTotalProductos(mensaje, from) {
   const msg = mensaje.toLowerCase();
   const categorias = Object.values(knowledge.inventario || {});
   const productosMencionados = [];
-  
+
   for (const categoria of categorias) {
     for (const producto of categoria.productos) {
       const nombreLimpio = producto.nombre.toLowerCase()
@@ -1355,7 +1355,7 @@ function calcularTotalProductos(mensaje, from) {
         .replace(/[^a-z0-9\s]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
-      
+
       const palabras = nombreLimpio.split(' ').filter(p => p.length > 3);
       let coincidencias = 0;
       for (const palabra of palabras) {
@@ -1363,7 +1363,7 @@ function calcularTotalProductos(mensaje, from) {
           coincidencias++;
         }
       }
-      
+
       if (coincidencias >= 2 || (palabras.length === 1 && msg.includes(palabras[0]))) {
         productosMencionados.push({
           nombre: producto.nombre,
@@ -1372,7 +1372,7 @@ function calcularTotalProductos(mensaje, from) {
       }
     }
   }
-  
+
   return productosMencionados;
 }
 
@@ -1424,7 +1424,7 @@ function detectarSolicitudCatalogo(mensaje) {
       return true;
     }
   }
-  
+
   const palabrasCategoria = ['sofa', 'sofas', 'silla', 'sillas', 'cama', 'camas', 'mesa', 'mesas', 'base', 'bases', 'comedor', 'comedores'];
   for (const palabra of palabrasCategoria) {
     if (msg.includes(palabra + 's') || msg === palabra || msg.includes('ver ' + palabra) || msg.includes('ver los ' + palabra) || msg.includes('ver las ' + palabra)) {
@@ -1448,7 +1448,7 @@ function detectarCantidad(mensaje) {
     /sí\s+(\d+)\s+unidades/i,
     /(\d+)\s+unidades/i
   ];
-  
+
   for (const patron of patrones) {
     const match = patron.exec(mensaje.toLowerCase());
     if (match) {
@@ -1458,13 +1458,13 @@ function detectarCantidad(mensaje) {
       }
     }
   }
-  
+
   if (/\b(?:5|cinco)\b/i.test(mensaje)) return 5;
   if (/\b(?:4|cuatro)\b/i.test(mensaje)) return 4;
   if (/\b(?:3|tres)\b/i.test(mensaje)) return 3;
   if (/\b(?:2|dos)\b/i.test(mensaje)) return 2;
   if (/\b(?:1|una?)\b/i.test(mensaje)) return 1;
-  
+
   return null;
 }
 
@@ -1553,7 +1553,7 @@ function detectarIntentionAddCarrito(mensaje) {
 
 function buscarProductosPorCategoria(mensaje) {
   const mensajeLimpio = mensaje.toLowerCase().replace(/[^a-záéíóúñ\s]/g, ' ').replace(/\s+/g, ' ').trim();
-  
+
   const mapeoCategorias = {
     'cajoneros': 'cajoneros_bifes',
     'cajones': 'cajoneros_bifes',
@@ -1577,7 +1577,7 @@ function buscarProductosPorCategoria(mensaje) {
     'mesa de noche': 'mesas_noche',
     'mesa tv': 'mesas_tv',
     'mesas tv': 'mesas_tv',
-'mesa de tv': 'mesas_tv',
+    'mesa de tv': 'mesas_tv',
     'base': 'bases_comedores',
     'bases': 'bases_comedores',
     'base compositor': 'bases_comedores',
@@ -1625,45 +1625,45 @@ function buscarProductosPorCategoria(mensaje) {
 
 function formatearProductos(precios, limite = 5) {
   if (!precios || precios.length === 0) return null;
-  
+
   const limitados = precios.slice(0, limite);
   const total = precios.length;
-  
+
   let mensaje = "Aquí tienes algunas opciones:\n\n";
-  
+
   limitados.forEach((p, i) => {
     mensaje += `${i + 1}. ${p.nombre} - ${p.precio}\n`;
   });
-  
+
   if (total > limite) {
     mensaje += `\n(${limite} de ${total}) Tenemos más opciones. ¿Quieres ver más o prefieres el catálogo completo en PDF? 😊`;
   } else {
     mensaje += "\n¿Cuál te interesa? 😊";
   }
-  
+
   return mensaje;
 }
 
 function formatearProductosVenta(productos, limite = 5) {
   if (!productos || productos.length === 0) return null;
-  
+
   const limitados = productos.slice(0, limite);
   const total = productos.length;
-  
+
   let mensaje = "OPIONES DISPONIBLES:\n\n";
-  
+
   limitados.forEach((p, i) => {
     mensaje += `${i + 1}. ${p.nombre}\n   Valor: ${p.precio}\n`;
     if (p.material) mensaje += `   Material: ${p.material}\n`;
     mensaje += "\n";
   });
-  
+
   if (total > limite) {
     mensaje += `(${limite} de ${total}) ¿Te interesa alguno o prefieres el PDF completo? 😊`;
   } else {
     mensaje += "¿Cuál te interesa? 😊";
   }
-  
+
   return mensaje;
 }
 
@@ -1741,7 +1741,7 @@ function buscarCatalogo(mensaje) {
   const catalogos = knowledge.catalogos || {};
   const inventario = knowledge.inventario || {};
   const mensajeLower = mensaje.toLowerCase();
-  
+
   const mapeoCategorias = {
     'cajonero': 'cajoneros_bifes',
     'cajon': 'cajoneros_bifes',
@@ -1830,26 +1830,26 @@ function buscarCatalogo(mensaje) {
       }
     }
   }
-  
+
   return null;
 }
 
 function detectarCategoriaAmbigua(mensaje) {
   const mensajeLower = mensaje.toLowerCase().replace(/[¿?.,!]/g, '').trim();
-  
+
   const sinonimosMesa = ['mesa', 'mesas', 'mobiliario', 'mueble'];
   const sinonimosSilla = ['silla', 'sillas', 'asiento', 'asientos'];
-  
+
   const esSoloMesa = sinonimosMesa.some(p => mensajeLower === p || mensajeLower === 'una ' + p || mensajeLower === 'un ' + p || mensajeLower === 'ver ' + p || mensajeLower === 'dame ' + p);
   const esSoloSilla = sinonimosSilla.some(p => mensajeLower === p || mensajeLower === 'una ' + p || mensajeLower === 'un ' + p || mensajeLower === 'ver ' + p || mensajeLower === 'dame ' + p);
-  
+
   if (esSoloMesa) {
     return "Qué tipo de mesa te interesa? Tenemos:\n• Mesa de centro (sala)\n• Mesa auxiliar\n• Mesa de TV\n• Mesa de noche\n\nCual quieres ver?";
   }
   if (esSoloSilla) {
     return "Qué tipo de silla te interesa? Tenemos:\n• Sillas de comedor\n• Sillas auxiliares/sillones\n• Sillas de barra\n\nCual quieres ver?";
   }
-  
+
   return null;
 }
 
@@ -1909,7 +1909,7 @@ Responde SOLO con JSON en este formato (sin texto adicional):
 
 async function clasificarIntencion(mensaje) {
   const url = `https://aiplatform.googleapis.com/v1/publishers/google/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
-  
+
   const contents = [
     { role: 'user', parts: [{ text: PROMPT_CLASIFICACION }] },
     { role: 'user', parts: [{ text: `Mensaje del usuario: "${mensaje}"` }] }
@@ -1933,7 +1933,7 @@ async function clasificarIntencion(mensaje) {
 
   const data = await response.json();
   const texto = data.candidates[0].content.parts[0].text;
-  
+
   try {
     const limpio = texto.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(limpio);
@@ -1946,60 +1946,62 @@ app.post('/webhook', async (req, res) => {
   const incomingMsg = req.body.Body || '';
   const from = req.body.From || 'unknown';
 
-    console.log(`Mensaje de ${from}: ${incomingMsg}`);
+  console.log(`Mensaje de ${from}: ${incomingMsg}`);
 
-    if (!incomingMsg) {
-      return res.status(200).send('');
+  if (!incomingMsg) {
+    return res.status(200).send('');
+  }
+
+  try {
+    await db.verificarYLimpiarInactividad(from, 10);
+    await db.getOrCreateUsuario(from);
+
+    // EARLY GREETING CHECK - Before any product search
+    if (detectarSaludo(incomingMsg)) {
+      let response = SALUDO_INICIAL;
+      if (await db.haEnviadoSaludo(from)) {
+        response = "¡Hola! ¿En qué puedo ayudarte? 😊";
+      } else {
+        await db.marcarSaludoEnviado(from);
+      }
+
+      await addToHistoryDB(from, 'user', incomingMsg);
+      await addToHistoryDB(from, 'assistant', response);
+      await db.actualizarLastInteraction(from);
+
+      const twiml = new MessagingResponse();
+      twiml.message(response);
+      res.type('text/xml').send(twiml.toString());
+      return; // STOP processing - don't search for products
     }
 
-    try {
-      await db.verificarYLimpiarInactividad(from, 10);
-      await db.getOrCreateUsuario(from);
-      
-      // EARLY GREETING CHECK - Before any product search
-      if (detectarSaludo(incomingMsg)) {
-        let response = SALUDO_INICIAL;
-        if (await db.haEnviadoSaludo(from)) {
-          response = "¡Hola! ¿En qué puedo ayudarte? 😊";
-        } else {
-          await db.marcarSaludoEnviado(from);
-        }
-        
-        await addToHistoryDB(from, 'user', incomingMsg);
-        await addToHistoryDB(from, 'assistant', response);
-        await db.actualizarLastInteraction(from);
-        
-        const twiml = new MessagingResponse();
-        twiml.message(response);
-        res.type('text/xml').send(twiml.toString());
-        return; // STOP processing - don't search for products
-      }
-      
-      const estaTransferidoAhora = await db.estaTransferida(from);
-      const esTransferencia = detectarAsesor(incomingMsg);
-      if (estaTransferidoAhora && !esTransferencia) {
-        console.log(`Limpiando estado transferido para ${from}`);
-        await db.updateEstado(from, { transferido: false });
-      }
-    
+    const estaTransferidoAhora = await db.estaTransferida(from);
+    const esTransferencia = detectarAsesor(incomingMsg);
+    if (estaTransferidoAhora && !esTransferencia) {
+      console.log(`Limpiando estado transferido para ${from}`);
+      await db.updateEstado(from, { transferido: false });
+    }
+
     const history = await getHistoryDB(from);
     let response;
     let imagenURL = null;
-    
+    const mediaUrl = req.body.MediaUrl0;
+    const mediaContentType = req.body.MediaContentType0;
+
     if (mediaUrl && mediaContentType && mediaContentType.startsWith('image/')) {
       console.log('Image received from:', from, 'URL:', mediaUrl);
-      
+
       // Send initial response
       const twiml = new MessagingResponse();
       twiml.message('⏳ Recibí tu foto! Estoy procesando la imagen para agregar un sofá... ⏳');
       res.type('text/xml').send(twiml.toString());
-      
+
       // Process image asynchronously
       try {
         const result = await processRoomImage(mediaUrl);
-        
+
         const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-        
+
         if (result.success) {
           await twilioClient.messages.create({
             from: req.body.To,
@@ -2010,7 +2012,7 @@ app.post('/webhook', async (req, res) => {
         } else if (result.error === 'NO_CREDIT') {
           const recentHistory = await db.getHistorial(from, 5);
           let sofaMentioned = null;
-          
+
           for (const msg of recentHistory) {
             if (msg.role === 'user') {
               const msgLower = msg.content.toLowerCase();
@@ -2024,7 +2026,7 @@ app.post('/webhook', async (req, res) => {
               if (sofaMentioned) break;
             }
           }
-          
+
           if (sofaMentioned) {
             await twilioClient.messages.create({
               from: req.body.To,
@@ -2058,10 +2060,10 @@ app.post('/webhook', async (req, res) => {
           console.error('Error sending error message:', e);
         }
       }
-      
+
       return; // Stop processing - we've handled the image
     }
-    
+
     const esAsesorDetectado = detectarAsesor(incomingMsg);
     let intencionClasificada = null;
     let debeTransferir = esAsesorDetectado;
@@ -2070,7 +2072,7 @@ app.post('/webhook', async (req, res) => {
     // Check if we already offered transfer for custom measurements and user confirms
     const transferenciaMedidaPendiente = await db.getTransferenciaMedidaPendiente(from);
     const esAfirmativo = /^si$|^sí$|^si me gustaría|^sí me gustaría|^por favor|^si por favor|^confirmo$/i.test(incomingMsg.trim());
-    
+
     if (transferenciaMedidaPendiente && esAfirmativo) {
       debeTransferir = true;
       esTransferenciaMedida = true;
@@ -2082,13 +2084,13 @@ app.post('/webhook', async (req, res) => {
       const productoPendiente = await db.getProductoPendiente(from);
       const ultimoProd = await db.getUltimoProducto(from);
       const producto = productoPendiente?.producto || ultimoProd?.nombre;
-      
+
       if (producto) {
         await db.setTransferenciaMedidaPendiente(from, producto);
         response = `Entiendo que necesitas una personalización para ${producto}. ¿Te gustaría que te transfiera con un asesor especializado en diseño a medida? 😊`;
         console.log(`Ofreciendo transferencia por personalización: ${from} - Producto: ${producto}`);
         imagenURL = null;
-        
+
         // Enviar respuesta y salir para evitar que se sobreescriba
         await addToHistoryDB(from, 'assistant', response);
         await db.actualizarLastInteraction(from);
@@ -2099,55 +2101,55 @@ app.post('/webhook', async (req, res) => {
         return;
       }
     }
-    
+
     // Check if bot offered transfer and user confirms
     let ofrecioTransferencia = false;
     if (!debeTransferir) {
       const history = await db.getHistorial(from);
       const ultimoMensajeBot = history.filter(h => h.role === 'assistant').pop();
       ofrecioTransferencia = ultimoMensajeBot && ultimoMensajeBot.content.includes('asesor');
-      
-        if (ofrecioTransferencia && esAfirmativo) {
-          await marcarTransferidaDB(from);
-          response = "Te transfiero con un asesor humano. Por favor espera un momento... 😊";
-          if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-            await enviarNotificacionTelegram(from.replace('whatsapp:', ''), 'Solicitud de transferencia a asesor', history);
-          }
-          await db.limpiarConversaciones(from);
-          await db.clearProductoPendiente(from);
-          await db.setCategoriaActual(from, null);
-          await db.limpiarCarrito(from);
-          return;
+
+      if (ofrecioTransferencia && esAfirmativo) {
+        await marcarTransferidaDB(from);
+        response = "Te transfiero con un asesor humano. Por favor espera un momento... 😊";
+        if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+          await enviarNotificacionTelegram(from.replace('whatsapp:', ''), 'Solicitud de transferencia a asesor', history);
         }
+        await db.limpiarConversaciones(from);
+        await db.clearProductoPendiente(from);
+        await db.setCategoriaActual(from, null);
+        await db.limpiarCarrito(from);
+        return;
+      }
     }
-    
-if (debeTransferir && !(await estaTransferidaDB(from))) {
+
+    if (debeTransferir && !(await estaTransferidaDB(from))) {
       const telefono = from.replace('whatsapp:', '');
-      
+
       if (esTransferenciaMedida) {
         const nombreProducto = transferenciaMedidaPendiente || 'Producto no especificado';
-        
+
         // Detect what type of customization
         const esColor = /en (negro|blanco|azul|rojo|verde)/i.test(incomingMsg);
         const esMaterial = /de (roble|pino|cedro|cuero|tela)/i.test(incomingMsg);
         const tipoPersonalizacion = esColor ? 'color' : (esMaterial ? 'material' : 'medida');
-        
+
         await enviarNotificacionTelegram(telefono, incomingMsg, history, 'personalizacion', nombreProducto, tipoPersonalizacion);
         await marcarTransferidaDB(from);
-        
+
         await db.limpiarConversaciones(from);
         await db.clearProductoPendiente(from);
         await db.setTransferenciaMedidaPendiente(from, null);
         await db.setCategoriaActual(from, null);
         await db.limpiarCarrito(from);
-        
+
         const tipoMsg = esColor ? 'color' : (esMaterial ? 'material' : 'medidas');
         response = `Entiendo que necesitas personalizar el ${tipoMsg} de ${nombreProducto}. Te transfiero con un asesor especializado en diseño a medida. Él te ayudará con los ajustes que necesitas. 😊\n\nUn asesor te contactará en breve.`;
-        
+
         console.log(`Cliente ${telefono} transferido por personalización (${tipoPersonalizacion}): ${nombreProducto}`);
       } else {
         const itemsCarrito = await db.verCarrito(from);
-        
+
         if (itemsCarrito.length > 0) {
           let productosTxt = '';
           let total = 0;
@@ -2160,42 +2162,42 @@ if (debeTransferir && !(await estaTransferidaDB(from))) {
             total += precio * cant;
           });
           productosTxt += `\n─────────────────\n💰 Total: $${total.toLocaleString()}`;
-          
+
           response = `📦 Tu pedido ha sido derivado a un asesor:\n\n${productosTxt}\n\nUn asesor te contactará pronto para confirmar entrega y pago. 🎉${generarMensajeInstagram()}`;
-          
+
           for (const item of itemsCarrito) {
             await db.guardarPedido(telefono, item.producto, item.precio, item.cantidad || 1);
           }
-          
+
           await db.marcarPedidoConfirmado(from);
-          
+
           await enviarNotificacionTelegram(telefono, incomingMsg, history, 'pedido');
-          
+
           await db.limpiarConversaciones(from);
           await db.setCategoriaActual(from, null);
           await db.limpiarCarrito(from);
-          
+
           console.log(`Cliente ${telefono} transferido con pedido: $${total}`);
         } else {
           await enviarNotificacionTelegram(telefono, incomingMsg, history, 'asesor');
           await marcarTransferidaDB(from);
-          
+
           await db.limpiarConversaciones(from);
           await db.clearProductoPendiente(from);
           await db.setCategoriaActual(from, null);
           await db.limpiarCarrito(from);
-          
+
           response = `Te transfiero con un asesor, espera un momento 😊
 Un asesor te atenderá personalmente para ayudarte con tu compra.`;
-          
+
           console.log(`Cliente ${telefono} transferido a asesor sin pedido`);
         }
       }
       imagenURL = null;
-} else if (await db.getEstaAgendando(from)) {
+    } else if (await db.getEstaAgendando(from)) {
       const paso = await db.getPasoAgendacion(from);
       const datos = await db.getDatosAgendacion(from);
-      
+
       if (detectarCancelarAgendacion(incomingMsg)) {
         await db.cancelarAgendacion(from);
         response = `Has cancelado la agendación de cita.\n\n¿Hay algo más en lo que pueda ayudarte? 😊`;
@@ -2232,16 +2234,16 @@ Un asesor te atenderá personalmente para ayudarte con tu compra.`;
           datos.esSabado = esSabado(incomingMsg);
           await db.guardarDatosAgendacion(from, datos);
           await db.setPasoAgendacion(from, 4);
-          const horarioInfo = datos.esSabado ? 
-            '📅 Horario sábado: 8 am a 11 am\n\n' : 
+          const horarioInfo = datos.esSabado ?
+            '📅 Horario sábado: 8 am a 11 am\n\n' :
             '📅 Horario: 8 am a 4 pm\n\n';
           response = `${horarioInfo}¿A qué hora deseas visitarnos?\n\n*FORMATO (hora militar):*\n• 8 / 9 / 10 / 11 (hasta 11 am - sábado)\n• 12 / 13 / 14 / 15 / 16\n• Con minutos: 9:30 / 14:50 / 16:15\n\nEjemplo: 14 o 14:30\n\nPara cancelar escribe "cancelar"`;
         }
       } else if (paso === 4) {
         const esSabadoFlag = datos.esSabado || false;
         if (!esHoraValida(incomingMsg, esSabadoFlag)) {
-          const horarioInfo = esSabadoFlag ? 
-            '• Sábado: 8 am a 11 am' : 
+          const horarioInfo = esSabadoFlag ?
+            '• Sábado: 8 am a 11 am' :
             '• L-V: 8 am a 4 pm';
           response = `Hora no válida.\n\n📅 ${horarioInfo}\n\n*FORMATO (hora militar):*\n• 8 / 9 / 10 / 11 (hasta 11 am - sábado)\n• 12 / 13 / 14 / 15 / 16\n• Con minutos: 9:30 / 14:50 / 16:15\n\nEjemplo: 14 o 14:30\n\nPara cancelar escribe "cancelar"`;
         } else {
@@ -2287,7 +2289,7 @@ Para cancelar escribe "cancelar"`;
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
 Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
-          
+
           const msgTelegram = `📅 *NUEVA CITA - DeCasa*
 ━━━━━━━━━━━━━━━━━━━━━━━━
 👤 Cliente: ${datos.nombre} (${telefonoClean})
@@ -2305,13 +2307,13 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
     } else if (detectarAgendar(incomingMsg)) {
       await db.iniciarAgendacion(from);
       response = `📅 *AGENDAR CITA*\n\nCon gusto te ayudo a agendar una cita.\n\nPrimero, ¿cuál es tu nombre?\n\nPara cancelar escribe "cancelar"`;
-      } else if (detectarSaludo(incomingMsg)) {
-        const tieneSaludo = true;
-        let respuestaSecundaria = '';
-        
-        if (/instagram|facebook|tiktok|youtube|redes?|pagina web|pagina oficial|social/i.test(incomingMsg)) {
-          respuestaSecundaria = `Síguenos en Instagram: @muebles_decasa\n🔔 ¡Mantente al día con nuestros nuevos productos y promociones! 😊`;
-        } else if (detectarUbicacion(incomingMsg)) {
+    } else if (detectarSaludo(incomingMsg)) {
+      const tieneSaludo = true;
+      let respuestaSecundaria = '';
+
+      if (/instagram|facebook|tiktok|youtube|redes?|pagina web|pagina oficial|social/i.test(incomingMsg)) {
+        respuestaSecundaria = `Síguenos en Instagram: @muebles_decasa\n🔔 ¡Mantente al día con nuestros nuevos productos y promociones! 😊`;
+      } else if (detectarUbicacion(incomingMsg)) {
         respuestaSecundaria = `Puedes visitarnos en cualquiera de nuestras cinco tiendas:
 *   **Avenida Bolívar # 16 N 26, Armenia, Quindío**
 *   **Km 2 vía El Edén, Armenia, Quindío**
@@ -2319,124 +2321,81 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
 *   **CC Unicentro Pereira, Pereira, Risaralda**
 *   **Cra. 14 #11 - 93. Pereira, Risaralda**
 ¿Te gustaría que te agendara una visita a alguna de ellas? 😊`;
-} else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('comedor') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
+      } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('comedor') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
         const msgLower = incomingMsg.toLowerCase();
         const esMensajeGenericoSillas = /que.*sillas|tiene.*sillas|ver.*sillas|tipos.*silla|que.*tipos.*silla|sillas tienen|ver las sillas/i.test(msgLower);
         const esMensajeGenericoMesas = /que.*mesas|tiene.*mesas|ver.*mesas|tipos.*mesa|que.*tipos.*mesa|mesas tienen|ver las mesas/i.test(msgLower);
-        
+
         if (esMensajeGenericoSillas) {
           response = formatearPreguntaSubtipo('sillas_comedor', incomingMsg);
         } else if (esMensajeGenericoMesas) {
           response = formatearPreguntaSubtipo('mesas_centro', incomingMsg);
-      } else {
-        let porCategoria = buscarProductosPorCategoria(incomingMsg);
-        let catalogo = null;
-        
-        // Si detectamos categoría, verificar si mencionó un producto específico
-        if (porCategoria.categoria) {
-          const productoEspecifico = buscarProductoPorNombre(incomingMsg, porCategoria.categoria);
-          if (productoEspecifico) {
-            await db.setCategoriaActual(from, porCategoria.categoria);
-            await db.setUltimoProducto(from, {
-              nombre: productoEspecifico.nombre,
-              precio: productoEspecifico.precio,
-              categoria: porCategoria.categoria
-            });
-            response = `${productoEspecifico.nombre}\n💰 Precio: ${productoEspecifico.precio}\n📏 Medidas: ${productoEspecifico.medidas || 'No disponible'}\n🪵 Material: ${productoEspecifico.material || 'No disponible'}\n\n¿Te interesa? 😊`;
-            imagenURL = productoEspecifico.imagen || null;
-          }
-        }
-        
-        // Si no se encontró producto específico, continuar con lógica original
-        if (!response) {
-          const categoriaGuardada = await db.getCategoriaActual(from);
-          if (categoriaGuardada && knowledge.catalogos[categoriaGuardada] && !porCategoria.categoria) {
-            catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
-          }
-          
-          if (!porCategoria.categoria && !catalogo) {
-            if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
-              porCategoria = { categoria: categoriaGuardada, productos: knowledge.inventario[categoriaGuardada].productos };
+        } else {
+          let porCategoria = buscarProductosPorCategoria(incomingMsg);
+          let catalogo = null;
+
+          // Si detectamos categoría, verificar si mencionó un producto específico
+          if (porCategoria.categoria) {
+            const productoEspecifico = buscarProductoPorNombre(incomingMsg, porCategoria.categoria);
+            if (productoEspecifico) {
+              await db.setCategoriaActual(from, porCategoria.categoria);
+              await db.setUltimoProducto(from, {
+                nombre: productoEspecifico.nombre,
+                precio: productoEspecifico.precio,
+                categoria: porCategoria.categoria
+              });
+              response = `${productoEspecifico.nombre}\n💰 Precio: ${productoEspecifico.precio}\n📏 Medidas: ${productoEspecifico.medidas || 'No disponible'}\n🪵 Material: ${productoEspecifico.material || 'No disponible'}\n\n¿Te interesa? 😊`;
+              imagenURL = productoEspecifico.imagen || null;
             }
           }
-          
-          if (!porCategoria.categoria && !catalogo) {
-            const catalogoBuscado = buscarCatalogo(incomingMsg);
-            if (catalogoBuscado) {
-              if (catalogoBuscado.url && catalogoBuscado.categoria) {
-                catalogo = catalogoBuscado;
-                porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
-              } else if (catalogoBuscado.sinPdf && catalogoBuscado.categoria && catalogoBuscado.productos) {
-                porCategoria = { categoria: catalogoBuscado.categoria, productos: catalogoBuscado.productos };
-                await db.setCategoriaActual(from, catalogoBuscado.categoria);
+
+          // Si no se encontró producto específico, continuar con lógica original
+          if (!response) {
+            const categoriaGuardada = await db.getCategoriaActual(from);
+            if (categoriaGuardada && knowledge.catalogos[categoriaGuardada] && !porCategoria.categoria) {
+              catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
+            }
+
+            if (!porCategoria.categoria && !catalogo) {
+              if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
+                porCategoria = { categoria: categoriaGuardada, productos: knowledge.inventario[categoriaGuardada].productos };
               }
             }
-          }
-          
-          if (!catalogo && porCategoria.categoria && knowledge.catalogos[porCategoria.categoria]) {
-            catalogo = { categoria: porCategoria.categoria, url: knowledge.catalogos[porCategoria.categoria] };
-            await db.setCategoriaActual(from, porCategoria.categoria);
-          }
-          
-          if (catalogo && catalogo.url) {
-            imagenURL = catalogo.url;
-            let nombreCat = formatearNombreCategoria(catalogo.categoria);
-            response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊`;
-          } else if (porCategoria.productos && porCategoria.productos.length > 0) {
-            if (porCategoria.categoria) {
+
+            if (!porCategoria.categoria && !catalogo) {
+              const catalogoBuscado = buscarCatalogo(incomingMsg);
+              if (catalogoBuscado) {
+                if (catalogoBuscado.url && catalogoBuscado.categoria) {
+                  catalogo = catalogoBuscado;
+                  porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
+                } else if (catalogoBuscado.sinPdf && catalogoBuscado.categoria && catalogoBuscado.productos) {
+                  porCategoria = { categoria: catalogoBuscado.categoria, productos: catalogoBuscado.productos };
+                  await db.setCategoriaActual(from, catalogoBuscado.categoria);
+                }
+              }
+            }
+
+            if (!catalogo && porCategoria.categoria && knowledge.catalogos[porCategoria.categoria]) {
+              catalogo = { categoria: porCategoria.categoria, url: knowledge.catalogos[porCategoria.categoria] };
               await db.setCategoriaActual(from, porCategoria.categoria);
             }
-            response = formatearProductosVenta(porCategoria.productos);
-          } else {
-            const categoriasDisponibles = Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ');
-            response = `Claro! Estas son las categorías disponibles:\n${categoriasDisponibles}\n\n¿Cuál te gustaría ver? 😊`;
-          }
-        }
-      }
-        
-        if (!porCategoria.categoria && !catalogo) {
-          if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
-            porCategoria = { categoria: categoriaGuardada, productos: knowledge.inventario[categoriaGuardada].productos };
-          }
-        }
-        
-        if (!porCategoria.categoria && !catalogo) {
-          const catalogoBuscado = buscarCatalogo(incomingMsg);
-          if (catalogoBuscado) {
-            if (catalogoBuscado.url && catalogoBuscado.categoria) {
-              catalogo = catalogoBuscado;
-              porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
-            } else if (catalogoBuscado.sinPdf && catalogoBuscado.categoria && catalogoBuscado.productos) {
-              porCategoria = { categoria: catalogoBuscado.categoria, productos: catalogoBuscado.productos };
-              await db.setCategoriaActual(from, catalogoBuscado.categoria);
+
+            if (catalogo && catalogo.url) {
+              imagenURL = catalogo.url;
+              let nombreCat = formatearNombreCategoria(catalogo.categoria);
+              response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊`;
+            } else if (porCategoria.productos && porCategoria.productos.length > 0) {
+              if (porCategoria.categoria) {
+                await db.setCategoriaActual(from, porCategoria.categoria);
+              }
+              response = formatearProductosVenta(porCategoria.productos);
+            } else {
+              const categoriasDisponibles = Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ');
+              response = `Claro! Estas son las categorías disponibles:\n${categoriasDisponibles}\n\n¿Cuál te gustaría ver? 😊`;
             }
           }
         }
-        
-        if (!catalogo && !porCategoria.categoria) {
-          const catalogoBuscado = buscarCatalogo(incomingMsg);
-          if (catalogoBuscado) {
-            if (catalogoBuscado.url && catalogoBuscado.categoria) {
-              catalogo = catalogoBuscado;
-              porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
-            } else if (catalogoBuscado.sinPdf && catalogoBuscado.categoria && catalogoBuscado.productos) {
-              porCategoria = { categoria: catalogoBuscado.categoria, productos: catalogoBuscado.productos };
-              await db.setCategoriaActual(from, catalogoBuscado.categoria);
-            }
-          }
-        }
-        
-        if (catalogo && catalogo.url) {
-          respuestaSecundaria = `Claro! Aquí tienes el catálogo de ${formatearNombreCategoria(catalogo.categoria)} 😊`;
-          imagenURL = catalogo.url;
-          await db.setCategoriaActual(from, catalogo.categoria);
-        } else if (porCategoria.productos && porCategoria.productos.length > 0) {
-          respuestaSecundaria = formatearProductosVenta(porCategoria.productos);
-          if (porCategoria.categoria) {
-            await db.setCategoriaActual(from, porCategoria.categoria);
-          }
-        }
-        }
+
       } else if (detectarConsultaPrecio(incomingMsg)) {
         const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
         const catBD = await db.getCategoriaActual(from);
@@ -2472,7 +2431,7 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
           respuestaSecundaria = `${productoInfo.nombre}\n💰 Precio: ${productoInfo.precio}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n\n¿Procedemos a añadirla al carrito por ${productoInfo.precio}? 😊`;
         }
       }
-      
+
       if (respuestaSecundaria) {
         response = `${SALUDO_INICIAL}\n\n${respuestaSecundaria}`;
       } else {
@@ -2493,11 +2452,11 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
     } else if (await estaTransferidaDB(from)) {
       const telefono = from.replace('whatsapp:', '');
       console.log(`Conversación transferida - Cliente ${telefono} dice: ${incomingMsg}`);
-      
+
       if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
         await enviarNotificacionTelegram(telefono, incomingMsg, []);
       }
-      
+
       res.status(200).send('');
       return;
     } else if (detectarMasBarato(incomingMsg)) {
@@ -2531,57 +2490,57 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
       const msgLower = incomingMsg.toLowerCase();
       const esMensajeGenericoSillas = /que.*sillas|tiene.*sillas|ver.*sillas|tipos.*silla|que.*tipos.*silla|sillas tienen|ver las sillas/i.test(msgLower);
       const esMensajeGenericoMesas = /que.*mesas|tiene.*mesas|ver.*mesas|tipos.*mesa|que.*tipos.*mesa|mesas tienen|ver las mesas/i.test(msgLower);
-      
+
       if (esMensajeGenericoSillas) {
         response = formatearPreguntaSubtipo('sillas_comedor', incomingMsg);
       } else if (esMensajeGenericoMesas) {
         response = formatearPreguntaSubtipo('mesas_centro', incomingMsg);
       } else {
-      let porCategoria = buscarProductosPorCategoria(incomingMsg);
-      let catalogo = null;
-      
-      const categoriaGuardada = await db.getCategoriaActual(from);
-      if (categoriaGuardada && knowledge.catalogos[categoriaGuardada] && !porCategoria.categoria) {
-        catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
-      }
-      
-      if (!porCategoria.categoria && !catalogo) {
-        if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
-          porCategoria = { categoria: categoriaGuardada, productos: knowledge.inventario[categoriaGuardada].productos };
+        let porCategoria = buscarProductosPorCategoria(incomingMsg);
+        let catalogo = null;
+
+        const categoriaGuardada = await db.getCategoriaActual(from);
+        if (categoriaGuardada && knowledge.catalogos[categoriaGuardada] && !porCategoria.categoria) {
+          catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
         }
-      }
-      
-      if (!porCategoria.categoria && !catalogo) {
-        const catalogoBuscado = buscarCatalogo(incomingMsg);
-        if (catalogoBuscado) {
-          if (catalogoBuscado.url && catalogoBuscado.categoria) {
-            catalogo = catalogoBuscado;
-            porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
-          } else if (catalogoBuscado.sinPdf && catalogoBuscado.categoria && catalogoBuscado.productos) {
-            porCategoria = { categoria: catalogoBuscado.categoria, productos: catalogoBuscado.productos };
-            await db.setCategoriaActual(from, catalogoBuscado.categoria);
+
+        if (!porCategoria.categoria && !catalogo) {
+          if (categoriaGuardada && knowledge.inventario[categoriaGuardada]) {
+            porCategoria = { categoria: categoriaGuardada, productos: knowledge.inventario[categoriaGuardada].productos };
           }
         }
-      }
-      
-      if (!catalogo && porCategoria.categoria && knowledge.catalogos[porCategoria.categoria]) {
-        catalogo = { categoria: porCategoria.categoria, url: knowledge.catalogos[porCategoria.categoria] };
-        await db.setCategoriaActual(from, porCategoria.categoria);
-      }
-      
-      if (catalogo && catalogo.url) {
-        imagenURL = catalogo.url;
-        let nombreCat = formatearNombreCategoria(catalogo.categoria);
-        response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊`;
-      } else if (porCategoria.productos && porCategoria.productos.length > 0) {
-        if (porCategoria.categoria) {
+
+        if (!porCategoria.categoria && !catalogo) {
+          const catalogoBuscado = buscarCatalogo(incomingMsg);
+          if (catalogoBuscado) {
+            if (catalogoBuscado.url && catalogoBuscado.categoria) {
+              catalogo = catalogoBuscado;
+              porCategoria = { categoria: catalogoBuscado.categoria, productos: [] };
+            } else if (catalogoBuscado.sinPdf && catalogoBuscado.categoria && catalogoBuscado.productos) {
+              porCategoria = { categoria: catalogoBuscado.categoria, productos: catalogoBuscado.productos };
+              await db.setCategoriaActual(from, catalogoBuscado.categoria);
+            }
+          }
+        }
+
+        if (!catalogo && porCategoria.categoria && knowledge.catalogos[porCategoria.categoria]) {
+          catalogo = { categoria: porCategoria.categoria, url: knowledge.catalogos[porCategoria.categoria] };
           await db.setCategoriaActual(from, porCategoria.categoria);
         }
-        response = formatearProductosVenta(porCategoria.productos);
-      } else {
-        const categoriasDisponibles = Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ');
-        response = `Claro! Estas son las categorías disponibles:\n${categoriasDisponibles}\n\n¿ cual te gustaría ver? 😊`;
-      }
+
+        if (catalogo && catalogo.url) {
+          imagenURL = catalogo.url;
+          let nombreCat = formatearNombreCategoria(catalogo.categoria);
+          response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊`;
+        } else if (porCategoria.productos && porCategoria.productos.length > 0) {
+          if (porCategoria.categoria) {
+            await db.setCategoriaActual(from, porCategoria.categoria);
+          }
+          response = formatearProductosVenta(porCategoria.productos);
+        } else {
+          const categoriasDisponibles = Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ');
+          response = `Claro! Estas son las categorías disponibles:\n${categoriasDisponibles}\n\n¿ cual te gustaría ver? 😊`;
+        }
       }
     } else if (detectarConsultaPrecio(incomingMsg)) {
       const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
@@ -2602,33 +2561,33 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
       if (response) {
         // Ya se manejó
       } else {
-      const catBD2 = await db.getCategoriaActual(from);
-      let producto = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD2);
-      
-      if (!producto) {
-        const ultimoProd = await db.getUltimoProducto(from);
-        if (ultimoProd) {
-          producto = {
-            nombre: ultimoProd.nombre,
-            precio: ultimoProd.precio,
-            categoria: ultimoProd.categoria || categoriaDetectada
-          };
+        const catBD2 = await db.getCategoriaActual(from);
+        let producto = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD2);
+
+        if (!producto) {
+          const ultimoProd = await db.getUltimoProducto(from);
+          if (ultimoProd) {
+            producto = {
+              nombre: ultimoProd.nombre,
+              precio: ultimoProd.precio,
+              categoria: ultimoProd.categoria || categoriaDetectada
+            };
+          }
+        }
+
+        if (producto) {
+          if (producto.categoria) {
+            await db.setCategoriaActual(from, producto.categoria);
+          }
+          await db.setUltimoProducto(from, {
+            nombre: producto.nombre,
+            precio: producto.precio,
+            categoria: producto.categoria
+          });
+          response = `${producto.nombre} | ${producto.precio}. ¿Te interesa? 😊`;
         }
       }
-      
-      if (producto) {
-        if (producto.categoria) {
-          await db.setCategoriaActual(from, producto.categoria);
-        }
-        await db.setUltimoProducto(from, {
-          nombre: producto.nombre,
-          precio: producto.precio,
-          categoria: producto.categoria
-        });
-        response = `${producto.nombre} | ${producto.precio}. ¿Te interesa? 😊`;
-      }
-      }
-      } else if (detectarConsultaInfo(incomingMsg)) {
+    } else if (detectarConsultaInfo(incomingMsg)) {
       const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
       const subtipo = necesitaSubtipo(incomingMsg, categoriaDetectada);
       if (subtipo === 'PEDIR_SUBTIPO') {
@@ -2647,8 +2606,8 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
       if (response) {
         // Ya se manejó
       } else {
-      const catBD2 = await db.getCategoriaActual(from);
-      const productoInfo = buscarInfoProducto(incomingMsg, categoriaDetectada, catBD2);
+        const catBD2 = await db.getCategoriaActual(from);
+        const productoInfo = buscarInfoProducto(incomingMsg, categoriaDetectada, catBD2);
         const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
         const porCategoria = resultadoCategoria.productos;
         if (porCategoria.length > 0) {
@@ -2668,7 +2627,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
           }
         }
       }
-} else if (detectarConsultaInfo(incomingMsg)) {
+    } else if (detectarConsultaInfo(incomingMsg)) {
       const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
       const catBD = await db.getCategoriaActual(from);
       const productoInfo = buscarInfoProducto(incomingMsg, categoriaDetectada, catBD);
@@ -2677,16 +2636,16 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
         if (cat.categoria) {
           await db.setCategoriaActual(from, cat.categoria);
         }
-        
+
         await db.setUltimoProducto(from, {
           nombre: productoInfo.nombre,
           precio: productoInfo.precio,
           medidas: productoInfo.medidas,
           material: productoInfo.material
         });
-        
+
         await db.guardarProductoPendiente(from, productoInfo.nombre, productoInfo.precio);
-        
+
         const es_buscar_info = /medidas|material|de qué|características|es de|es de qué|que trae|viene/i.test(incomingMsg);
         if (es_buscar_info) {
           response = `${productoInfo.nombre}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n💰 Precio: ${productoInfo.precio}\n\nEsta pieza está hecha en ${productoInfo.material.split(',')[0].toLowerCase()}, lo que garantiza resistencia y durabilidad.\n\n¿Procedemos a añadirla al carrito por ${productoInfo.precio}? 😊`;
@@ -2699,52 +2658,51 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
         if (productosBD && productosBD.length > 0) {
           response = formatearProductosVenta(productosBD);
         } else {
-        const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
-        const porCategoria = resultadoCategoria.productos;
-        if (porCategoria.length > 0) {
-          if (resultadoCategoria.categoria) {
-            await db.setCategoriaActual(from, resultadoCategoria.categoria);
-          }
-          response = formatearProductosVenta(porCategoria);
-        } else if (!esMensajeRelevante(incomingMsg)) {
-          response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
-        } else {
-          // Check if message contains furniture-like words but no confident match
-          const tienePalabrasMueble = /cama|silla|mesa|sofa|base|comedor|escritorio/i.test(incomingMsg);
-          if (tienePalabrasMueble && !productoDetectado) {
-            response = "No estoy segura de qué producto buscas exactamente. ¿Podrías decirme el nombre correcto o describirlo mejor? 😊";
-            const catActual = await db.getCategoriaActual(from);
-            if (catActual && knowledge.inventario[catActual]) {
-              response += `\n\nO puedo mostrarte las opciones de ${formatearNombreCategoria(catActual)} que tenemos disponibles. 😊`;
+          const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
+          const porCategoria = resultadoCategoria.productos;
+          if (porCategoria.length > 0) {
+            if (resultadoCategoria.categoria) {
+              await db.setCategoriaActual(from, resultadoCategoria.categoria);
             }
-            return;
-          }
-          const catFallback = buscarProductosPorCategoria(incomingMsg);
-          if (catFallback.categoria && catFallback.productos && catFallback.productos.length > 0) {
-            await db.setCategoriaActual(from, catFallback.categoria);
-            response = formatearProductosVenta(catFallback.productos);
+            response = formatearProductosVenta(porCategoria);
+          } else if (!esMensajeRelevante(incomingMsg)) {
+            response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
           } else {
-            await addToHistoryDB(from, 'user', incomingMsg);
-          response = await callGemini({
-            history: history,
-            currentMessage: incomingMsg
-          });
-          
-          const pareceNoSabe = !response.includes('$') && 
-            (response.includes('no tengo') || response.includes('no estoy segura') || 
-             response.includes('posiblemente') || response.includes('creo que') ||
-             response.length < 30);
-          
-          if (pareceNoSabe) {
-            const catActual = await db.getCategoriaActual(from);
-            if (catActual && knowledge.inventario[catActual]) {
-              response = `Tenemos varios modelos disponibles. ¿Cuál te interesa? 😊`;
+            // Check if message contains furniture-like words but no confident match
+            const tienePalabrasMueble = /cama|silla|mesa|sofa|base|comedor|escritorio/i.test(incomingMsg);
+            if (tienePalabrasMueble && !productoDetectado) {
+              response = "No estoy segura de qué producto buscas exactamente. ¿Podrías decirme el nombre correcto o describirlo mejor? 😊";
+              const catActual = await db.getCategoriaActual(from);
+              if (catActual && knowledge.inventario[catActual]) {
+                response += `\n\nO puedo mostrarte las opciones de ${formatearNombreCategoria(catActual)} que tenemos disponibles. 😊`;
+              }
+            }
+            const catFallback = buscarProductosPorCategoria(incomingMsg);
+            if (catFallback.categoria && catFallback.productos && catFallback.productos.length > 0) {
+              await db.setCategoriaActual(from, catFallback.categoria);
+              response = formatearProductosVenta(catFallback.productos);
             } else {
-              response += "\n\n¿Te gustaría que te transferiera a un asesor para aclarar tu duda? 😊";
+              await addToHistoryDB(from, 'user', incomingMsg);
+              response = await callGemini({
+                history: history,
+                currentMessage: incomingMsg
+              });
+
+              const pareceNoSabe = !response.includes('$') &&
+                (response.includes('no tengo') || response.includes('no estoy segura') ||
+                  response.includes('posiblemente') || response.includes('creo que') ||
+                  response.length < 30);
+
+              if (pareceNoSabe) {
+                const catActual = await db.getCategoriaActual(from);
+                if (catActual && knowledge.inventario[catActual]) {
+                  response = `Tenemos varios modelos disponibles. ¿Cuál te interesa? 😊`;
+                } else {
+                  response += "\n\n¿Te gustaría que te transferiera a un asesor para aclarar tu duda? 😊";
+                }
+              }
             }
           }
-          }
-        }
         }
       }
     } else if (detectarVerCarrito(incomingMsg)) {
@@ -2756,7 +2714,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
       }
     } else if (detectarLimpiarCarrito(incomingMsg)) {
       const itemsCarrito = await db.verCarrito(from);
-      
+
       if (itemsCarrito.length === 0) {
         response = "Tu carrito está vacío. ¿Qué te gustaría comprar? 😊";
       } else if (itemsCarrito.length === 1) {
@@ -2766,7 +2724,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
       } else {
         const msgLower = incomingMsg.toLowerCase();
         let productoEliminado = null;
-        
+
         for (const item of itemsCarrito) {
           const nombreLimpio = item.producto.toLowerCase();
           if (msgLower.includes(nombreLimpio.substring(0, 10))) {
@@ -2774,7 +2732,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
             break;
           }
         }
-        
+
         if (productoEliminado) {
           const itemsActualizados = itemsCarrito.filter(item => item.producto !== productoEliminado.producto);
           await db.updateEstado(from, { carrito: itemsActualizados });
@@ -2792,10 +2750,10 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
     } else if (!(await db.estaTransferida(from))) {
       const pendiente = await db.getProductoPendiente(from);
       const itemsEnCarrito = await db.verCarrito(from);
-      
+
       const esConfirmacionExplicita = /si lo compro|confirmo compra|este me lo llevo|confirmar|me lo llevo ya|comprar ahora|pedido confirmado|ordenar ya|confirmar.*pedido|procedamos.*compra|proceder.*compra/i.test(incomingMsg);
       const esConfirmacionSimple = /^si$|^sí$|^ok$|^yes$|^si claro$|^así$|^asiprocede$|^confirmo$/i.test(incomingMsg.trim());
-      
+
       if (esConfirmacionSimple && itemsEnCarrito.length > 0) {
         const telefono = from.replace('whatsapp:', '');
         const total = itemsEnCarrito.reduce((acc, item) => {
@@ -2803,7 +2761,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
           const cantidad = item.cantidad || 1;
           return acc + (precioUnitario * cantidad);
         }, 0);
-        
+
         let productosTxt = '';
         let totalConfirmado = 0;
         itemsEnCarrito.forEach((item, i) => {
@@ -2814,24 +2772,24 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
           productosTxt += '\n';
           totalConfirmado += precio * cant;
         });
-        
+
         const mensajeCarrito = `🛒 Tu pedido:\n\n${productosTxt}─────────────────\n💰 Total: $${totalConfirmado.toLocaleString()}`;
-        
+
         response = `📦 ¡Pedido confirmado!\n\n${mensajeCarrito}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉${generarMensajeInstagram()}`;
-        
+
         for (const item of itemsEnCarrito) {
           await db.guardarPedido(telefono, item.producto, item.precio, item.cantidad || 1);
         }
-        
+
         await db.marcarPedidoConfirmado(from);
-        
+
         await enviarNotificacionPedido(telefono, itemsEnCarrito, history);
-        
+
         await db.limpiarConversaciones(from);
         await db.clearProductoPendiente(from);
         await db.setCategoriaActual(from, null);
         await db.limpiarCarrito(from);
-        
+
         console.log(`Cliente ${telefono} confirmó compra: $${total}`);
       } else if (esConfirmacionExplicita && itemsEnCarrito.length > 0) {
         const telefono = from.replace('whatsapp:', '');
@@ -2840,7 +2798,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
           const cantidad = item.cantidad || 1;
           return acc + (precioUnitario * cantidad);
         }, 0);
-        
+
         let productosTxt = '';
         let totalConfirmado = 0;
         itemsEnCarrito.forEach((item, i) => {
@@ -2851,26 +2809,26 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
           productosTxt += '\n';
           totalConfirmado += precio * cant;
         });
-        
+
         const mensajeCarrito = `🛒 Tu pedido:\n\n${productosTxt}─────────────────\n💰 Total: $${totalConfirmado.toLocaleString()}`;
-        
+
         response = `📦 ¡Pedido confirmado!\n\n${mensajeCarrito}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto para coordinar entrega y pago. 🎉${generarMensajeInstagram()}`;
-        
+
         for (const item of itemsEnCarrito) {
           await db.guardarPedido(telefono, item.producto, item.precio, item.cantidad || 1);
         }
-        
+
         await db.marcarPedidoConfirmado(from);
-        
+
         await enviarNotificacionPedido(telefono, itemsEnCarrito, history);
-        
+
         await db.limpiarConversaciones(from);
         await db.clearProductoPendiente(from);
         await db.setCategoriaActual(from, null);
         await db.limpiarCarrito(from);
-        
+
         console.log(`Cliente ${telefono} confirmó compra explícita: $${total}`);
-} else if (esConfirmacionSimple) {
+      } else if (esConfirmacionSimple) {
         const carritoData = await formatearCarrito(from);
         if (carritoData && carritoData.mensaje) {
           response = `${carritoData.mensaje}\n\n¿Confirmas la compra? Responde "si" o "confirmo" para proceder 😊`;
@@ -2886,7 +2844,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
             await agregarAlCarritoDB(from, ultimoProd.nombre, ultimoProd.precio, cantidad);
             await db.clearProductoPendiente(from);
             response = `${ultimoProd.nombre} añadido al carrito (${cantidad} unidad${cantidad > 1 ? 'es' : ''}) por ${ultimoProd.precio}.\n\nPuedes seguir viendo productos o confirmar tu compra cuando quieres.\n\n¿Quieres ver el carrito? 😊`;
-} else {
+          } else {
             response = "No hay productos en el carrito. ¿Qué te gustaría comprar? 😊";
           }
         }
@@ -2895,7 +2853,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
         const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
         const catBD3 = await db.getCategoriaActual(from);
         let productoDetectado = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD3);
-        
+
         // If no product detected, try searching by description in current category
         if (!productoDetectado && catBD3) {
           const resultadoDescripcion = buscarPorDescripcion(incomingMsg, catBD3);
@@ -2908,7 +2866,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
             console.log(`Producto detectado por descripción: ${resultadoDescripcion.nombre} en categoría ${catBD3}`);
           }
         }
-        
+
         // If still no product, check if message refers to recently shown products
         if (!productoDetectado) {
           const ultimoProd = await db.getUltimoProducto(from);
@@ -2936,7 +2894,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
             }
           }
         }
-        
+
         const esDejaloPendiente = /déjalo pendiente|dejalo pendiente|déjala pendiente|dejala pendiente|dejar pendiente|guardar pendiente/i.test(incomingMsg);
         if (esDejaloPendiente) {
           let prodParaGuardar = productoDetectado;
@@ -2951,14 +2909,14 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
             response = `${prodParaGuardar.nombre} guardado como pendiente. `;
           }
         }
-        
+
         const esPronombreReferido = /^\s*(lo|la|les|este|esta|estos|estas)\s*$/i.test(incomingMsg) ||
           incomingMsg.toLowerCase().includes('lo quiero') ||
           incomingMsg.toLowerCase().includes('la quiero') ||
           incomingMsg.toLowerCase().includes('me gusta') ||
           (incomingMsg.toLowerCase().includes('me gustaría') && !ofrecioTransferencia) ||
           incomingMsg.toLowerCase().includes('comprar') && !productoDetectado;
-        
+
         if (!productoDetectado && esPronombreReferido) {
           const ultimoProd = await db.getUltimoProducto(from);
           if (ultimoProd) {
@@ -2969,7 +2927,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
             };
           }
         }
-        
+
         const esReferenciaPendiente = /pendiente|dejamos pendiente|quedó pendiente|mueble pendiente|producto pendiente/i.test(incomingMsg);
         let productoPendienteData = null;
         if (esReferenciaPendiente) {
@@ -2985,12 +2943,12 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
             }
           }
         }
-        
+
         const esSoloPronombre = /^si$|^sí$|^si$|^lo$|^la$|^les$|^este$|^esta$|^estos$|^estas$|^comprarlo$|^comprarla$|^quiero$|^me\s+gustaría$|^me\s+gustaria$/i.test(incomingMsg.trim());
         const quiereAgregar = detectarCompra(incomingMsg) || detectarIntentionAddCarrito(incomingMsg) || incomingMsg.toLowerCase().includes('comprar') || incomingMsg.toLowerCase().includes('agregar') || incomingMsg.toLowerCase().includes('agregarle') || incomingMsg.toLowerCase().includes('lo') || incomingMsg.toLowerCase().includes('la');
-        
+
         const mensajeAmbiguo = /conocerla|conocerlo|conorarla|conorarlo|agregarla|agregarlo|conocella|conocellar/i.test(incomingMsg.toLowerCase());
-        
+
         if (mensajeAmbiguo && !productoDetectado) {
           const ultimoProd = await db.getUltimoProducto(from);
           if (ultimoProd && ultimoProd.nombre) {
@@ -3030,7 +2988,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
             }
           }
         }
-        
+
         const pideSuma = /suma|total|cuanto.*suma|cuanto.*total|cuánto.*suma|cuánto.*total/i.test(incomingMsg);
         if (pideSuma && productoDetectado && productoPendienteData && productoDetectado.nombre !== productoPendienteData.nombre) {
           const precio1 = parseInt(String(productoDetectado.precio).replace(/[^0-9]/g, '')) || 0;
@@ -3038,12 +2996,12 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
           const total = precio1 + precio2;
           response = `📋 Resumen de productos:\n\n1. ${productoDetectado.nombre} - ${productoDetectado.precio}\n2. ${productoPendienteData.nombre} - ${productoPendienteData.precio}\n\n💰 Suma total: $${total.toLocaleString()}\n\n¿Confirmas agregar ambos al carrito? 😊`;
         }
-        
+
         const preguntaSillas = /(comedor|base).*(silla|viene|incluye|separado|apart)|(silla).*(comedor|base)/i.test(incomingMsg);
         if (!response && preguntaSillas && (incomingMsg.includes('?') || /viene|incluye|separado/i.test(incomingMsg))) {
           response = `Las bases de comedor se venden por separado de las sillas. Cada producto se cotiza de forma independiente. 🪑\n\n¿Te gustaría ver nuestras sillas de comedor para acompañar tu base? 😊`;
         }
-        
+
         if (esInfoPura && productoDetectado) {
           await db.setUltimoProducto(from, {
             nombre: productoDetectado.nombre,
@@ -3063,7 +3021,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
         } else if (productoDetectado && (detectarCompra(incomingMsg) || detectarIntentionAddCarrito(incomingMsg) || incomingMsg.toLowerCase().includes('comprar') || incomingMsg.toLowerCase().includes('agregar') || incomingMsg.toLowerCase().includes('agregarle') || incomingMsg.toLowerCase().includes('nido') || incomingMsg.toLowerCase().includes('lo') || incomingMsg.toLowerCase().includes('la'))) {
           let cantidadDetectada = detectarCantidad(incomingMsg);
           let catActual = productoDetectado.categoria;
-          
+
           if (!productoDetectado.nombre || productoDetectado.nombre.includes('undefined')) {
             const pendiente = await db.getProductoPendiente(from);
             if (pendiente && pendiente.producto && !pendiente.producto.includes('undefined')) {
@@ -3075,32 +3033,32 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
               cantidadDetectada = cantidadDetectada || pendiente.cantidad;
             }
           }
-          
+
           const cat = buscarProductosPorCategoria(incomingMsg);
           catActual = cat.categoria || productoDetectado.categoria;
           if (catActual && typeof catActual === 'string') {
             await db.setCategoriaActual(from, catActual);
           }
-          
+
           const productoInfo = buscarInfoProducto(productoDetectado.nombre, catActual);
           await db.setUltimoProducto(from, {
             nombre: productoDetectado.nombre,
             precio: productoDetectado.precio,
             categoria: catActual
           });
-          
+
           if (productoInfo) {
             const cantidadDetectada = detectarCantidad(incomingMsg);
             await db.guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio, cantidadDetectada);
             if (cantidadDetectada) {
-              response = `${productoDetectado.nombre}\n💰 Precio: ${productoDetectado.precio}\n📏 Medidas: ${productoInfo.medidas || 'No disponible'}\n🪵 Material: ${productoInfo.material || 'No disponible'}\n\nConfirmas ${cantidadDetectada} unidades a $${productoDetectado.precio.replace('$','').replace('.','')} cada una?\nResponde "sí" para confirmar 😊`;
+              response = `${productoDetectado.nombre}\n💰 Precio: ${productoDetectado.precio}\n📏 Medidas: ${productoInfo.medidas || 'No disponible'}\n🪵 Material: ${productoInfo.material || 'No disponible'}\n\nConfirmas ${cantidadDetectada} unidades a $${productoDetectado.precio.replace('$', '').replace('.', '')} cada una?\nResponde "sí" para confirmar 😊`;
             } else {
               response = `${productoDetectado.nombre}\n💰 Precio: ${productoDetectado.precio}\n📏 Medidas: ${productoInfo.medidas || 'No disponible'}\n🪵 Material: ${productoInfo.material || 'No disponible'}\n\n¿Confirmas agregar al carrito? Responde "sí" para confirmar 😊`;
             }
           } else {
             const cantidad = cantidadDetectada || 1;
             const result = await agregarAlCarritoDB(from, productoDetectado.nombre, productoDetectado.precio, cantidad);
-            
+
             if (result.success) {
               const itemsCarrito = await db.verCarrito(from);
               if (itemsCarrito.length === 1) {
@@ -3166,7 +3124,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
     }
 
     if (!response || response === 'undefined' || response === 'null') {
-      response = SALUDO_INICIAL;ñ
+      response = SALUDO_INICIAL;
     }
 
     await addToHistoryDB(from, 'assistant', response);
@@ -3192,7 +3150,7 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
 
     const twiml = new MessagingResponse();
     twiml.message('Disculpa, estoy teniendo problemas tecnicos. Por favor intenta mas tarde.');
-  res.type('text/xml').send(twiml.toString());
+    res.type('text/xml').send(twiml.toString());
   }
 });
 
