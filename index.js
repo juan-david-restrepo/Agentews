@@ -844,6 +844,10 @@ function detectarSaludo(mensaje) {
     /\bholaa\b/i,
     /\bholaaa\b/i,
     /\bholas\b/i,
+    /\bola\b/i,
+    /\bolas\b/i,
+    /\bolaas\b/i,
+    /\bollaaa\b/i,
     /\bbuenos\s+dias\b/i,
     /\bbuenas\s+dias\b/i,
     /\bbuenos\s+días\b/i,
@@ -2203,9 +2207,12 @@ app.post('/webhook', async (req, res) => {
     await db.getOrCreateUsuario(from);
 
     // EARLY GREETING CHECK - Before any product search
-    if (detectarSaludo(incomingMsg)) {
+    const esSaludo = detectarSaludo(incomingMsg);
+    console.log(`[GREETING] detectarSaludo="${esSaludo}", msg="${incomingMsg}", solo="${esSoloSaludo(incomingMsg)}"`);
+    if (esSaludo) {
       if (esSoloSaludo(incomingMsg)) {
         // Pure greeting → always send full SALUDO_INICIAL
+        console.log(`[GREETING] Pure greeting detected, sending SALUDO_INICIAL`);
         let response = SALUDO_INICIAL;
         await addToHistoryDB(from, 'user', incomingMsg);
         await addToHistoryDB(from, 'assistant', response);
@@ -2218,6 +2225,7 @@ app.post('/webhook', async (req, res) => {
         return; // STOP processing - don't search for products
       } else {
         // Greeting + question → save to history, continue to detect question
+        console.log(`[GREETING] Greeting + content, continuing to detect question`);
         await addToHistoryDB(from, 'user', incomingMsg);
         if (!(await db.haEnviadoSaludo(from))) {
           await db.marcarSaludoEnviado(from);
@@ -2326,7 +2334,9 @@ app.post('/webhook', async (req, res) => {
       transferenciaMedidaPendiente = typeof rawTransferencia === 'object' ? rawTransferencia : { producto: rawTransferencia, solicitud: null };
     }
 
-    const esAfirmativo = /^(si|sí|claro|dale|ok|bueno|ya|de una|amén|confirmo|por favor)(\s|$|porfa|por favor|me gustaría|quiero|vamos|listo|pues)/i.test(incomingMsg.trim());
+    const msgTrim = incomingMsg.trim().toLowerCase();
+    const esAfirmativo = /^(si|sí|claro|dale|ok|ya|de una|amén|confirmo|por favor|listo|vamos|pues|porfa)(\s|$|,|\.|!)/i.test(msgTrim) && !/^(buenos?|buenas?)\s/i.test(msgTrim);
+    console.log(`[TRANSFER] esAfirmativo="${esAfirmativo}", msgTrim="${msgTrim}", pendiente="${!!transferenciaMedidaPendiente}"`);
 
     if (transferenciaMedidaPendiente && esAfirmativo) {
       debeTransferir = true;
