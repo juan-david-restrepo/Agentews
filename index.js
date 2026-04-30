@@ -2228,14 +2228,19 @@ app.post('/webhook', async (req, res) => {
         // Pure greeting → always send full SALUDO_INICIAL
         console.log(`[GREETING] Pure greeting detected, sending SALUDO_INICIAL`);
         let response = SALUDO_INICIAL;
-        await addToHistoryDB(from, 'user', incomingMsg);
-        await addToHistoryDB(from, 'assistant', response);
-        await db.actualizarLastInteraction(from);
-        await db.marcarSaludoEnviado(from);
 
+        // Send response FIRST to ensure user gets it immediately
         const twiml = new MessagingResponse();
         twiml.message(response);
         res.type('text/xml').send(twiml.toString());
+        console.log(`[GREETING] TwiML sent successfully`);
+
+        // Then do DB operations asynchronously (don't block the response)
+        addToHistoryDB(from, 'user', incomingMsg).catch(e => console.error('[GREETING] Error saving user message:', e));
+        addToHistoryDB(from, 'assistant', response).catch(e => console.error('[GREETING] Error saving assistant message:', e));
+        db.actualizarLastInteraction(from).catch(e => console.error('[GREETING] Error updating interaction:', e));
+        db.marcarSaludoEnviado(from).catch(e => console.error('[GREETING] Error marking greeting:', e));
+
         return; // STOP processing - don't search for products
       } else {
         // Greeting + question → save to history, continue to detect question
