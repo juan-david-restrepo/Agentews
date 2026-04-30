@@ -1674,7 +1674,6 @@ function detectarSolicitudCatalogo(mensaje) {
     /\bver\s+pdf\b/i,
     /\bdame\s+pdf\b/i,
     /\bel\s+cat/i,
-    /\bver\s+cat/i,
     /el\s+cat[áa]logo\s+completo/i,
     /qu[é]产品的/i,
     /ver\s+todos\s+los\s+productos/i,
@@ -1690,12 +1689,6 @@ function detectarSolicitudCatalogo(mensaje) {
     }
   }
 
-  const palabrasCategoria = ['sofa', 'sofas', 'silla', 'sillas', 'cama', 'camas', 'mesa', 'mesas', 'base', 'bases', 'comedor', 'comedores'];
-  for (const palabra of palabrasCategoria) {
-    if (msg.includes(palabra + 's') || msg === palabra || msg.includes('ver ' + palabra) || msg.includes('ver los ' + palabra) || msg.includes('ver las ' + palabra)) {
-      return true;
-    }
-  }
   return false;
 }
 
@@ -2262,16 +2255,30 @@ app.post('/webhook', async (req, res) => {
       console.log(`[CATALOG] Solicitud de catálogo detectada: "${incomingMsg}"`);
       const categoriaGuardada = await db.getCategoriaActual(from);
       console.log(`[CATALOG] Categoria guardada: ${categoriaGuardada}`);
+      
+      let imagenURL = null;
+      let response = '';
+      
+      // First try saved category
       if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
         imagenURL = knowledge.catalogos[categoriaGuardada];
         let nombreCat = formatearNombreCategoria(categoriaGuardada);
         response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊`;
-        console.log(`[CATALOG] Enviando PDF: ${nombreCat}`);
+        console.log(`[CATALOG] Enviando PDF desde categoria guardada: ${nombreCat}`);
       } else {
-        // No saved category, show available categories
-        const categoriasDisponibles = Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ');
-        response = `¿De qué categoría te gustaría ver el catálogo? 😊\n\nCategorías disponibles:\n${categoriasDisponibles}`;
-        console.log(`[CATALOG] Sin categoria guardada, mostrando categorias disponibles`);
+        // Try to detect category from message
+        const catDetectada = buscarCatalogo(incomingMsg);
+        if (catDetectada && catDetectada.url) {
+          imagenURL = catDetectada.url;
+          let nombreCat = formatearNombreCategoria(catDetectada.categoria);
+          response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊`;
+          console.log(`[CATALOG] Enviando PDF detectado del mensaje: ${nombreCat}`);
+        } else {
+          // No saved or detected category, show available categories
+          const categoriasDisponibles = Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ');
+          response = `¿De qué categoría te gustaría ver el catálogo? 😊\n\nCategorías disponibles:\n${categoriasDisponibles}`;
+          console.log(`[CATALOG] Sin categoria, mostrando disponibles`);
+        }
       }
       
       // Save to history and send response immediately
