@@ -164,7 +164,8 @@ async function getEstado(telefono) {
     paso_agenda: estado.paso_agenda || 0,
     datos_agenda: parseJSONField(estado.datos_agenda),
     candidatos_pendientes: parseJSONField(estado.candidatos_pendientes),
-    subtipo_pendiente: parseJSONField(estado.subtipo_pendiente)
+    subtipo_pendiente: parseJSONField(estado.subtipo_pendiente),
+    comparacion_pendiente: parseJSONField(estado.comparacion_pendiente)
   };
 }
 
@@ -238,6 +239,11 @@ async function updateEstado(telefono, datos) {
   if (datos.subtipo_pendiente !== undefined) {
     campos.push('subtipo_pendiente = ?');
     valores.push(datos.subtipo_pendiente ? JSON.stringify(datos.subtipo_pendiente) : null);
+  }
+
+  if (datos.comparacion_pendiente !== undefined) {
+    campos.push('comparacion_pendiente = ?');
+    valores.push(datos.comparacion_pendiente ? JSON.stringify(datos.comparacion_pendiente) : null);
   }
 
   if (campos.length === 0) return;
@@ -438,7 +444,8 @@ async function resetearEstadoSinPedido(telefono) {
     paso_agenda: 0,
     datos_agenda: null,
     candidatos_pendientes: null,
-    subtipo_pendiente: null
+    subtipo_pendiente: null,
+    comparacion_pendiente: null
   });
 }
 
@@ -577,6 +584,25 @@ async function clearSubtipoPendiente(telefono) {
   await updateEstado(telefono, { subtipo_pendiente: null });
 }
 
+async function setComparacionPendiente(telefono, datos) {
+  await updateEstado(telefono, { comparacion_pendiente: { ...datos, timestamp: Date.now() } });
+}
+
+async function getComparacionPendiente(telefono) {
+  const estado = await getEstado(telefono);
+  if (!estado.comparacion_pendiente) return null;
+  const MAX_AGE_MS = 10 * 60 * 1000;
+  if (Date.now() - estado.comparacion_pendiente.timestamp > MAX_AGE_MS) {
+    await clearComparacionPendiente(telefono);
+    return null;
+  }
+  return estado.comparacion_pendiente;
+}
+
+async function clearComparacionPendiente(telefono) {
+  await updateEstado(telefono, { comparacion_pendiente: null });
+}
+
 module.exports = {
   pool,
   getOrCreateUsuario,
@@ -623,5 +649,8 @@ module.exports = {
   clearCandidatosPendientes,
   setSubtipoPendiente,
   getSubtipoPendiente,
-  clearSubtipoPendiente
+  clearSubtipoPendiente,
+  setComparacionPendiente,
+  getComparacionPendiente,
+  clearComparacionPendiente
 };

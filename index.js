@@ -767,7 +767,7 @@ function detectarComparacion(mensaje) {
   return patrones.some(p => p.test(msg));
 }
 
-async function compararProductos(from) {
+async function compararProductos(from, incomingMsg = null) {
   const historial = await db.getHistorial(from, 8);
   const categoriaActual = await db.getCategoriaActual(from);
   const itemsCarrito = await db.verCarrito(from);
@@ -775,14 +775,33 @@ async function compararProductos(from) {
   const inventario = knowledge.inventario;
   const nombresEnCarrito = new Set(itemsCarrito.map(item => item.producto.toLowerCase()));
 
-  for (const msg of historial) {
-    if (msg.role === 'assistant') {
-      for (const [catKey, catData] of Object.entries(inventario)) {
-        if (categoriaActual && catKey !== categoriaActual) continue;
-        for (const prod of catData.productos) {
-          if (nombresEnCarrito.has(prod.nombre.toLowerCase())) continue;
-          if (msg.content.includes(prod.nombre) && !productosMencionados.find(p => p.nombre === prod.nombre)) {
-            productosMencionados.push({ ...prod, categoria: catKey });
+  if (incomingMsg) {
+    for (const [catKey, catData] of Object.entries(inventario)) {
+      if (categoriaActual && catKey !== categoriaActual) continue;
+      for (const prod of catData.productos) {
+        if (nombresEnCarrito.has(prod.nombre.toLowerCase())) continue;
+        const nombreNormalizado = prod.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const msgNormalizado = incomingMsg.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const palabrasProd = nombreNormalizado.split(/\s+/).filter(p => p.length > 2);
+        const coincidencias = palabrasProd.filter(p => msgNormalizado.includes(p));
+        if (coincidencias.length >= Math.min(2, palabrasProd.length) && !productosMencionados.find(p => p.nombre === prod.nombre)) {
+          productosMencionados.push({ ...prod, categoria: catKey });
+        }
+      }
+    }
+  }
+
+  if (productosMencionados.length < 2) {
+    for (const msg of historial) {
+      if (msg.role === 'assistant') {
+        for (const [catKey, catData] of Object.entries(inventario)) {
+          if (categoriaActual && catKey !== categoriaActual) continue;
+          for (const prod of catData.productos) {
+            if (nombresEnCarrito.has(prod.nombre.toLowerCase())) continue;
+            if (productosMencionados.find(p => p.nombre === prod.nombre)) continue;
+            if (msg.content.includes(prod.nombre)) {
+              productosMencionados.push({ ...prod, categoria: catKey });
+            }
           }
         }
       }
@@ -824,6 +843,203 @@ async function compararProductos(from) {
   }
 
   return null;
+}
+
+function detectarRespuestaComparacion(mensaje) {
+  const msg = mensaje.toLowerCase();
+  const tienePresupuesto = /presupuesto|plata|dinero|tengo|maximo|gastar|hasta\s*\d|mi\s*presupuesto|cuesta|valor/i.test(msg) || /\d{3,}/.test(msg.replace(/[^\d]/g, ''));
+  const tieneEstilo = /clasico|moderno|minimalista|rustico|industrial|contemporaneo|sencillo|elegante|vintage|colonia/i.test(msg);
+  const tieneEspacio = /sala|comedor|dormitorio|cuarto|cocina|oficina|recibidor|habitacion/i.test(msg);
+  return tienePresupuesto || tieneEstilo || tieneEspacio;
+}
+
+function extraerPreferencias(mensaje) {
+  const msg = mensaje.toLowerCase();
+  const prefs = { presupuesto: null, estilo: null, espacio: null, textoCompleto: mensaje };
+
+  const numeros = msg.match(/(\d[\d.]*)/g);
+  if (numeros && numeros.length > 0) {
+    for (const num of numeros) {
+      let valor = parseInt(num.replace(/\./g, ''), 10);
+      if (isNaN(valor)) continue;
+      if (valor > 100 && valor < 10000000) {
+        if (valor < 10000) valor *= 1000;
+        prefs.presupuesto = valor;
+        break;
+      }
+    }
+  }
+
+  const estilos = [
+    { patron: /clasico|colonia/i, valor: 'clasico' },
+    { patron: /moderno/i, valor: 'moderno' },
+    { patron: /minimalista/i, valor: 'minimalista' },
+    { patron: /rustico/i, valor: 'rustico' },
+    { patron: /industrial/i, valor: 'industrial' },
+    { patron: /contemporaneo/i, valor: 'contemporaneo' },
+    { patron: /sencillo|simple/i, valor: 'sencillo' },
+    { patron: /elegante/i, valor: 'elegante' },
+    { patron: /vintage/i, valor: 'vintage' }
+  ];
+  for (const e of estilos) {
+    if (e.patron.test(msg)) { prefs.estilo = e.valor; break; }
+  }
+
+  const espacios = [
+    { patron: /comedor/i, valor: 'comedor' },
+    { patron: /sala|estar/i, valor: 'sala' },
+    { patron: /dormitorio|cuarto|habitacion|dormir/i, valor: 'dormitorio' },
+    { patron: /cocina/i, valor: 'cocina' },
+    { patron: /oficina|escritorio|estudio/i, valor: 'oficina' },
+    { patron: /recibidor|entrada/i, valor: 'recibidor' }
+  ];
+  for (const e of espacios) {
+    if (e.patron.test(msg)) { prefs.espacio = e.valor; break; }
+  }
+
+  return prefs;
+}
+
+function recomendarPorPreferencias(prefs) {
+  const inventario = knowledge.inventario;
+  let candidatos = [];
+
+  const espacioCategoria = {
+    comedor: ['bases_comedores', 'sillas_comedor'],
+    sala: ['sofas', 'sofas_camas', 'sofas_modulares', 'mesas_centro', 'mesas_auxiliares', 'sillas_auxiliares'],
+    dormitorio: ['camas', 'colchones', 'mesas_noche', 'cajoneros_bifes'],
+    cocina: ['sillas_barra', 'mesas_auxiliares'],
+    oficina: ['escritorios'],
+    recibidor: ['mesas_auxiliares', 'sillas_auxiliares']
+  };
+
+  let categoriasBusqueda = [];
+  if (prefs.espacio && espacioCategoria[prefs.espacio]) {
+    categoriasBusqueda = espacioCategoria[prefs.espacio];
+  } else {
+    categoriasBusqueda = Object.keys(inventario);
+  }
+
+  for (const catKey of categoriasBusqueda) {
+    const cat = inventario[catKey];
+    if (!cat || !cat.productos) continue;
+    for (const prod of cat.productos) {
+      const precioNum = parseInt(String(prod.precio).replace(/[^0-9]/g, '')) || 0;
+      if (precioNum === 0) continue;
+
+      let score = 0;
+
+      if (prefs.presupuesto) {
+        const rango = prefs.presupuesto * 0.3;
+        if (precioNum <= prefs.presupuesto + rango && precioNum >= prefs.presupuesto - rango) {
+          score += 100;
+        } else if (precioNum <= prefs.presupuesto) {
+          score += 80;
+        } else {
+          continue;
+        }
+      }
+
+      if (prefs.estilo) {
+        const estiloPalabras = {
+          clasico: ['clasico', 'colonial', 'traditional', 'antiguo'],
+          moderno: ['moderno', 'contemporaneo', 'actual', 'minimal'],
+          minimalista: ['minimal', 'simple', 'sencillo', 'basico'],
+          rustico: ['rustico', 'madera', 'natural', 'campo'],
+          industrial: ['industrial', 'metal', 'hierro', 'urbano'],
+          elegante: ['elegante', 'premium', 'lujo', 'deluxe'],
+          vintage: ['vintage', 'retro', 'antiguo'],
+          sencillo: ['sencillo', 'simple', 'basico']
+        };
+        const palabrasEstilo = estiloPalabras[prefs.estilo] || [];
+        const prodNombre = prod.nombre.toLowerCase();
+        const prodMaterial = (prod.material || '').toLowerCase();
+        for (const p of palabrasEstilo) {
+          if (prodNombre.includes(p) || prodMaterial.includes(p)) { score += 20; }
+        }
+      }
+
+      if (score > 0) {
+        candidatos.push({ ...prod, categoria: catKey, score, precioNumerico: precioNum });
+      }
+    }
+  }
+
+  candidatos.sort((a, b) => b.score - a.score);
+  const seleccionados = candidatos.slice(0, 5);
+
+  if (seleccionados.length === 0) {
+    let todosProductos = [];
+    for (const catKey of categoriasBusqueda) {
+      const cat = inventario[catKey];
+      if (!cat || !cat.productos) continue;
+      for (const prod of cat.productos) {
+        const precioNum = parseInt(String(prod.precio).replace(/[^0-9]/g, '')) || 0;
+        if (precioNum > 0) todosProductos.push({ ...prod, categoria: catKey, precioNumerico: precioNum });
+      }
+    }
+    if (prefs.presupuesto) {
+      todosProductos = todosProductos.filter(p => p.precioNumerico <= prefs.presupuesto);
+    }
+    todosProductos.sort((a, b) => a.precioNumerico - b.precioNumerico);
+    const fallback = todosProductos.slice(0, 5);
+    if (fallback.length === 0) return null;
+
+    let respuesta = "No encontré productos exactos con esas preferencias, pero aquí tienes algunas opciones:\n\n";
+    fallback.forEach((prod, i) => {
+      respuesta += `${i + 1}. *${prod.nombre}* - ${prod.precio}\n`;
+      if (prod.material) respuesta += `   🪵 ${prod.material}\n`;
+    });
+    respuesta += "\n¿Alguna te interesa? 😊";
+    return respuesta;
+  }
+
+  const masEconomico = [...seleccionados].sort((a, b) => a.precioNumerico - b.precioNumerico)[0];
+  const premium = seleccionados.find(p => p.nombre !== masEconomico.nombre);
+
+  let respuesta = "Encontré varias opciones para ti 😊\n\n";
+  seleccionados.forEach((prod, i) => {
+    respuesta += `${i + 1}. *${prod.nombre}* - ${prod.precio}\n`;
+    if (prod.material) respuesta += `   🪵 ${prod.material}\n`;
+    if (prod.medidas) respuesta += `   📏 ${prod.medidas}\n`;
+    respuesta += "\n";
+  });
+
+  respuesta += `💡 *Mi recomendación:*\n`;
+  respuesta += `• Mejor precio: *${masEconomico.nombre}* (${masEconomico.precio})\n`;
+  if (premium) {
+    respuesta += `• Opción premium: *${premium.nombre}* (${premium.precio})\n`;
+  }
+  respuesta += "\n¿Cuál te llama más la atención? 😊";
+
+  return respuesta;
+}
+
+async function generarComparacionDirecta(productosEncontrados) {
+  if (!productosEncontrados || productosEncontrados.length < 2) return null;
+
+  let comparacion = "📊 *Comparación de productos:*\n\n";
+
+  const ordenados = [...productosEncontrados].sort((a, b) => a.precioNumerico - b.precioNumerico);
+  const masBarato = ordenados[0];
+  const masCaro = ordenados[ordenados.length - 1];
+
+  productosEncontrados.forEach((prod, i) => {
+    comparacion += `${i + 1}. *${prod.nombre}*\n`;
+    comparacion += `   💰 Precio: ${prod.precio}\n`;
+    if (prod.material) comparacion += `   🪵 Material: ${prod.material}\n`;
+    if (prod.medidas) comparacion += `   📏 Medidas: ${prod.medidas}\n`;
+    comparacion += "\n";
+  });
+
+  comparacion += `💡 *Mi recomendación:*\n`;
+  comparacion += `• Si buscas la mejor relación precio-calidad: *${masBarato.nombre}* (${masBarato.precio})\n`;
+  if (masBarato.nombre !== masCaro.nombre) {
+    comparacion += `• Si buscas la opción premium: *${masCaro.nombre}* (${masCaro.precio})\n`;
+  }
+  comparacion += "\n¿Cuál te interesa? 😊";
+
+  return comparacion;
 }
 
 const MAX_ITEMS_CARRITO = 10;
@@ -2673,11 +2889,54 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
           response = `No se guardó la cita.\n\nPara confirmar escribe "sí" o "confirmar"\n\nPara cancelar escribe "cancelar"`;
         }
       }
+    } else if (await db.getComparacionPendiente(from)) {
+      if (detectarRespuestaComparacion(incomingMsg)) {
+        const prefs = extraerPreferencias(incomingMsg);
+        prefs.textoCompleto = incomingMsg;
+        const pendientes = await db.getComparacionPendiente(from);
+        if (pendientes.presupuesto && !prefs.presupuesto) prefs.presupuesto = pendientes.presupuesto;
+        if (pendientes.estilo && !prefs.estilo) prefs.estilo = pendientes.estilo;
+        if (pendientes.espacio && !prefs.espacio) prefs.espacio = pendientes.espacio;
+
+        const recomendaciones = recomendarPorPreferencias(prefs);
+        if (recomendaciones) {
+          await db.clearComparacionPendiente(from);
+          response = recomendaciones;
+        } else {
+          response = "Cuéntame más detalles para ayudarte mejor 😊\n\n¿Qué categoría te interesa? (sillas, mesas, camas, sofás, etc.)";
+        }
+      } else if (/si|sí|claro|dale|ok|bueno|perfecto|este|ese|aquel|prefiero|escojo|elijo/i.test(incomingMsg.toLowerCase())) {
+        await db.clearComparacionPendiente(from);
+        response = "¿Qué producto te interesa? 😊";
+      } else if (/no|ninguno|ningun|nada/i.test(incomingMsg.toLowerCase())) {
+        await db.clearComparacionPendiente(from);
+        response = "Entiendo. ¿Qué otro tipo de mueble buscas? 😊";
+      } else {
+        const prefs = extraerPreferencias(incomingMsg);
+        if (prefs.presupuesto || prefs.estilo || prefs.espacio) {
+          prefs.textoCompleto = incomingMsg;
+          const pendientes = await db.getComparacionPendiente(from);
+          if (pendientes.presupuesto && !prefs.presupuesto) prefs.presupuesto = pendientes.presupuesto;
+          if (pendientes.estilo && !prefs.estilo) prefs.estilo = pendientes.estilo;
+          if (pendientes.espacio && !prefs.espacio) prefs.espacio = pendientes.espacio;
+          const recomendaciones = recomendarPorPreferencias(prefs);
+          if (recomendaciones) {
+            await db.clearComparacionPendiente(from);
+            response = recomendaciones;
+          } else {
+            await db.clearComparacionPendiente(from);
+            response = "¿Qué categoría te interesa? 😊";
+          }
+        } else {
+          response = "Para ayudarte mejor, dime:\n\n1. 💰 ¿Cuál es tu presupuesto?\n2. 🎨 ¿Qué estilo prefieres?\n3. 📏 ¿Para qué espacio?\n\nCon eso te doy la mejor recomendación 😊";
+        }
+      }
     } else if (detectarComparacion(incomingMsg)) {
-      const comparacion = await compararProductos(from);
+      const comparacion = await compararProductos(from, incomingMsg);
       if (comparacion) {
         response = comparacion;
       } else {
+        await db.setComparacionPendiente(from, {});
         response = "¡Claro! Te ayudo a elegir. 😊\n\nPara recomendarte mejor, cuéntame:\n\n1. 💰 ¿Cuál es tu presupuesto aproximado?\n2. 🎨 ¿Qué estilo prefieres: moderno, clásico, minimalista?\n3. 📏 ¿Para qué espacio es? (sala, comedor, dormitorio)\n\nCon eso te puedo dar la mejor recomendación. 😊";
       }
     } else if (await db.getCandidatosPendientes(from)) {
