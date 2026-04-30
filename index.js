@@ -2344,12 +2344,17 @@ app.post('/webhook', async (req, res) => {
       if (ofrecioTransferencia && esAfirmativo) {
         const telefono = from.replace('whatsapp:', '');
         const productoPendiente = await db.getProductoPendiente(from);
-        const prodInfo = productoPendiente?.producto || null;
-        const esPersonalizacion = ultimoMensajeBot && (ultimoMensajeBot.content.includes('personalización') || ultimoMensajeBot.content.includes('personalizar') || ultimoMensajeBot.content.includes('medida') || ultimoMensajeBot.content.includes('diseño a medida'));
+        let prodInfo = productoPendiente?.producto || null;
+        let esPersonalizacion = ultimoMensajeBot && (ultimoMensajeBot.content.includes('personalización') || ultimoMensajeBot.content.includes('personalizar') || ultimoMensajeBot.content.includes('medida') || ultimoMensajeBot.content.includes('diseño a medida'));
+
+        if (!prodInfo && transferenciaMedidaPendiente?.producto) {
+          prodInfo = transferenciaMedidaPendiente.producto;
+          esPersonalizacion = true;
+        }
 
         if (esPersonalizacion && prodInfo) {
-          const solicitudAlt = transferenciaMedidaPendiente?.solicitud || incomingMsg;
-          await enviarNotificacionTelegram(telefono, solicitudAlt, history, 'personalizacion', prodInfo, 'personalización');
+          const solicitudUsuario = transferenciaMedidaPendiente?.solicitud || incomingMsg;
+          await enviarNotificacionTelegram(telefono, solicitudUsuario, history, 'personalizacion', prodInfo, 'personalización');
         } else {
           await enviarNotificacionTelegram(telefono, 'Solicitud de transferencia a asesor', history);
         }
