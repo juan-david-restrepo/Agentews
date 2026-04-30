@@ -99,6 +99,13 @@ REGLAS IMPORTANTES:
 - No seas agresiva, pero si convincente
 - Siempre ofrece ayuda adicional al final
 
+REGLA IMPORTANTE SOBRE SILLAS Y COMEDORES:
+- TODAS las sillas (de comedor, auxiliares, de barra) se venden POR UNIDAD (una por una), NO en paquetes.
+- Las sillas se venden POR SEPARADO de las bases de comedor. La base del comedor NO incluye sillas.
+- Cuando el cliente pregunte "cuántas vienen?" o similar sobre sillas, responde que se venden por unidad.
+- Siempre que muestres sillas, menciona que el precio es por unidad y que se venden aparte de la base del comedor.
+- Cuando el cliente consulte sobre bases de comedores, menciona que se venden sin sillas incluidas y que puede elegir sillas por separado.
+
 SINONIMOS Y TERMINOS GENERICOS - Como interpretar al cliente:
 - "muebles" o "mueble" = cualquier producto de DeCasa (sofás, camas, mesas, sillas, etc.)
 - "para la sala" = sofás modulares, sofás camas, mesas de centro, sillas auxiliares, mesas de TV
@@ -2532,11 +2539,18 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
           imagenURL = catalogo.url;
           let nombreCat = formatearNombreCategoria(catalogo.categoria);
           response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊`;
-        } else if (porCategoria.productos && porCategoria.productos.length > 0) {
+        } else         if (porCategoria.productos && porCategoria.productos.length > 0) {
           if (porCategoria.categoria) {
             await db.setCategoriaActual(from, porCategoria.categoria);
           }
           response = formatearProductosVenta(porCategoria.productos);
+          const categoriasSillas = ['sillas_comedor', 'sillas_auxiliares', 'sillas_barra'];
+          if (porCategoria.categoria && categoriasSillas.includes(porCategoria.categoria)) {
+            response += "\n\n💡 Recuerda: Las sillas se venden por separado de la base del comedor y el precio es por unidad. 🪑";
+          }
+          if (porCategoria.categoria === 'bases_comedores') {
+            response += "\n\n💡 Recuerda: La base del comedor se vende sin sillas. Puedes elegir tus sillas favoritas por separado. 🪑";
+          }
         } else {
           const categoriasDisponibles = Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ');
           response = `Claro! Estas son las categorías disponibles:\n${categoriasDisponibles}\n\n¿ cual te gustaría ver? 😊`;
@@ -2598,6 +2612,13 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
           await db.setCategoriaActual(from, subtipo);
           const tienePdf = knowledge.catalogos[subtipo];
           response = formatearProductosVenta(productosSubtipo);
+          const categoriasSillas = ['sillas_comedor', 'sillas_auxiliares', 'sillas_barra'];
+          if (subtipo && categoriasSillas.includes(subtipo)) {
+            response += "\n\n💡 Recuerda: Las sillas se venden por separado de la base del comedor y el precio es por unidad. 🪑";
+          }
+          if (subtipo === 'bases_comedores') {
+            response += "\n\n💡 Recuerda: La base del comedor se vende sin sillas. Puedes elegir tus sillas favoritas por separado. 🪑";
+          }
           if (tienePdf) {
             response += "\n\n¿Quieres ver el catálogo completo en PDF? 😊";
           }
@@ -2615,6 +2636,13 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
             await db.setCategoriaActual(from, resultadoCategoria.categoria);
           }
           response = formatearProductosVenta(porCategoria);
+          const categoriasSillas = ['sillas_comedor', 'sillas_auxiliares', 'sillas_barra'];
+          if (resultadoCategoria.categoria && categoriasSillas.includes(resultadoCategoria.categoria)) {
+            response += "\n\n💡 Recuerda: Las sillas se venden por separado de la base del comedor y el precio es por unidad. 🪑";
+          }
+          if (resultadoCategoria.categoria === 'bases_comedores') {
+            response += "\n\n💡 Recuerda: La base del comedor se vende sin sillas. Puedes elegir tus sillas favoritas por separado. 🪑";
+          }
         } else {
           const catActual = await db.getCategoriaActual(from);
           if (catActual && knowledge.inventario[catActual]) {
@@ -2657,6 +2685,13 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
         const productosBD = catBD && knowledge.inventario[catBD]?.productos;
         if (productosBD && productosBD.length > 0) {
           response = formatearProductosVenta(productosBD);
+          const categoriasSillas = ['sillas_comedor', 'sillas_auxiliares', 'sillas_barra'];
+          if (catBD && categoriasSillas.includes(catBD)) {
+            response += "\n\n💡 Recuerda: Las sillas se venden por separado de la base del comedor y el precio es por unidad. 🪑";
+          }
+          if (catBD === 'bases_comedores') {
+            response += "\n\n💡 Recuerda: La base del comedor se vende sin sillas. Puedes elegir tus sillas favoritas por separado. 🪑";
+          }
         } else {
           const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
           const porCategoria = resultadoCategoria.productos;
@@ -2995,6 +3030,15 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
           const precio2 = parseInt(String(productoPendienteData.precio).replace(/[^0-9]/g, '')) || 0;
           const total = precio1 + precio2;
           response = `📋 Resumen de productos:\n\n1. ${productoDetectado.nombre} - ${productoDetectado.precio}\n2. ${productoPendienteData.nombre} - ${productoPendienteData.precio}\n\n💰 Suma total: $${total.toLocaleString()}\n\n¿Confirmas agregar ambos al carrito? 😊`;
+        }
+
+        const preguntaCantidadSillas = /cu(a|á)nt(a|á)s|cu(a|á)ntos|cuantos|viene|vienen|cantidad|unidad|unidades|paquete|pack/i.test(incomingMsg);
+        if (!response && preguntaCantidadSillas) {
+          const catBD = await db.getCategoriaActual(from);
+          const categoriasSillas = ['sillas_comedor', 'sillas_auxiliares', 'sillas_barra'];
+          if (catBD && categoriasSillas.includes(catBD)) {
+            response = `Las sillas se venden por unidad (una por una), no vienen en paquete. El precio que ves es por cada silla individual. 🪑\n\n¿Cuántas sillas te gustaría agregar a tu pedido? 😊`;
+          }
         }
 
         const preguntaSillas = /(comedor|base).*(silla|viene|incluye|separado|apart)|(silla).*(comedor|base)/i.test(incomingMsg);
