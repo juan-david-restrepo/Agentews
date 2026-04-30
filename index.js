@@ -420,7 +420,7 @@ function buscarProductoPorNombre(mensaje, categoriaPref = null, categoriaBD = nu
   if (coincidencias.length === 0) return null;
 
   const mejorScore = coincidencias[0].score;
-  if (mejorScore < 50) return null;
+  if (mejorScore < 60) return null;
 
   const categoriaDetectada = categoriaPref || detectarCategoriaEnMensaje(mensaje);
   const categoriaPreferida = categoriaDetectada || categoriaBD;
@@ -520,7 +520,7 @@ function buscarInfoProducto(nombreProducto, categoriaPref = null, categoriaBD = 
   });
 
   const mejorScore = mejoresCoincidencias[0].score;
-  if (mejorScore < 50) return null;
+  if (mejorScore < 60) return null;
 
   let mismosScore = mejoresCoincidencias.filter(c => c.score >= mejorScore - 10 && c.score >= 50);
 
@@ -655,6 +655,39 @@ function buscarPorDescripcion(descripcion, categoriaActual) {
   }
 
   return mejorScore > 50 ? mejorCoincidencia : null;
+}
+
+function esFraseCompraGenerica(mensaje) {
+  const msg = mensaje.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const palabrasFiltro = [
+    'cama', 'sofa', 'sofá', 'comedor', 'silla', 'mesa', 'cama',
+    'base', 'colchon', 'colchón', 'nido', 'repisa', 'mueble',
+    'sillon', 'sillón', 'auxiliar', 'barra', 'moderno', 'clasico',
+    'madera', 'cuero', 'tela', 'color', 'negro', 'blanco', 'cafe',
+    'gris', 'rojo', 'azul', 'verde', 'dorado', 'plateado',
+    'grande', 'pequeño', 'pequeno', 'economico', 'barato', 'caro',
+    'mejor', 'barato', 'economico', 'torello', 'valencia', 'monaco',
+    'torino', 'milan', 'roma', 'aria', 'luna', 'sol', 'perla',
+    'diamante', 'cristal', 'oro', 'plata', 'roble', 'nogal',
+    'pine', 'pino', 'cedro', 'caoba', 'tropical', 'rustico',
+    'lujo', 'premium', 'deluxe', 'ejecutivo', 'estandar',
+    'doble', 'individual', 'queen', 'king', 'full',
+    'seater', 'seaters', 'plaza', 'plazas',
+    'centro', 'esquina', 'seccional', 'reclinable',
+    'puff', 'otomana', 'ottoman', 'console', 'consola',
+    'escritorio', 'estante', 'closet', 'zapatero',
+    'tocador', 'velador', 'comoda', 'modul',
+    'infantil', 'juvenil', 'gamer', 'oficina',
+    'exterior', 'interior', 'jardin', 'balcon',
+    'plegable', 'abatible', 'apilable'
+  ];
+  const msgSinAcentos = msg.toLowerCase();
+  for (const palabra of palabrasFiltro) {
+    if (msgSinAcentos.includes(palabra)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 const TRIGGERS_ASESOR = [
@@ -3266,7 +3299,10 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
         const esInfoPura = esPreguntaInformativa(incomingMsg);
         const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
         const catBD3 = await db.getCategoriaActual(from);
-        let productoDetectado = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD3);
+        let productoDetectado = null;
+        if (!esFraseCompraGenerica(incomingMsg)) {
+          productoDetectado = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD3);
+        }
 
         if (productoDetectado && productoDetectado.ambiguo && productoDetectado.candidatos) {
           await db.guardarCandidatosPendientes(from, productoDetectado.candidatos, incomingMsg);
