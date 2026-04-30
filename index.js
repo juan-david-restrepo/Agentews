@@ -2248,7 +2248,7 @@ app.post('/webhook', async (req, res) => {
 
     // Check if we already offered transfer for custom measurements and user confirms
     const transferenciaMedidaPendiente = await db.getTransferenciaMedidaPendiente(from);
-    const esAfirmativo = /^si$|^sí$|^si me gustaría|^sí me gustaría|^por favor|^si por favor|^confirmo$/i.test(incomingMsg.trim());
+    const esAfirmativo = /^(si|sí|claro|dale|ok|bueno|ya|de una|amén|confirmo|por favor)(\s|$|porfa|por favor|me gustaría|quiero|vamos|listo|pues)/i.test(incomingMsg.trim());
 
     if (transferenciaMedidaPendiente && esAfirmativo) {
       debeTransferir = true;
@@ -2284,14 +2284,22 @@ app.post('/webhook', async (req, res) => {
     if (!debeTransferir) {
       const history = await db.getHistorial(from);
       const ultimoMensajeBot = history.filter(h => h.role === 'assistant').pop();
-      ofrecioTransferencia = ultimoMensajeBot && ultimoMensajeBot.content.includes('asesor');
+      ofrecioTransferencia = ultimoMensajeBot && (ultimoMensajeBot.content.includes('asesor') || ultimoMensajeBot.content.includes('transfiera') || ultimoMensajeBot.content.includes('transferencia') || ultimoMensajeBot.content.includes('personalización'));
 
       if (ofrecioTransferencia && esAfirmativo) {
-        await marcarTransferidaDB(from);
-        response = "Te transfiero con un asesor humano. Por favor espera un momento... 😊";
-        if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-          await enviarNotificacionTelegram(from.replace('whatsapp:', ''), 'Solicitud de transferencia a asesor', history);
+        const telefono = from.replace('whatsapp:', '');
+        const productoPendiente = await db.getProductoPendiente(from);
+        const prodInfo = productoPendiente?.producto || null;
+        const esPersonalizacion = ultimoMensajeBot && (ultimoMensajeBot.content.includes('personalización') || ultimoMensajeBot.content.includes('personalizar') || ultimoMensajeBot.content.includes('medida') || ultimoMensajeBot.content.includes('diseño a medida'));
+
+        if (esPersonalizacion && prodInfo) {
+          await enviarNotificacionTelegram(telefono, incomingMsg, history, 'personalizacion', prodInfo, 'personalización');
+        } else {
+          await enviarNotificacionTelegram(telefono, 'Solicitud de transferencia a asesor', history);
         }
+
+        await marcarTransferidaDB(from);
+        response = "¡Perfecto! Te transfiero con un asesor especializado para que podamos ayudarte. Por favor, espera un momento. 😊";
         await db.limpiarConversaciones(from);
         await db.clearProductoPendiente(from);
         await db.setCategoriaActual(from, null);
