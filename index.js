@@ -2724,6 +2724,37 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
       } else {
         response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
       }
+    } else if ((detectarConsultaPrecio(incomingMsg) || detectarConsultaInfo(incomingMsg)) &&
+               (incomingMsg.toLowerCase().includes('comedor') || incomingMsg.toLowerCase().includes('silla') || incomingMsg.toLowerCase().includes('cama') || incomingMsg.toLowerCase().includes('sofa') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('mesa'))) {
+      const catBD = await db.getCategoriaActual(from);
+      const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
+      const producto = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD);
+      if (producto && !producto.ambiguo) {
+        const cat = producto.categoria || categoriaDetectada || catBD;
+        await db.setCategoriaActual(from, cat);
+        await db.setUltimoProducto(from, { nombre: producto.nombre, precio: producto.precio, categoria: cat });
+        await db.guardarProductoPendiente(from, producto.nombre, producto.precio);
+        const info = buscarInfoProducto(producto.nombre, cat);
+        response = `${producto.nombre}\n💰 Precio: ${producto.precio}\n📏 Medidas: ${info?.medidas || 'No disponible'}\n🪵 Material: ${info?.material || 'No disponible'}\n\n¿Te interesa? 😊`;
+      } else if (producto && producto.ambiguo && producto.candidatos) {
+        const cat = producto.categoria || categoriaDetectada || catBD;
+        await db.setCategoriaActual(from, cat);
+        await db.guardarCandidatosPendientes(from, producto.candidatos, incomingMsg);
+        response = formatearMensajeAmbiguo(producto.candidatos);
+      } else {
+        const catBD2 = await db.getCategoriaActual(from);
+        const cat2 = categoriaDetectada || catBD2;
+        if (cat2 && knowledge.inventario[cat2]) {
+          const productosCat = knowledge.inventario[cat2].productos;
+          response = formatearProductosVenta(productosCat);
+          await db.setCategoriaActual(from, cat2);
+          if (cat2 === 'bases_comedores') {
+            response += "\n\n💡 Recuerda: La base del comedor se vende sin sillas. Puedes elegir tus sillas favoritas por separado. 🪑";
+          }
+        } else {
+          response = `Claro! Estas son las categorías disponibles:\n${Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ')}\n\n¿Cuál te gustaría ver? 😊`;
+        }
+      }
     } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('comedor') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
       const msgLower = incomingMsg.toLowerCase();
       const esMensajeGenericoSillas = /que.*sillas|tiene.*sillas|ver.*sillas|tipos.*silla|que.*tipos.*silla|sillas tienen|ver las sillas/i.test(msgLower);
