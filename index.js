@@ -337,6 +337,22 @@ function formatearPreguntaSubtipo(categoria, mensaje) {
   return null;
 }
 
+function resolverRespuestaSubtipo(mensaje, categoriaPadre) {
+  const msg = mensaje.toLowerCase().trim();
+  if (categoriaPadre === 'sillas_comedor') {
+    if (msg.includes('comedor') || msg.includes('diario')) return 'sillas_comedor';
+    if (msg.includes('auxiliar') || msg.includes('rededora') || msg.includes('sala')) return 'sillas_auxiliares';
+    if (msg.includes('barra') || msg.includes('alto') || msg.includes('cocina')) return 'sillas_barra';
+  }
+  if (categoriaPadre === 'mesas_centro') {
+    if (msg.includes('centro') || msg.includes('sala')) return 'mesas_centro';
+    if (msg.includes('auxiliar')) return 'mesas_auxiliares';
+    if (msg.includes('noche')) return 'mesas_noche';
+    if (msg.includes('tv') || msg.includes('televisor')) return 'mesas_tv';
+  }
+  return null;
+}
+
 function encontrarCoincidencias(mensaje, categoriaPref = null, categoriaBD = null) {
   const articulos = ['el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'mi', 'tu', 'su', 'me', 'te', 'se', 'le', 'lo', 'de', 'del', 'al', 'y', 'o', 'que', 'con', 'sin', 'por', 'para', 'una'];
   
@@ -2750,6 +2766,20 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
         } else {
           respuestaSecundaria = '¿Cuál modelo de comedor te interesa? 😊';
         }
+      } else if (await db.getSubtipoPendiente(from)) {
+        const contexto = await db.getSubtipoPendiente(from);
+        const categoriaResuelta = resolverRespuestaSubtipo(incomingMsg, contexto.categoriaPadre);
+        if (categoriaResuelta && knowledge.inventario[categoriaResuelta]) {
+          await db.clearSubtipoPendiente(from);
+          await db.setCategoriaActual(from, categoriaResuelta);
+          respuestaSecundaria = formatearProductosVenta(knowledge.inventario[categoriaResuelta].productos);
+          if (['sillas_comedor', 'sillas_auxiliares', 'sillas_barra'].includes(categoriaResuelta)) {
+            respuestaSecundaria += "\n\n💡 Recuerda: Las sillas se venden por separado de la base del comedor y el precio es por unidad. 🪑";
+          }
+        } else {
+          await db.clearSubtipoPendiente(from);
+          respuestaSecundaria = null;
+        }
       } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('comedor') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
         const msgLower = incomingMsg.toLowerCase();
         const esMensajeGenericoSillas = /que.*sillas|tiene.*sillas|ver.*sillas|tipos.*silla|que.*tipos.*silla|sillas tienen|ver las sillas/i.test(msgLower);
@@ -2757,8 +2787,10 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
 
         if (esMensajeGenericoSillas) {
           respuestaSecundaria = formatearPreguntaSubtipo('sillas_comedor', incomingMsg);
+          await db.setSubtipoPendiente(from, 'sillas_comedor');
         } else if (esMensajeGenericoMesas) {
           respuestaSecundaria = formatearPreguntaSubtipo('mesas_centro', incomingMsg);
+          await db.setSubtipoPendiente(from, 'mesas_centro');
         } else {
           let porCategoria = buscarProductosPorCategoria(incomingMsg);
           let catalogo = null;
@@ -2923,13 +2955,15 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
      } else {
          response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
        }
-     } else if (esConsultaGenericaCategoria(incomingMsg)) {
-       const msgLower = incomingMsg.toLowerCase();
-       if (msgLower.includes('silla')) {
-         response = formatearPreguntaSubtipo('sillas_comedor', incomingMsg);
-       } else if (msgLower.includes('mesa')) {
-         response = formatearPreguntaSubtipo('mesas_centro', incomingMsg);
-       } else {
+      } else if (esConsultaGenericaCategoria(incomingMsg)) {
+        const msgLower = incomingMsg.toLowerCase();
+        if (msgLower.includes('silla')) {
+          response = formatearPreguntaSubtipo('sillas_comedor', incomingMsg);
+          await db.setSubtipoPendiente(from, 'sillas_comedor');
+        } else if (msgLower.includes('mesa')) {
+          response = formatearPreguntaSubtipo('mesas_centro', incomingMsg);
+          await db.setSubtipoPendiente(from, 'mesas_centro');
+        } else {
          let porCategoria = buscarProductosPorCategoria(incomingMsg);
          if (porCategoria.categoria && porCategoria.productos.length > 0) {
            await db.setCategoriaActual(from, porCategoria.categoria);
@@ -3023,6 +3057,20 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
         await addToHistoryDB(from, 'user', incomingMsg);
         response = await callGemini({ history, currentMessage: incomingMsg });
       }
+    } else if (await db.getSubtipoPendiente(from)) {
+      const contexto = await db.getSubtipoPendiente(from);
+      const categoriaResuelta = resolverRespuestaSubtipo(incomingMsg, contexto.categoriaPadre);
+      if (categoriaResuelta && knowledge.inventario[categoriaResuelta]) {
+        await db.clearSubtipoPendiente(from);
+        await db.setCategoriaActual(from, categoriaResuelta);
+        response = formatearProductosVenta(knowledge.inventario[categoriaResuelta].productos);
+        if (['sillas_comedor', 'sillas_auxiliares', 'sillas_barra'].includes(categoriaResuelta)) {
+          response += "\n\n💡 Recuerda: Las sillas se venden por separado de la base del comedor y el precio es por unidad. 🪑";
+        }
+      } else {
+        await db.clearSubtipoPendiente(from);
+        response = null;
+      }
     } else if (detectarSolicitudCatalogo(incomingMsg) || incomingMsg.toLowerCase().includes('comedores') || incomingMsg.toLowerCase().includes('comedor') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('camas') || incomingMsg.toLowerCase().includes('sillas') || incomingMsg.toLowerCase().includes('sofás') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('sofas')) {
       const msgLower = incomingMsg.toLowerCase();
       const esMensajeGenericoSillas = /que.*sillas|tiene.*sillas|ver.*sillas|tipos.*silla|que.*tipos.*silla|sillas tienen|ver las sillas/i.test(msgLower);
@@ -3030,8 +3078,10 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
 
       if (esMensajeGenericoSillas) {
         response = formatearPreguntaSubtipo('sillas_comedor', incomingMsg);
+        await db.setSubtipoPendiente(from, 'sillas_comedor');
       } else if (esMensajeGenericoMesas) {
         response = formatearPreguntaSubtipo('mesas_centro', incomingMsg);
+        await db.setSubtipoPendiente(from, 'mesas_centro');
       } else {
         let porCategoria = buscarProductosPorCategoria(incomingMsg);
         let catalogo = null;
@@ -3091,6 +3141,7 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
       const subtipo = necesitaSubtipo(incomingMsg, categoriaDetectada);
       if (subtipo === 'PEDIR_SUBTIPO') {
         response = formatearPreguntaSubtipo(categoriaDetectada, incomingMsg);
+        await db.setSubtipoPendiente(from, categoriaDetectada);
       } else if (subtipo) {
         const productosSubtipo = knowledge.inventario[subtipo]?.productos || [];
         if (productosSubtipo.length > 0) {
@@ -3136,6 +3187,7 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
       const subtipo = necesitaSubtipo(incomingMsg, categoriaDetectada);
       if (subtipo === 'PEDIR_SUBTIPO') {
         response = formatearPreguntaSubtipo(categoriaDetectada, incomingMsg);
+        await db.setSubtipoPendiente(from, categoriaDetectada);
       } else if (subtipo) {
         const productosSubtipo = knowledge.inventario[subtipo]?.productos || [];
         if (productosSubtipo.length > 0) {
@@ -3557,9 +3609,10 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
         } else if (!productoDetectado && quiereAgregar) {
           const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
           const subtipo = necesitaSubtipo(incomingMsg, categoriaDetectada);
-          if (subtipo === 'PEDIR_SUBTIPO') {
-            response = formatearPreguntaSubtipo(categoriaDetectada, incomingMsg);
-          } else if (subtipo) {
+      if (subtipo === 'PEDIR_SUBTIPO') {
+        response = formatearPreguntaSubtipo(categoriaDetectada, incomingMsg);
+        await db.setSubtipoPendiente(from, categoriaDetectada);
+      } else if (subtipo) {
             const productosSubtipo = knowledge.inventario[subtipo]?.productos || [];
             if (productosSubtipo.length > 0) {
               await db.setCategoriaActual(from, subtipo);
