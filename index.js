@@ -2247,14 +2247,19 @@ app.post('/webhook', async (req, res) => {
     let esTransferenciaMedida = false;
 
     // Check if we already offered transfer for custom measurements and user confirms
-    const transferenciaMedidaPendiente = await db.getTransferenciaMedidaPendiente(from);
+    const rawTransferencia = await db.getTransferenciaMedidaPendiente(from);
+    let transferenciaMedidaPendiente = null;
+    if (rawTransferencia) {
+      transferenciaMedidaPendiente = typeof rawTransferencia === 'object' ? rawTransferencia : { producto: rawTransferencia, solicitud: null };
+    }
+
     const esAfirmativo = /^(si|sí|claro|dale|ok|bueno|ya|de una|amén|confirmo|por favor)(\s|$|porfa|por favor|me gustaría|quiero|vamos|listo|pues)/i.test(incomingMsg.trim());
 
     if (transferenciaMedidaPendiente && esAfirmativo) {
       debeTransferir = true;
       esTransferenciaMedida = true;
       await db.setTransferenciaMedidaPendiente(from, transferenciaMedidaPendiente);
-      console.log(`Confirmada transferencia por medida personalizada: ${from} - Producto: ${transferenciaMedidaPendiente}`);
+      console.log(`Confirmada transferencia por medida personalizada: ${from} - Producto: ${transferenciaMedidaPendiente.producto}, Solicitud: ${transferenciaMedidaPendiente.solicitud || incomingMsg}`);
     }
 
     if (!debeTransferir && (detectarMedidaPersonalizada(incomingMsg) || detectarPersonalizacion(incomingMsg))) {
@@ -2263,7 +2268,7 @@ app.post('/webhook', async (req, res) => {
       const producto = productoPendiente?.producto || ultimoProd?.nombre;
 
       if (producto) {
-        await db.setTransferenciaMedidaPendiente(from, producto);
+        await db.setTransferenciaMedidaPendiente(from, { producto: producto, solicitud: incomingMsg });
         response = `Entiendo que necesitas una personalización para ${producto}. ¿Te gustaría que te transfiera con un asesor especializado en diseño a medida? 😊`;
         console.log(`Ofreciendo transferencia por personalización: ${from} - Producto: ${producto}`);
         imagenURL = null;
@@ -2293,7 +2298,8 @@ app.post('/webhook', async (req, res) => {
         const esPersonalizacion = ultimoMensajeBot && (ultimoMensajeBot.content.includes('personalización') || ultimoMensajeBot.content.includes('personalizar') || ultimoMensajeBot.content.includes('medida') || ultimoMensajeBot.content.includes('diseño a medida'));
 
         if (esPersonalizacion && prodInfo) {
-          await enviarNotificacionTelegram(telefono, incomingMsg, history, 'personalizacion', prodInfo, 'personalización');
+          const solicitudAlt = transferenciaMedidaPendiente?.solicitud || incomingMsg;
+          await enviarNotificacionTelegram(telefono, solicitudAlt, history, 'personalizacion', prodInfo, 'personalización');
         } else {
           await enviarNotificacionTelegram(telefono, 'Solicitud de transferencia a asesor', history);
         }
@@ -2312,14 +2318,14 @@ app.post('/webhook', async (req, res) => {
       const telefono = from.replace('whatsapp:', '');
 
       if (esTransferenciaMedida) {
-        const nombreProducto = transferenciaMedidaPendiente || 'Producto no especificado';
+        const nombreProducto = transferenciaMedidaPendiente?.producto || transferenciaMedidaPendiente || 'Producto no especificado';
+        const solicitudUsuario = transferenciaMedidaPendiente?.solicitud || incomingMsg;
 
-        // Detect what type of customization
-        const esColor = /en (negro|blanco|azul|rojo|verde)/i.test(incomingMsg);
-        const esMaterial = /de (roble|pino|cedro|cuero|tela)/i.test(incomingMsg);
+        const esColor = /en (negro|blanco|azul|rojo|verde)/i.test(solicitudUsuario);
+        const esMaterial = /de (roble|pino|cedro|cuero|tela)/i.test(solicitudUsuario);
         const tipoPersonalizacion = esColor ? 'color' : (esMaterial ? 'material' : 'medida');
 
-        await enviarNotificacionTelegram(telefono, incomingMsg, history, 'personalizacion', nombreProducto, tipoPersonalizacion);
+        await enviarNotificacionTelegram(telefono, solicitudUsuario, history, 'personalizacion', nombreProducto, tipoPersonalizacion);
         await marcarTransferidaDB(from);
 
         await db.limpiarConversaciones(from);
