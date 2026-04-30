@@ -338,11 +338,19 @@ function formatearPreguntaSubtipo(categoria, mensaje) {
 }
 
 function encontrarCoincidencias(mensaje, categoriaPref = null, categoriaBD = null) {
-  const mensajeLimpio = mensaje.toLowerCase()
+  const articulos = ['el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'mi', 'tu', 'su', 'me', 'te', 'se', 'le', 'lo', 'de', 'del', 'al', 'y', 'o', 'que', 'con', 'sin', 'por', 'para', 'una'];
+  
+  let mensajeLimpio = mensaje.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+  
+  // Remove articles from the message for better matching
+  const palabrasMsg = mensajeLimpio.split(' ').filter(p => p.length > 2 && !articulos.includes(p));
+  if (palabrasMsg.length > 0) {
+    mensajeLimpio = palabrasMsg.join(' ');
+  }
 
   if (mensajeLimpio.length < 3) return [];
 
@@ -383,6 +391,13 @@ function encontrarCoincidencias(mensaje, categoriaPref = null, categoriaBD = nul
           }
         }
 
+        // Bonus for exact word match (e.g., "amatista" matching "amatista")
+        for (const pm of palabrasMsj) {
+          if (palabrasProd.includes(pm)) {
+            score += 30;
+          }
+        }
+
         if (mensajeLimpio.length >= 4 && nombreLimpio.startsWith(mensajeLimpio.substring(0, 4))) {
           score += 30;
         }
@@ -420,7 +435,12 @@ function buscarProductoPorNombre(mensaje, categoriaPref = null, categoriaBD = nu
   if (coincidencias.length === 0) return null;
 
   const mejorScore = coincidencias[0].score;
-  if (mejorScore < 60) return null;
+  
+  // Lower threshold for single-word meaningful queries (like "amatista", "torello")
+  const palabrasSignificativas = mensaje.toLowerCase().split(' ').filter(p => p.length > 3 && !['quiero', 'ver', 'una', 'unos', 'unas', 'este', 'esta', 'estos', 'estas'].includes(p));
+  const umbralScore = palabrasSignificativas.length <= 2 ? 50 : 60;
+  
+  if (mejorScore < umbralScore) return null;
 
   const categoriaDetectada = categoriaPref || detectarCategoriaEnMensaje(mensaje);
   const categoriaPreferida = categoriaDetectada || categoriaBD;
@@ -2645,40 +2665,52 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
         response = "¡Claro! Te ayudo a elegir. 😊\n\nPara recomendarte mejor, cuéntame:\n\n1. 💰 ¿Cuál es tu presupuesto aproximado?\n2. 🎨 ¿Qué estilo prefieres: moderno, clásico, minimalista?\n3. 📏 ¿Para qué espacio es? (sala, comedor, dormitorio)\n\nCon eso te puedo dar la mejor recomendación. 😊";
       }
     } else if (await db.getCandidatosPendientes(from)) {
-      const pendientes = await db.getCandidatosPendientes(from);
-      const elegido = resolverCandidatoAmbiguo(incomingMsg, pendientes.candidatos);
-      if (elegido) {
-        await db.clearCandidatosPendientes(from);
-        await db.setCategoriaActual(from, elegido.categoria);
-        await db.setUltimoProducto(from, {
-          nombre: elegido.nombre,
-          precio: elegido.precio,
-          categoria: elegido.categoria
-        });
-        await db.guardarProductoPendiente(from, elegido.nombre, elegido.precio);
-        const catActual = await db.getCategoriaActual(from);
-        let catNombre = catActual ? formatearNombreCategoria(catActual) : 'producto';
-        response = `${elegido.nombre}\n💰 Precio: ${elegido.precio}\n📏 Medidas: ${elegido.medidas || 'No disponible'}\n🪵 Material: ${elegido.material || 'No disponible'}\n\n¡Excelente opción! ${catNombre} de gran calidad.\n\n¿Procedemos a añadirlo al carrito por ${elegido.precio}? 😊`;
-      } else {
-        const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
-        const catBD = await db.getCategoriaActual(from);
-        const nuevoProducto = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD);
-        if (nuevoProducto && !nuevoProducto.ambiguo) {
-          await db.clearCandidatosPendientes(from);
-          const cat = nuevoProducto.categoria || categoriaDetectada || catBD;
-          await db.setCategoriaActual(from, cat);
-          await db.setUltimoProducto(from, { nombre: nuevoProducto.nombre, precio: nuevoProducto.precio, categoria: cat });
-          await db.guardarProductoPendiente(from, nuevoProducto.nombre, nuevoProducto.precio);
-          const info = buscarInfoProducto(nuevoProducto.nombre, cat);
-          response = `${nuevoProducto.nombre}\n💰 Precio: ${nuevoProducto.precio}\n📏 Medidas: ${info?.medidas || 'No disponible'}\n🪵 Material: ${info?.material || 'No disponible'}\n\n¿Te interesa? 😊`;
-        } else if (nuevoProducto && nuevoProducto.ambiguo && nuevoProducto.candidatos) {
-          await db.clearCandidatosPendientes(from);
-          const cat = nuevoProducto.categoria || categoriaDetectada || catBD;
-          await db.setCategoriaActual(from, cat);
-          await db.guardarCandidatosPendientes(from, nuevoProducto.candidatos, incomingMsg);
-          response = formatearMensajeAmbiguo(nuevoProducto.candidatos);
+      // Check if this is a photo request first, before treating it as candidate selection
+      if (detectarSolicitudFoto(incomingMsg)) {
+        // Don't clear candidates, let it flow to the detectarSolicitudFoto block later
+        const producto = buscarImagenProducto(incomingMsg);
+        if (producto) {
+          imagenURL = producto.imagen;
+          response = `Claro! Aquí tienes la ${producto.nombre} 😊 Si quieres el catálogo completo, pídemelo y te lo envío!`;
         } else {
-          response = formatearMensajeAmbiguo(pendientes.candidatos);
+          response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
+        }
+      } else {
+        const pendientes = await db.getCandidatosPendientes(from);
+        const elegido = resolverCandidatoAmbiguo(incomingMsg, pendientes.candidatos);
+        if (elegido) {
+          await db.clearCandidatosPendientes(from);
+          await db.setCategoriaActual(from, elegido.categoria);
+          await db.setUltimoProducto(from, {
+            nombre: elegido.nombre,
+            precio: elegido.precio,
+            categoria: elegido.categoria
+          });
+          await db.guardarProductoPendiente(from, elegido.nombre, elegido.precio);
+          const catActual = await db.getCategoriaActual(from);
+          let catNombre = catActual ? formatearNombreCategoria(catActual) : 'producto';
+          response = `${elegido.nombre}\n💰 Precio: ${elegido.precio}\n📏 Medidas: ${elegido.medidas || 'No disponible'}\n🪵 Material: ${elegido.material || 'No disponible'}\n\n¡Excelente opción! ${catNombre} de gran calidad.\n\n¿Procedemos a añadirlo al carrito por ${elegido.precio}? 😊`;
+        } else {
+          const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
+          const catBD = await db.getCategoriaActual(from);
+          const nuevoProducto = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD);
+          if (nuevoProducto && !nuevoProducto.ambiguo) {
+            await db.clearCandidatosPendientes(from);
+            const cat = nuevoProducto.categoria || categoriaDetectada || catBD;
+            await db.setCategoriaActual(from, cat);
+            await db.setUltimoProducto(from, { nombre: nuevoProducto.nombre, precio: nuevoProducto.precio, categoria: cat });
+            await db.guardarProductoPendiente(from, nuevoProducto.nombre, nuevoProducto.precio);
+            const info = buscarInfoProducto(nuevoProducto.nombre, cat);
+            response = `${nuevoProducto.nombre}\n💰 Precio: ${nuevoProducto.precio}\n📏 Medidas: ${info?.medidas || 'No disponible'}\n🪵 Material: ${info?.material || 'No disponible'}\n\n¿Te interesa? 😊`;
+          } else if (nuevoProducto && nuevoProducto.ambiguo && nuevoProducto.candidatos) {
+            await db.clearCandidatosPendientes(from);
+            const cat = nuevoProducto.categoria || categoriaDetectada || catBD;
+            await db.setCategoriaActual(from, cat);
+            await db.guardarCandidatosPendientes(from, nuevoProducto.candidatos, incomingMsg);
+            response = formatearMensajeAmbiguo(nuevoProducto.candidatos);
+          } else {
+            response = formatearMensajeAmbiguo(pendientes.candidatos);
+          }
         }
       }
     } else if (detectarAgendar(incomingMsg)) {
