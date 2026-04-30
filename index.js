@@ -2929,7 +2929,24 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
             }
             response = formatearProductosVenta(porCategoria);
           } else if (!esMensajeRelevante(incomingMsg)) {
-            response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
+            const catActivaFallback = await db.getCategoriaActual(from);
+            if (catActivaFallback) {
+              const productoEnCatActiva = buscarProductoPorNombre(incomingMsg, catActivaFallback, catActivaFallback);
+              if (productoEnCatActiva && !productoEnCatActiva.ambiguo) {
+                const productoInfoFallback = buscarInfoProducto(productoEnCatActiva.nombre, catActivaFallback);
+                await db.setUltimoProducto(from, { nombre: productoEnCatActiva.nombre, precio: productoEnCatActiva.precio, categoria: catActivaFallback });
+                await db.guardarProductoPendiente(from, productoEnCatActiva.nombre, productoEnCatActiva.precio);
+                response = `${productoEnCatActiva.nombre}\n💰 Precio: ${productoEnCatActiva.precio}\n📏 Medidas: ${productoInfoFallback?.medidas || 'No disponible'}\n🪵 Material: ${productoInfoFallback?.material || 'No disponible'}\n\n¡Excelente opción! ¿Procedemos a añadirlo al carrito por ${productoEnCatActiva.precio}? 😊`;
+              } else if (productoEnCatActiva && productoEnCatActiva.ambiguo && productoEnCatActiva.candidatos) {
+                await db.guardarCandidatosPendientes(from, productoEnCatActiva.candidatos, incomingMsg);
+                response = formatearMensajeAmbiguo(productoEnCatActiva.candidatos);
+              } else {
+                await addToHistoryDB(from, 'user', incomingMsg);
+                response = await callGemini({ history, currentMessage: incomingMsg });
+              }
+            } else {
+              response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
+            }
           } else {
             // Check if message contains furniture-like words but no confident match
             const tienePalabrasMueble = /cama|silla|mesa|sofa|base|comedor|escritorio/i.test(incomingMsg);
