@@ -1520,6 +1520,20 @@ function generarMensajeDespedida() {
   return "\n\n📱 Síguenos en Instagram: @muebles_decasa\n🔔 ¡Mantente al día con nuestros productos y ofertas!\n\nQue tengas un lindo día! 😊";
 }
 
+function generarRespuestaContactoUbicacion() {
+  return `Puedes visitarnos en cualquiera de nuestras cinco tiendas:
+📍 **Avenida Bolívar # 16 N 26, Armenia, Quindío**
+📍 **Km 2 vía El Edén, Armenia, Quindío**
+📍 **Km 1 vía Jardines, Armenia, Quindío**
+📍 **CC Unicentro Pereira, Pereira, Risaralda**
+📍 **Cra. 14 #11 - 93. Pereira, Risaralda**
+
+📱 Síguenos en Instagram: @muebles_decasa
+🔔 ¡Mantente al día con nuestros productos y ofertas! 😊`;
+}
+
+const patronesContactoUbicacion = /donde|ubicacion|tienda|direccion|instagram|redes?|seguir|contacto|telefono|numero|whatsapp|encontrar|localizar/i;
+
 function calcularTotalProductos(mensaje, from) {
   const msg = mensaje.toLowerCase();
   const categorias = Object.values(knowledge.inventario || {});
@@ -3059,6 +3073,8 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
                 await addToHistoryDB(from, 'user', incomingMsg);
                 response = await callGemini({ history, currentMessage: incomingMsg });
               }
+            } else if (patronesContactoUbicacion.test(incomingMsg)) {
+              response = generarRespuestaContactoUbicacion();
             } else {
               response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
             }
@@ -3492,6 +3508,8 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
           if (catFallback.categoria && catFallback.productos && catFallback.productos.length > 0) {
             await db.setCategoriaActual(from, catFallback.categoria);
             response = formatearProductosVenta(catFallback.productos);
+          } else if (patronesContactoUbicacion.test(incomingMsg)) {
+            response = generarRespuestaContactoUbicacion();
           } else {
             response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
           }
@@ -3516,6 +3534,8 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
         if (catFallback.categoria && catFallback.productos && catFallback.productos.length > 0) {
           await db.setCategoriaActual(from, catFallback.categoria);
           response = formatearProductosVenta(catFallback.productos);
+        } else if (patronesContactoUbicacion.test(incomingMsg)) {
+          response = generarRespuestaContactoUbicacion();
         } else {
           response = `Disculpa, solo puedo ayudarte con información sobre nuestros muebles de DeCasa 😊 \n\n¿Te puedo mostrar nuestro catálogo de productos? 📦${generarMensajeDespedida()}`;
         }
