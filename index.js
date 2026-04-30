@@ -902,6 +902,20 @@ function esSoloSaludo(mensaje) {
   return detectarSaludo(mensaje);
 }
 
+function esConsultaGenericaCategoria(mensaje) {
+  const msg = mensaje.trim();
+  const msgLower = msg.toLowerCase();
+
+  const patrones = [
+    /^(me\s+gustar[ií]a\s+saber\s+(que|qu[eé])|quiero\s+saber\s+(que|qu[eé])|quisiera\s+saber\s+(que|qu[eé])|dime\s+(que|qu[eé])|decime\s+(que|qu[eé]))\s+(sillas|mesas|comedores|camas|sofas|sof[aá]s|colchones|bases|escritorios|cajoneros)\s+(tienen|manejan|hay|ofrecen|manej[aá]is)/i,
+    /^(que|qu[eé])\s+(sillas|mesas|comedores|camas|sofas|sof[aá]s|colchones|bases|escritorios|cajoneros)\s+(tienen|manejan|hay|ofrecen|manejan\s+ustedes)/i,
+    /^(que|qu[eé])\s+(sillas|mesas|comedores|camas|sofas|sof[aá]s|colchones|bases|escritorios|cajoneros)\s+(tienen|manejan|hay|ofrecen)/i,
+    /^(que|qu[eé])\s+(tipos?\s+de\s+)?(sillas|mesas|comedores|camas|sofas|sof[aá]s|colchones|bases|escritorios|cajoneros)\s+(tienen|manejan|hay|ofrecen)/i
+  ];
+
+  return patrones.some(p => p.test(msgLower));
+}
+
 function detectarAsesor(mensaje) {
   const msg = mensaje.toLowerCase();
   const triggers_exactos = [
@@ -2834,10 +2848,28 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
       if (producto) {
         imagenURL = producto.imagen;
         response = `Claro! Aquí tienes la ${producto.nombre} 😊 Si quieres el catálogo completo, pídemelo y te lo envío!`;
-      } else {
-        response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
-      }
-    } else if ((detectarConsultaPrecio(incomingMsg) || detectarConsultaInfo(incomingMsg)) &&
+     } else {
+         response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
+       }
+     } else if (esConsultaGenericaCategoria(incomingMsg)) {
+       const msgLower = incomingMsg.toLowerCase();
+       if (msgLower.includes('silla')) {
+         response = formatearPreguntaSubtipo('sillas_comedor', incomingMsg);
+       } else if (msgLower.includes('mesa')) {
+         response = formatearPreguntaSubtipo('mesas_centro', incomingMsg);
+       } else {
+         let porCategoria = buscarProductosPorCategoria(incomingMsg);
+         if (porCategoria.categoria && porCategoria.productos.length > 0) {
+           await db.setCategoriaActual(from, porCategoria.categoria);
+           response = formatearProductosVenta(porCategoria.productos);
+           if (porCategoria.categoria === 'bases_comedores') {
+             response += "\n\n💡 Recuerda: La base del comedor se vende sin sillas. Puedes elegir tus sillas favoritas por separado. 🪑";
+           }
+         } else {
+           response = "¿Qué categoría de muebles te interesa ver? 😊";
+         }
+       }
+     } else if ((detectarConsultaPrecio(incomingMsg) || detectarConsultaInfo(incomingMsg)) &&
                (incomingMsg.toLowerCase().includes('comedor') || incomingMsg.toLowerCase().includes('silla') || incomingMsg.toLowerCase().includes('cama') || incomingMsg.toLowerCase().includes('sofa') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('mesa'))) {
       const catBD = await db.getCategoriaActual(from);
       const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
