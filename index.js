@@ -879,6 +879,25 @@ function detectarSaludo(mensaje) {
   return patrones.some(p => p.test(msg));
 }
 
+function esSoloSaludo(mensaje) {
+  const msg = mensaje.trim();
+  const palabras = msg.split(/\s+/).length;
+
+  if (palabras > 4) return false;
+
+  if (/[?¿]/.test(msg)) return false;
+
+  const contenidoPatterns = [
+    /comedor|cama|sofa|silla|mesa|colch|mueble|catalog|precio|cuanto|costo|valor/i,
+    /donde|ubic|tienda|direccion|horario|comprar|venta|pedir|quiero|necesito/i,
+    /manej|tienen|tiene|ver|mostrar|info|informacion/i
+  ];
+
+  if (contenidoPatterns.some(p => p.test(msg))) return false;
+
+  return detectarSaludo(mensaje);
+}
+
 function detectarAsesor(mensaje) {
   const msg = mensaje.toLowerCase();
   const triggers_exactos = [
@@ -2185,21 +2204,25 @@ app.post('/webhook', async (req, res) => {
 
     // EARLY GREETING CHECK - Before any product search
     if (detectarSaludo(incomingMsg)) {
-      let response = SALUDO_INICIAL;
-      if (await db.haEnviadoSaludo(from)) {
-        response = "¡Hola! ¿En qué puedo ayudarte? 😊";
-      } else {
+      if (esSoloSaludo(incomingMsg)) {
+        // Pure greeting → always send full SALUDO_INICIAL
+        let response = SALUDO_INICIAL;
+        await addToHistoryDB(from, 'user', incomingMsg);
+        await addToHistoryDB(from, 'assistant', response);
+        await db.actualizarLastInteraction(from);
         await db.marcarSaludoEnviado(from);
+
+        const twiml = new MessagingResponse();
+        twiml.message(response);
+        res.type('text/xml').send(twiml.toString());
+        return; // STOP processing - don't search for products
+      } else {
+        // Greeting + question → save to history, continue to detect question
+        await addToHistoryDB(from, 'user', incomingMsg);
+        if (!(await db.haEnviadoSaludo(from))) {
+          await db.marcarSaludoEnviado(from);
+        }
       }
-
-      await addToHistoryDB(from, 'user', incomingMsg);
-      await addToHistoryDB(from, 'assistant', response);
-      await db.actualizarLastInteraction(from);
-
-      const twiml = new MessagingResponse();
-      twiml.message(response);
-      res.type('text/xml').send(twiml.toString());
-      return; // STOP processing - don't search for products
     }
 
     const estaTransferidoAhora = await db.estaTransferida(from);
@@ -2637,9 +2660,9 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
         const esMensajeGenericoMesas = /que.*mesas|tiene.*mesas|ver.*mesas|tipos.*mesa|que.*tipos.*mesa|mesas tienen|ver las mesas/i.test(msgLower);
 
         if (esMensajeGenericoSillas) {
-          response = formatearPreguntaSubtipo('sillas_comedor', incomingMsg);
+          respuestaSecundaria = formatearPreguntaSubtipo('sillas_comedor', incomingMsg);
         } else if (esMensajeGenericoMesas) {
-          response = formatearPreguntaSubtipo('mesas_centro', incomingMsg);
+          respuestaSecundaria = formatearPreguntaSubtipo('mesas_centro', incomingMsg);
         } else {
           let porCategoria = buscarProductosPorCategoria(incomingMsg);
           let catalogo = null;
@@ -2649,7 +2672,7 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
             if (productoEspecifico) {
               if (productoEspecifico.ambiguo && productoEspecifico.candidatos) {
                 await db.guardarCandidatosPendientes(from, productoEspecifico.candidatos, incomingMsg);
-                response = formatearMensajeAmbiguo(productoEspecifico.candidatos);
+                respuestaSecundaria = formatearMensajeAmbiguo(productoEspecifico.candidatos);
               } else {
                 await db.setCategoriaActual(from, porCategoria.categoria);
                 await db.setUltimoProducto(from, {
@@ -2657,13 +2680,13 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
                   precio: productoEspecifico.precio,
                   categoria: porCategoria.categoria
                 });
-                response = `${productoEspecifico.nombre}\n💰 Precio: ${productoEspecifico.precio}\n📏 Medidas: ${productoEspecifico.medidas || 'No disponible'}\n🪵 Material: ${productoEspecifico.material || 'No disponible'}\n\n¿Te interesa? 😊`;
+                respuestaSecundaria = `${productoEspecifico.nombre}\n💰 Precio: ${productoEspecifico.precio}\n📏 Medidas: ${productoEspecifico.medidas || 'No disponible'}\n🪵 Material: ${productoEspecifico.material || 'No disponible'}\n\n¿Te interesa? 😊`;
                 imagenURL = productoEspecifico.imagen || null;
               }
             }
           }
 
-          if (!response) {
+          if (!respuestaSecundaria) {
             const categoriaGuardada = await db.getCategoriaActual(from);
             if (categoriaGuardada && knowledge.catalogos[categoriaGuardada] && !porCategoria.categoria) {
               catalogo = { categoria: categoriaGuardada, url: knowledge.catalogos[categoriaGuardada] };
@@ -2696,15 +2719,15 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
             if (catalogo && catalogo.url) {
               imagenURL = catalogo.url;
               let nombreCat = formatearNombreCategoria(catalogo.categoria);
-              response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊`;
+              respuestaSecundaria = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊`;
             } else if (porCategoria.productos && porCategoria.productos.length > 0) {
               if (porCategoria.categoria) {
                 await db.setCategoriaActual(from, porCategoria.categoria);
               }
-              response = formatearProductosVenta(porCategoria.productos);
+              respuestaSecundaria = formatearProductosVenta(porCategoria.productos);
             } else {
               const categoriasDisponibles = Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ');
-              response = `Claro! Estas son las categorías disponibles:\n${categoriasDisponibles}\n\n¿Cuál te gustaría ver? 😊`;
+              respuestaSecundaria = `Claro! Estas son las categorías disponibles:\n${categoriasDisponibles}\n\n¿Cuál te gustaría ver? 😊`;
             }
           }
         }
