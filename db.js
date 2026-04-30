@@ -313,6 +313,251 @@ async function clearCandidatosPendientes(telefono) {
   await updateEstado(telefono, { candidatos_pendientes: null });
 }
 
+async function estaTransferida(telefono) {
+  const estado = await getEstado(telefono);
+  return estado.transferido;
+}
+
+async function marcarTransferida(telefono) {
+  await updateEstado(telefono, { transferido: true });
+}
+
+async function haEnviadoSaludo(telefono) {
+  const estado = await getEstado(telefono);
+  return estado.greeting_sent;
+}
+
+async function marcarSaludoEnviado(telefono) {
+  await updateEstado(telefono, { greeting_sent: true });
+}
+
+async function getCategoriaActual(telefono) {
+  const estado = await getEstado(telefono);
+  return estado.categoria_actual;
+}
+
+async function setCategoriaActual(telefono, categoria) {
+  const catString = typeof categoria === 'string' ? categoria : (categoria?.nombre || categoria?.categoria || String(categoria) || null);
+  await updateEstado(telefono, { categoria_actual: catString });
+}
+
+async function getUltimoProducto(telefono) {
+  const estado = await getEstado(telefono);
+  return estado.ultimo_producto;
+}
+
+async function setUltimoProducto(telefono, producto) {
+  await updateEstado(telefono, { ultimo_producto: producto });
+}
+
+async function guardarPedido(telefono, producto, precio, cantidad = 1) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+  
+  const [usuarios] = await pool.query(
+    'SELECT id FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return false;
+  
+  await pool.query(
+    'INSERT INTO pedidos (usuario_id, producto, precio, cantidad) VALUES (?, ?, ?, ?)',
+    [usuarios[0].id, producto, precio, cantidad]
+  );
+  
+  return true;
+}
+
+async function getPedidos(telefono) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+  
+  const [usuarios] = await pool.query(
+    'SELECT id FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return [];
+  
+  const [pedidos] = await pool.query(
+    'SELECT producto, precio, cantidad, estado, created_at FROM pedidos WHERE usuario_id = ? ORDER BY created_at DESC',
+    [usuarios[0].id]
+  );
+  
+  return pedidos;
+}
+
+async function limpiarConversaciones(telefono) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+  
+  const [usuarios] = await pool.query(
+    'SELECT id FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return false;
+  
+  await pool.query(
+    'DELETE FROM conversaciones WHERE usuario_id = ?',
+    [usuarios[0].id]
+  );
+  
+  return true;
+}
+
+async function tienePedido(telefono) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+  
+  const [usuarios] = await pool.query(
+    'SELECT id FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return false;
+  
+  const [estados] = await pool.query(
+    'SELECT tiene_pedido FROM estado_usuario WHERE usuario_id = ?',
+    [usuarios[0].id]
+  );
+
+  if (estados.length === 0) return false;
+  return !!estados[0].tiene_pedido;
+}
+
+async function marcarPedidoConfirmado(telefono) {
+  await updateEstado(telefono, { tiene_pedido: true });
+}
+
+async function resetearEstadoSinPedido(telefono) {
+  await updateEstado(telefono, {
+    categoria_actual: null,
+    producto_pendiente: null,
+    carrito: [],
+    greeting_sent: false,
+    tiene_pedido: false,
+    agendando_cita: false,
+    paso_agenda: 0,
+    datos_agenda: null,
+    candidatos_pendientes: null,
+    subtipo_pendiente: null
+  });
+}
+
+async function verificarYLimpiarInactividad(telefono, timeoutMinutos = 20) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+  
+  const [usuarios] = await pool.query(
+    'SELECT id, last_interaction FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return;
+  
+  const usuario = usuarios[0];
+  const ultimaInteraccion = new Date(usuario.last_interaction);
+  const ahora = new Date();
+  
+  const diffMinutos = (ahora - ultimaInteraccion) / (1000 * 60);
+  
+  if (diffMinutos >= timeoutMinutos) {
+    const tienePedidoConfirmado = await tienePedido(telefono);
+    
+    if (!tienePedidoConfirmado) {
+      await limpiarConversaciones(telefono);
+      await resetearEstadoSinPedido(telefono);
+      console.log(`🧹 Limpiando conversaciones inactivas para ${telefonoLimpio} (${diffMinutos.toFixed(1)} min sin compra)`);
+    } else {
+      console.log(`⏭️ Usuario ${telefonoLimpio} inactivo ${diffMinutos.toFixed(1)} min pero tiene pedidos - no se limpia`);
+    }
+  }
+}
+
+async function actualizarLastInteraction(telefono) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+  
+  const [usuarios] = await pool.query(
+    'SELECT id FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return;
+  
+  await pool.query(
+    'UPDATE usuarios SET last_interaction = NOW() WHERE id = ?',
+    [usuarios[0].id]
+  );
+}
+
+async function iniciarAgendacion(telefono) {
+  await updateEstado(telefono, { agendando_cita: true, paso_agenda: 1, datos_agenda: { nombre: '', ubicacion: null, dia: '', hora: '', razon: '', esSabado: false } });
+}
+
+async function cancelarAgendacion(telefono) {
+  await updateEstado(telefono, { agendando_cita: false, paso_agenda: 0, datos_agenda: null });
+}
+
+async function getEstaAgendando(telefono) {
+  const estado = await getEstado(telefono);
+  return !!estado.agendando_cita;
+}
+
+async function getPasoAgendacion(telefono) {
+  const estado = await getEstado(telefono);
+  return estado.paso_agenda || 0;
+}
+
+async function setPasoAgendacion(telefono, paso) {
+  await updateEstado(telefono, { paso_agenda: paso });
+}
+
+async function getDatosAgendacion(telefono) {
+  const estado = await getEstado(telefono);
+  return estado.datos_agenda || { nombre: '', ubicacion: null, dia: '', hora: '', razon: '', esSabado: false };
+}
+
+async function guardarDatosAgendacion(telefono, datos) {
+  await updateEstado(telefono, { datos_agenda: datos });
+}
+
+async function guardarCita(telefono, datos) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+  
+  const [usuarios] = await pool.query(
+    'SELECT id FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return false;
+  
+  await pool.query(
+    `INSERT INTO citas (usuario_id, telefono, nombre, dia, hora, razon, ubicacion) 
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [usuarios[0].id, telefonoLimpio, datos.nombre, datos.dia, datos.hora, datos.razon, datos.ubicacion]
+  );
+  
+  await cancelarAgendacion(telefono);
+  return true;
+}
+
+async function limpiarConversacionesInactivas(timeoutMinutos = 10) {
+  try {
+    const [usuarios] = await pool.query(
+      `SELECT telefono FROM usuarios 
+       WHERE last_interaction < NOW() - INTERVAL ? MINUTE`,
+      [timeoutMinutos]
+    );
+    
+    for (const usuario of usuarios) {
+      await verificarYLimpiarInactividad(usuario.telefono, timeoutMinutos);
+    }
+    
+    if (usuarios.length > 0) {
+      console.log(`🧹 Limpieza programada: ${usuarios.length} usuarios inactivos procesados`);
+    }
+  } catch (error) {
+    console.error('Error en limpieza programada:', error.message);
+  }
+}
+
 async function setSubtipoPendiente(telefono, categoriaPadre) {
   await updateEstado(telefono, { subtipo_pendiente: { categoriaPadre, timestamp: Date.now() } });
 }
