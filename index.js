@@ -1671,6 +1671,7 @@ ${historialTexto}
   } catch (error) {
     console.error('Error enviando pedido a Telegram:', error.message);
   }
+}
 
 
 async function getHistoryDB(from) {
@@ -4247,4 +4248,4 @@ if (require.main === module) {
   });
   
   console.log('🔵 Script cargado, esperando que el event loop mantenga el proceso...');
-}}
+}
