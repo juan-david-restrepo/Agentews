@@ -209,64 +209,7 @@ const buscarProductoEnHistorial = buscarProductoEnHistorialUtils;
 
 const { detectarCategoriaEnMensaje: detectarCategoriaEnMensajeUtils } = utils;
 const detectarCategoriaEnMensaje = detectarCategoriaEnMensajeUtils;
-const msg = mensaje.toLowerCase()
-  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  .replace(/[^a-záéíóúñ\s]/g, ' ')
-  .replace(/\s+/g, ' ')
-  .trim();
 
-const mapeoCategorias = {
-  'sofa cama': 'sofacamas',
-  'sofas cama': 'sofacamas',
-  'sofacamas': 'sofacamas',
-  'sofacama': 'sofacamas',
-  'comedor': 'bases_comedores',
-  'comedores': 'bases_comedores',
-  'base': 'bases_comedores',
-  'bases': 'bases_comedores',
-  'cama': 'camas',
-  'camas': 'camas',
-  'silla': null,
-  'sillas': null,
-  'sofa': 'sofas',
-  'sofas': 'sofas',
-  'mesa': null,
-  'mesas': null,
-  'mesa noche': 'mesas_noche',
-  'mesa de noche': 'mesas_noche',
-  'mesa tv': 'mesas_tv',
-  'mesa de tv': 'mesas_tv',
-  'mesa centro': 'mesas_centro',
-  'mesa de centro': 'mesas_centro',
-  'mesa auxiliar': 'mesas_auxiliares',
-  'mesa auxiliar': 'mesas_auxiliares',
-  'silla auxiliar': 'sillas_auxiliares',
-  'silla auxiliar': 'sillas_auxiliares',
-  'silla barra': 'sillas_barra',
-  'silla de barra': 'sillas_barra'
-};
-
-const tieneSilla = msg.includes('silla') || msg.includes('sillas');
-const tieneComedor = msg.includes('comedor') || msg.includes('comida') || msg.includes('para comer') || msg.includes('para comer');
-const tieneSala = msg.includes('sala') || msg.includes('auxiliar') || msg.includes('rededora');
-const tieneBarra = msg.includes('barra') || msg.includes('alto') || msg.includes('mesón') || msg.includes('meson');
-
-if (tieneSilla && tieneComedor) {
-  return 'sillas_comedor';
-}
-if (tieneSilla && tieneSala) {
-  return 'sillas_auxiliares';
-}
-if (tieneSilla && tieneBarra) {
-  return 'sillas_barra';
-}
-
-for (const [palabra, clave] of Object.entries(mapeoCategorias)) {
-  if (msg.includes(palabra)) {
-    return clave;
-  }
-}
-return null;
 
 
 function necesitaSubtipo(mensaje, categoria) {
