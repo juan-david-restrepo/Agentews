@@ -209,65 +209,65 @@ const buscarProductoEnHistorial = buscarProductoEnHistorialUtils;
 
 const { detectarCategoriaEnMensaje: detectarCategoriaEnMensajeUtils } = utils;
 const detectarCategoriaEnMensaje = detectarCategoriaEnMensajeUtils;
-  const msg = mensaje.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-záéíóúñ\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+const msg = mensaje.toLowerCase()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-záéíóúñ\s]/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
 
-  const mapeoCategorias = {
-    'sofa cama': 'sofacamas',
-    'sofas cama': 'sofacamas',
-    'sofacamas': 'sofacamas',
-    'sofacama': 'sofacamas',
-    'comedor': 'bases_comedores',
-    'comedores': 'bases_comedores',
-    'base': 'bases_comedores',
-    'bases': 'bases_comedores',
-    'cama': 'camas',
-    'camas': 'camas',
-    'silla': null,
-    'sillas': null,
-    'sofa': 'sofas',
-    'sofas': 'sofas',
-    'mesa': null,
-    'mesas': null,
-    'mesa noche': 'mesas_noche',
-    'mesa de noche': 'mesas_noche',
-    'mesa tv': 'mesas_tv',
-    'mesa de tv': 'mesas_tv',
-    'mesa centro': 'mesas_centro',
-    'mesa de centro': 'mesas_centro',
-    'mesa auxiliar': 'mesas_auxiliares',
-    'mesa auxiliar': 'mesas_auxiliares',
-    'silla auxiliar': 'sillas_auxiliares',
-    'silla auxiliar': 'sillas_auxiliares',
-    'silla barra': 'sillas_barra',
-    'silla de barra': 'sillas_barra'
-  };
+const mapeoCategorias = {
+  'sofa cama': 'sofacamas',
+  'sofas cama': 'sofacamas',
+  'sofacamas': 'sofacamas',
+  'sofacama': 'sofacamas',
+  'comedor': 'bases_comedores',
+  'comedores': 'bases_comedores',
+  'base': 'bases_comedores',
+  'bases': 'bases_comedores',
+  'cama': 'camas',
+  'camas': 'camas',
+  'silla': null,
+  'sillas': null,
+  'sofa': 'sofas',
+  'sofas': 'sofas',
+  'mesa': null,
+  'mesas': null,
+  'mesa noche': 'mesas_noche',
+  'mesa de noche': 'mesas_noche',
+  'mesa tv': 'mesas_tv',
+  'mesa de tv': 'mesas_tv',
+  'mesa centro': 'mesas_centro',
+  'mesa de centro': 'mesas_centro',
+  'mesa auxiliar': 'mesas_auxiliares',
+  'mesa auxiliar': 'mesas_auxiliares',
+  'silla auxiliar': 'sillas_auxiliares',
+  'silla auxiliar': 'sillas_auxiliares',
+  'silla barra': 'sillas_barra',
+  'silla de barra': 'sillas_barra'
+};
 
-  const tieneSilla = msg.includes('silla') || msg.includes('sillas');
-  const tieneComedor = msg.includes('comedor') || msg.includes('comida') || msg.includes('para comer') || msg.includes('para comer');
-  const tieneSala = msg.includes('sala') || msg.includes('auxiliar') || msg.includes('rededora');
-  const tieneBarra = msg.includes('barra') || msg.includes('alto') || msg.includes('mesón') || msg.includes('meson');
+const tieneSilla = msg.includes('silla') || msg.includes('sillas');
+const tieneComedor = msg.includes('comedor') || msg.includes('comida') || msg.includes('para comer') || msg.includes('para comer');
+const tieneSala = msg.includes('sala') || msg.includes('auxiliar') || msg.includes('rededora');
+const tieneBarra = msg.includes('barra') || msg.includes('alto') || msg.includes('mesón') || msg.includes('meson');
 
-  if (tieneSilla && tieneComedor) {
-    return 'sillas_comedor';
-  }
-  if (tieneSilla && tieneSala) {
-    return 'sillas_auxiliares';
-  }
-  if (tieneSilla && tieneBarra) {
-    return 'sillas_barra';
-  }
-
-  for (const [palabra, clave] of Object.entries(mapeoCategorias)) {
-    if (msg.includes(palabra)) {
-      return clave;
-    }
-  }
-  return null;
+if (tieneSilla && tieneComedor) {
+  return 'sillas_comedor';
 }
+if (tieneSilla && tieneSala) {
+  return 'sillas_auxiliares';
+}
+if (tieneSilla && tieneBarra) {
+  return 'sillas_barra';
+}
+
+for (const [palabra, clave] of Object.entries(mapeoCategorias)) {
+  if (msg.includes(palabra)) {
+    return clave;
+  }
+}
+return null;
+
 
 function necesitaSubtipo(mensaje, categoria) {
   const msg = mensaje.toLowerCase();
@@ -338,13 +338,13 @@ function resolverRespuestaSubtipo(mensaje, categoriaPadre) {
 
 function encontrarCoincidencias(mensaje, categoriaPref = null, categoriaBD = null) {
   const articulos = ['el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'mi', 'tu', 'su', 'me', 'te', 'se', 'le', 'lo', 'de', 'del', 'al', 'y', 'o', 'que', 'con', 'sin', 'por', 'para', 'una'];
-  
+
   let mensajeLimpio = mensaje.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  
+
   // Remove articles from the message for better matching
   const palabrasMsg = mensajeLimpio.split(' ').filter(p => p.length > 2 && !articulos.includes(p));
   if (palabrasMsg.length > 0) {
@@ -434,11 +434,11 @@ function buscarProductoPorNombre(mensaje, categoriaPref = null, categoriaBD = nu
   if (coincidencias.length === 0) return null;
 
   const mejorScore = coincidencias[0].score;
-  
+
   // Lower threshold for single-word meaningful queries (like "amatista", "torello")
   const palabrasSignificativas = mensaje.toLowerCase().split(' ').filter(p => p.length > 3 && !['quiero', 'ver', 'una', 'unos', 'unas', 'este', 'esta', 'estos', 'estas'].includes(p));
   const umbralScore = palabrasSignificativas.length <= 2 ? 50 : 60;
-  
+
   if (mejorScore < umbralScore) return null;
 
   const categoriaDetectada = categoriaPref || detectarCategoriaEnMensaje(mensaje);
@@ -1712,10 +1712,7 @@ ${historialTexto}
   } catch (error) {
     console.error('Error enviando pedido a Telegram:', error.message);
   }
-  } catch (error) {
-    console.error('Error enviando pedido a Telegram:', error.message);
-  }
-}
+
 
 async function getHistoryDB(from) {
   return await db.getHistorial(from, 12);
@@ -2570,10 +2567,10 @@ app.post('/webhook', async (req, res) => {
       console.log(`[CATALOG] Solicitud de catálogo detectada: "${incomingMsg}"`);
       const categoriaGuardada = await db.getCategoriaActual(from);
       console.log(`[CATALOG] Categoria guardada: ${categoriaGuardada}`);
-      
+
       let imagenURL = null;
       let response = '';
-      
+
       // First try saved category
       if (categoriaGuardada && knowledge.catalogos[categoriaGuardada]) {
         imagenURL = knowledge.catalogos[categoriaGuardada];
@@ -2595,12 +2592,12 @@ app.post('/webhook', async (req, res) => {
           console.log(`[CATALOG] Sin categoria, mostrando disponibles`);
         }
       }
-      
+
       // Save to history and send response immediately
       await addToHistoryDB(from, 'user', incomingMsg);
       await addToHistoryDB(from, 'assistant', response);
       await db.actualizarLastInteraction(from);
-      
+
       const twiml = new MessagingResponse();
       if (imagenURL) {
         twiml.message({
@@ -3320,31 +3317,31 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
       if (producto) {
         imagenURL = producto.imagen;
         response = `Claro! Aquí tienes la ${producto.nombre} 😊 Si quieres el catálogo completo, pídemelo y te lo envío!`;
-     } else {
-         response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
-       }
-      } else if (esConsultaGenericaCategoria(incomingMsg)) {
-        const msgLower = incomingMsg.toLowerCase();
-        if (msgLower.includes('silla')) {
-          response = formatearPreguntaSubtipo('sillas_comedor', incomingMsg);
-          await db.setSubtipoPendiente(from, 'sillas_comedor');
-        } else if (msgLower.includes('mesa')) {
-          response = formatearPreguntaSubtipo('mesas_centro', incomingMsg);
-          await db.setSubtipoPendiente(from, 'mesas_centro');
+      } else {
+        response = "Claro! Dime qué producto te interesa y te envío la foto 😊 Si quieres el catálogo completo, pídemelo y te lo envío!";
+      }
+    } else if (esConsultaGenericaCategoria(incomingMsg)) {
+      const msgLower = incomingMsg.toLowerCase();
+      if (msgLower.includes('silla')) {
+        response = formatearPreguntaSubtipo('sillas_comedor', incomingMsg);
+        await db.setSubtipoPendiente(from, 'sillas_comedor');
+      } else if (msgLower.includes('mesa')) {
+        response = formatearPreguntaSubtipo('mesas_centro', incomingMsg);
+        await db.setSubtipoPendiente(from, 'mesas_centro');
+      } else {
+        let porCategoria = buscarProductosPorCategoria(incomingMsg);
+        if (porCategoria.categoria && porCategoria.productos.length > 0) {
+          await db.setCategoriaActual(from, porCategoria.categoria);
+          response = formatearProductosVenta(porCategoria.productos);
+          if (porCategoria.categoria === 'bases_comedores') {
+            response += "\n\n💡 Recuerda: La base del comedor se vende sin sillas. Puedes elegir tus sillas favoritas por separado. 🪑";
+          }
         } else {
-         let porCategoria = buscarProductosPorCategoria(incomingMsg);
-         if (porCategoria.categoria && porCategoria.productos.length > 0) {
-           await db.setCategoriaActual(from, porCategoria.categoria);
-           response = formatearProductosVenta(porCategoria.productos);
-           if (porCategoria.categoria === 'bases_comedores') {
-             response += "\n\n💡 Recuerda: La base del comedor se vende sin sillas. Puedes elegir tus sillas favoritas por separado. 🪑";
-           }
-         } else {
-           response = "¿Qué categoría de muebles te interesa ver? 😊";
-         }
-       }
-     } else if ((detectarConsultaPrecio(incomingMsg) || detectarConsultaInfo(incomingMsg)) &&
-               (incomingMsg.toLowerCase().includes('comedor') || incomingMsg.toLowerCase().includes('silla') || incomingMsg.toLowerCase().includes('cama') || incomingMsg.toLowerCase().includes('sofa') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('mesa'))) {
+          response = "¿Qué categoría de muebles te interesa ver? 😊";
+        }
+      }
+    } else if ((detectarConsultaPrecio(incomingMsg) || detectarConsultaInfo(incomingMsg)) &&
+      (incomingMsg.toLowerCase().includes('comedor') || incomingMsg.toLowerCase().includes('silla') || incomingMsg.toLowerCase().includes('cama') || incomingMsg.toLowerCase().includes('sofa') || incomingMsg.toLowerCase().includes('bases de') || incomingMsg.toLowerCase().includes('colchon') || incomingMsg.toLowerCase().includes('mesa'))) {
       const catBD = await db.getCategoriaActual(from);
       const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
       const producto = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD);
@@ -3487,7 +3484,7 @@ Te esperamos! 😊\n\n¿Hay algo más en lo que pueda ayudarte?`;
           imagenURL = catalogo.url;
           let nombreCat = formatearNombreCategoria(catalogo.categoria);
           response = `Claro! Aquí tienes el catálogo de ${nombreCat} 😊`;
-        } else         if (porCategoria.productos && porCategoria.productos.length > 0) {
+        } else if (porCategoria.productos && porCategoria.productos.length > 0) {
           if (porCategoria.categoria) {
             await db.setCategoriaActual(from, porCategoria.categoria);
           }
@@ -3977,10 +3974,10 @@ Tenemos varias opciones de ${catNombre} disponibles.¿Te gustaría ver nuestro c
         } else if (!productoDetectado && quiereAgregar) {
           const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
           const subtipo = necesitaSubtipo(incomingMsg, categoriaDetectada);
-      if (subtipo === 'PEDIR_SUBTIPO') {
-        response = formatearPreguntaSubtipo(categoriaDetectada, incomingMsg);
-        await db.setSubtipoPendiente(from, categoriaDetectada);
-      } else if (subtipo) {
+          if (subtipo === 'PEDIR_SUBTIPO') {
+            response = formatearPreguntaSubtipo(categoriaDetectada, incomingMsg);
+            await db.setSubtipoPendiente(from, categoriaDetectada);
+          } else if (subtipo) {
             const productosSubtipo = knowledge.inventario[subtipo]?.productos || [];
             if (productosSubtipo.length > 0) {
               await db.setCategoriaActual(from, subtipo);
@@ -4238,32 +4235,10 @@ async function startServer() {
   return server;
 }
 
-  app.listen(PORT, () => {
-    console.log(`
-╔══════════════════════════════════════════╗
-║   Elena - Vendedora DeCasa               ║
-╠══════════════════════════════════════════╣
-║  Servidor corriendo en puerto ${PORT}    ║
-║                                          ║
-║  Endpoints:                              ║
-║  - POST /webhook (Recibir mensajes)      ║
-║  - GET  /webhook (Verificar)             ║
-║  - GET  /health (Estado)                 ║
-╚══════════════════════════════════════════╝
-    `);
-
-    setInterval(async () => {
-      await db.limpiarConversacionesInactivas(10);
-    }, 10 * 60 * 1000);
-  });
-
-  return server;
-}
-
 if (require.main === module) {
   async function main() {
     const server = await startServer();
-    
+
     const gracefulShutdown = (signal) => {
       console.log(`\n${signal} recibido. Cerrando servidor...`);
       server.close(() => {
@@ -4276,7 +4251,7 @@ if (require.main === module) {
           process.exit(1);
         });
       });
-      
+
       setTimeout(() => {
         console.error('Forzando cierre después de timeout');
         process.exit(1);
@@ -4303,4 +4278,4 @@ module.exports = {
   formatearCarrito,
   buscarProductoEnHistorial,
   detectarCategoriaEnMensaje,
-};
+}};  
