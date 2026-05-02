@@ -2,7 +2,7 @@
 
 ## Reglas generales
 
-1. **NO eliminAR código existente a menos que sea ABSOLUTAMENTE necesario** para solucionar un error específico
+1. **NO eliminAR código existente a menos que sea ABSOLUTAMENTE necesario y fijate que no dupliques codigo** para solucionar un error específico
 2. **Ante la duda, añadir o modificar en lugar de eliminar**
 3. **Mantener la coherencia del código** - no dejar funciones huérfanas o sin uso
 4. **Verificar que las funciones seguen existiendo** antes de llamarlas

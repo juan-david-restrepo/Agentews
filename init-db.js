@@ -146,7 +146,7 @@ async function initDB() {
     
   } catch (error) {
     console.error('❌ Error inicializando BD:', error.message);
-    process.exit(1);
+    throw error;
   } finally {
     if (connection) {
       await connection.end();

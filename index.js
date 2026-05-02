@@ -1,3 +1,19 @@
+process.on('uncaughtException', (err) => {
+  console.error('ERROR NO CAPTURADO:', err);
+});
+process.on('unhandledRejection', (err) => {
+  console.error('PROMESA RECHAZADA:', err);
+});
+process.on('exit', (code) => {
+  console.log(`Proceso terminando con código: ${code}`);
+});
+process.on('SIGTERM', () => {
+  console.log('SIGTERM recibido');
+});
+process.on('SIGINT', () => {
+  console.log('SIGINT recibido');
+});
+
 require('dotenv').config();
 const express = require('express');
 const twilio = require('twilio');
@@ -4146,6 +4162,8 @@ app.get('/health', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+console.log(`🔍 DEBUG: Puerto configurado: ${PORT}`);
+console.log(`🔍 DEBUG: Variable PORT desde env: ${process.env.PORT || '(no definida)'}`);
 
 async function startServer() {
   try {
@@ -4153,7 +4171,6 @@ async function startServer() {
     console.log('✅ Base de datos conectada');
   } catch (error) {
     console.error('❌ Error conectando a la base de datos:', error.message);
-    process.exit(1);
   }
 
   const server = app.listen(PORT, () => {
@@ -4171,7 +4188,11 @@ async function startServer() {
     `);
 
     setInterval(async () => {
-      await db.limpiarConversacionesInactivas(10);
+      try {
+        await db.limpiarConversacionesInactivas(10);
+      } catch (err) {
+        console.error('Error en limpieza programada:', err.message);
+      }
     }, 10 * 60 * 1000);
   });
 
@@ -4188,17 +4209,10 @@ if (require.main === module) {
         console.log('Servidor HTTP cerrado');
         db.pool.end().then(() => {
           console.log('Conexiones MySQL cerradas');
-          process.exit(0);
         }).catch(err => {
           console.error('Error cerrando MySQL:', err);
-          process.exit(1);
         });
       });
-
-      setTimeout(() => {
-        console.error('Forzando cierre después de timeout');
-        process.exit(1);
-      }, 10000);
     };
 
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -4207,7 +4221,6 @@ if (require.main === module) {
 
   main().catch(err => {
     console.error('Error iniciando servidor:', err);
-    process.exit(1);
   });
 }
 }
