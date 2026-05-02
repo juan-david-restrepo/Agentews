@@ -4227,19 +4227,19 @@ if (require.main === module) {
     console.log('✅ Servidor iniciado correctamente, manteniendo proceso vivo...');
     
     // Comentado temporalmente para diagnóstico
-    // const gracefulShutdown = (signal) => {
-    //   console.log(`\n${signal} recibido. Cerrando servidor...`);
-    //   server.close(() => {
-    //     console.log('Servidor HTTP cerrado');
-    //     db.pool.end().then(() => {
-    //       console.log('Conexiones MySQL cerradas');
-    //     }).catch(err => {
-    //       console.error('Error cerrando MySQL:', err);
-    //     });
-    //   });
-    // };
-    // process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    // process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+     const gracefulShutdown = (signal) => {
+       console.log(`\n${signal} recibido. Cerrando servidor...`);
+      server.close(() => {
+        console.log('Servidor HTTP cerrado');
+        db.pool.end().then(() => {
+          console.log('Conexiones MySQL cerradas');
+        }).catch(err => {
+          console.error('Error cerrando MySQL:', err);
+         });
+       });
+    };
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   }
 
   main().catch(err => {
