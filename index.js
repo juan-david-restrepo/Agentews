@@ -25,14 +25,39 @@ const { processRoomImage } = require('./image-processor');
 const utils = require('./utils');
 
 function validateTwilioRequest(req, res, next) {
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const twilioSignature = req.headers['x-twilio-signature'];
-  const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+  // En desarrollo o si no hay auth token, saltar validación
+  if (!process.env.TWILIO_AUTH_TOKEN) {
+    return next();
+  }
 
-  if (!twilioSignature || !twilio.webhook(authToken)(req.headers, url, req.body)) {
+  const twilioSignature = req.headers['x-twilio-signature'];
+  
+  // Si no viene firma de Twilio (ej: health check), rechazar solo si hay body de WhatsApp
+  if (!twilioSignature) {
+    if (req.body && req.body.From) {
+      console.warn('Invalid Twilio signature - rejecting request');
+      return res.status(403).send('Forbidden');
+    }
+    return next();
+  }
+
+  // Construir URL correctamente para Render (siempre https)
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  const proto = req.headers['x-forwarded-proto'] || 'https';
+  const url = `${proto}://${host}${req.originalUrl}`;
+
+  const isValid = twilio.validateRequest(
+    process.env.TWILIO_AUTH_TOKEN,
+    twilioSignature,
+    url,
+    req.body
+  );
+
+  if (!isValid) {
     console.warn('Invalid Twilio signature - rejecting request');
     return res.status(403).send('Forbidden');
   }
+
   next();
 }
 
