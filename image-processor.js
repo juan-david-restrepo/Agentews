@@ -1,7 +1,6 @@
 ﻿require('dotenv').config();
 const Replicate = require('replicate');
 const cloudinary = require('cloudinary').v2;
-const fetch = require('node-fetch');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -16,7 +15,8 @@ async function downloadFromTwilio(mediaUrl) {
     process.env.TWILIO_ACCOUNT_SID + ':' + process.env.TWILIO_AUTH_TOKEN
   ).toString('base64');
   
-  const response = await fetch(mediaUrl, {
+  const { fetchWithTimeout } = require('./httpClient');
+  const response = await fetchWithTimeout(mediaUrl, {
     headers: { 'Authorization': 'Basic ' + auth }
   });
   

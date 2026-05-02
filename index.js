@@ -1,14 +1,34 @@
 require('dotenv').config();
 const express = require('express');
-const { MessagingResponse } = require('twilio').twiml;
+const twilio = require('twilio');
+const { MessagingResponse } = twilio.twiml;
 const knowledge = require('./knowledge.json');
 const { initDB } = require('./init-db');
 const db = require('./db');
 const { processRoomImage } = require('./image-processor');
+const utils = require('./utils');
+
+function validateTwilioRequest(req, res, next) {
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const twilioSignature = req.headers['x-twilio-signature'];
+  const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+
+  if (!twilioSignature || !twilio.webhook(authToken)(req.headers, url, req.body)) {
+    console.warn('Invalid Twilio signature - rejecting request');
+    return res.status(403).send('Forbidden');
+  }
+  next();
+}
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(validateTwilioRequest);
+
+app.use((err, req, res, next) => {
+  console.error('Error no manejado:', err.message);
+  res.status(500).send('Error interno del servidor');
+});
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const MODEL_NAME = 'gemini-2.5-flash-lite';
@@ -27,19 +47,8 @@ const SALUDO_INICIAL = `Hola! 👋 Soy Elena, tu asesora de DeCasa.
 💬 Estoy para ayudarte con información o comprar muebles. 
    ¿Qué necesitas? 😊`;
 
-const generarInventarioTexto = () => {
-  let texto = '\n\n=== INVENTARIO DE PRODUCTOS ===\n';
-
-  const categorias = Object.values(knowledge.inventario || {});
-  for (const categoria of categorias) {
-    texto += `\n${categoria.nombre}:\n`;
-    for (const producto of categoria.productos) {
-      texto += `- ${producto.nombre} | Material: ${producto.material} | Precio: ${producto.precio}\n`;
-    }
-  }
-
-  return texto;
-};
+const { generarInventarioTexto: generarInventarioTextoUtils } = utils;
+const generarInventarioTexto = generarInventarioTextoUtils;
 
 const SYSTEM_PROMPT = `Eres Elena, una vendedora amable y persuasiva de DeCasa. Tu objetivo es ayudar al cliente a encontrar el mueble perfecto y convencerlo de comprar.
 
@@ -141,26 +150,11 @@ async function callGeminiWithHistory(from, currentMessage) {
   });
 }
 
-function buscarMasBarato(categoria) {
-  const inventario = knowledge.inventario || {};
-  const productos = inventario[categoria]?.productos;
-  if (!productos || productos.length === 0) return null;
+const { buscarMasBarato: buscarMasBaratoUtils } = utils;
+const buscarMasBarato = buscarMasBaratoUtils;
 
-  const sorted = [...productos].sort((a, b) => {
-    const precioA = parseInt(a.precio.replace(/[^0-9]/g, '')) || 0;
-    const precioB = parseInt(b.precio.replace(/[^0-9]/g, '')) || 0;
-    return precioA - precioB;
-  });
-
-  return sorted[0];
-}
-
-function buscarProductosRelacionados(categoria, limite = 3) {
-  const inventario = knowledge.inventario || {};
-  const productos = inventario[categoria]?.productos;
-  if (!productos || productos.length === 0) return [];
-  return productos.slice(0, limite);
-}
+const { buscarProductosRelacionados: buscarProductosRelacionadosUtils } = utils;
+const buscarProductosRelacionados = buscarProductosRelacionadosUtils;
 
 async function agregarAlCarritoDB(from, producto, precio, cantidad = 1) {
   const items = await db.verCarrito(from);
@@ -210,22 +204,11 @@ async function formatearCarrito(from) {
   return { mensaje, total, items };
 }
 
-function buscarProductoEnHistorial(history, mensaje) {
-  const mensajeLower = mensaje.toLowerCase();
-  const categorias = Object.values(knowledge.inventario || {});
+const { buscarProductoEnHistorial: buscarProductoEnHistorialUtils } = utils;
+const buscarProductoEnHistorial = buscarProductoEnHistorialUtils;
 
-  for (const categoria of categorias) {
-    for (const producto of categoria.productos) {
-      const nombreLower = producto.nombre.toLowerCase();
-      if (mensajeLower.includes(nombreLower.substring(0, 8))) {
-        return { nombre: producto.nombre, precio: producto.precio };
-      }
-    }
-  }
-  return null;
-}
-
-function detectarCategoriaEnMensaje(mensaje) {
+const { detectarCategoriaEnMensaje: detectarCategoriaEnMensajeUtils } = utils;
+const detectarCategoriaEnMensaje = detectarCategoriaEnMensajeUtils;
   const msg = mensaje.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-záéíóúñ\s]/g, ' ')
@@ -1628,9 +1611,10 @@ ${historialTexto}
 `;
 
   const url = `https://api.telegram.org/bot${token}/sendMessage`;
+  const { fetchWithRetry } = require('./httpClient');
 
   try {
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1639,7 +1623,7 @@ ${historialTexto}
         parse_mode: 'HTML',
         disable_web_page_preview: true
       })
-    });
+    }, 2, 10000);
     const result = await response.json();
     if (!response.ok) {
       console.error('Error Telegram:', response.status, JSON.stringify(result));
@@ -1706,9 +1690,10 @@ ${historialTexto}
 `;
 
   const url = `https://api.telegram.org/bot${token}/sendMessage`;
+  const { fetchWithRetry } = require('./httpClient');
 
   try {
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1717,13 +1702,16 @@ ${historialTexto}
         parse_mode: 'HTML',
         disable_web_page_preview: true
       })
-    });
+    }, 2, 10000);
     const result = await response.json();
     if (!response.ok) {
       console.error('Error Telegram pedido:', response.status, JSON.stringify(result));
     } else {
-      console.log('Notificación de pedido enviada a Telegram');
+      console.log(`Notificación pedido enviada a Telegram`);
     }
+  } catch (error) {
+    console.error('Error enviando pedido a Telegram:', error.message);
+  }
   } catch (error) {
     console.error('Error enviando pedido a Telegram:', error.message);
   }
@@ -2447,7 +2435,8 @@ async function callGemini(prompt) {
   }
   contents.push({ role: 'user', parts: [{ text: prompt.currentMessage }] });
 
-  const response = await fetch(url, {
+  const { fetchWithRetry } = require('./httpClient');
+  const response = await fetchWithRetry(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -2458,7 +2447,7 @@ async function callGemini(prompt) {
         maxOutputTokens: 600
       }
     })
-  });
+  }, 2, 15000);
 
   if (!response.ok) {
     const error = await response.text();
@@ -2497,7 +2486,8 @@ async function clasificarIntencion(mensaje) {
     { role: 'user', parts: [{ text: `Mensaje del usuario: "${mensaje}"` }] }
   ];
 
-  const response = await fetch(url, {
+  const { fetchWithRetry } = require('./httpClient');
+  const response = await fetchWithRetry(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -2507,7 +2497,7 @@ async function clasificarIntencion(mensaje) {
         maxOutputTokens: 100
       }
     })
-  });
+  }, 2, 10000);
 
   if (!response.ok) {
     return { intencion: 'GENERAL', producto: null, detalle: null };
@@ -4226,6 +4216,28 @@ async function startServer() {
     process.exit(1);
   }
 
+  const server = app.listen(PORT, () => {
+    console.log(`
+╔════════════════════════════════════════╗
+║   Elena - Vendedora DeCasa               ║
+╠════════════════════════════════════════╣
+║  Servidor corriendo en puerto ${PORT}    ║
+║                                          ║
+║  Endpoints:                              ║
+║  - POST /webhook (Recibir mensajes)      ║
+║  - GET  /webhook (Verificar)             ║
+║  - GET  /health (Estado)                 ║
+╚════════════════════════════════════════╝
+    `);
+
+    setInterval(async () => {
+      await db.limpiarConversacionesInactivas(10);
+    }, 10 * 60 * 1000);
+  });
+
+  return server;
+}
+
   app.listen(PORT, () => {
     console.log(`
 ╔══════════════════════════════════════════╗
@@ -4244,6 +4256,51 @@ async function startServer() {
       await db.limpiarConversacionesInactivas(10);
     }, 10 * 60 * 1000);
   });
+
+  return server;
 }
 
-startServer();
+if (require.main === module) {
+  async function main() {
+    const server = await startServer();
+    
+    const gracefulShutdown = (signal) => {
+      console.log(`\n${signal} recibido. Cerrando servidor...`);
+      server.close(() => {
+        console.log('Servidor HTTP cerrado');
+        db.pool.end().then(() => {
+          console.log('Conexiones MySQL cerradas');
+          process.exit(0);
+        }).catch(err => {
+          console.error('Error cerrando MySQL:', err);
+          process.exit(1);
+        });
+      });
+      
+      setTimeout(() => {
+        console.error('Forzando cierre después de timeout');
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  }
+
+  main().catch(err => {
+    console.error('Error iniciando servidor:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  generarInventarioTexto,
+  buscarMasBarato,
+  buscarProductosRelacionados,
+  agregarAlCarritoDB,
+  verCarritoDB,
+  limpiarCarritoDB,
+  formatearCarrito,
+  buscarProductoEnHistorial,
+  detectarCategoriaEnMensaje,
+};
