@@ -4166,6 +4166,7 @@ console.log(`🔍 DEBUG: Puerto configurado: ${PORT}`);
 console.log(`🔍 DEBUG: Variable PORT desde env: ${process.env.PORT || '(no definida)'}`);
 
 async function startServer() {
+  console.log('🔵 Iniciando startServer...');
   try {
     await initDB();
     console.log('✅ Base de datos conectada');
@@ -4173,7 +4174,9 @@ async function startServer() {
     console.error('❌ Error conectando a la base de datos:', error.message);
   }
 
+  console.log(`🔵 Intentando escuchar en puerto ${PORT}...`);
   const server = app.listen(PORT, () => {
+    console.log(`✅ Servidor ESCUCHANDO exitosamente en puerto ${PORT}`);
     console.log(`
 ╔════════════════════════════════════════╗
 ║   Elena - Vendedora DeCasa               ║
@@ -4196,32 +4199,52 @@ async function startServer() {
     }, 10 * 60 * 1000);
   });
 
+  server.on('error', (err) => {
+    console.error('🔴 ERROR EN SERVIDOR:', err);
+  });
+  
+  server.on('close', () => {
+    console.log('🔴 SERVIDOR CERRADO');
+  });
+
+  // Keep-alive para diagnóstico
+  const keepAlive = setInterval(() => {
+    console.log(`⏱️ Keep-alive: Servidor activo en puerto ${PORT}`);
+  }, 5000);
+
+  server.on('close', () => clearInterval(keepAlive));
+
   return server;
 }
 
 if (require.main === module) {
+  console.log('🔵 Iniciando función main...');
+  
   async function main() {
+    console.log('🔵 Dentro de main, llamando a startServer...');
     const server = await startServer();
-
-    const gracefulShutdown = (signal) => {
-      console.log(`\n${signal} recibido. Cerrando servidor...`);
-      server.close(() => {
-        console.log('Servidor HTTP cerrado');
-        db.pool.end().then(() => {
-          console.log('Conexiones MySQL cerradas');
-        }).catch(err => {
-          console.error('Error cerrando MySQL:', err);
-        });
-      });
-    };
-
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    console.log('✅ Servidor iniciado correctamente, manteniendo proceso vivo...');
+    
+    // Comentado temporalmente para diagnóstico
+    // const gracefulShutdown = (signal) => {
+    //   console.log(`\n${signal} recibido. Cerrando servidor...`);
+    //   server.close(() => {
+    //     console.log('Servidor HTTP cerrado');
+    //     db.pool.end().then(() => {
+    //       console.log('Conexiones MySQL cerradas');
+    //     }).catch(err => {
+    //       console.error('Error cerrando MySQL:', err);
+    //     });
+    //   });
+    // };
+    // process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    // process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   }
 
   main().catch(err => {
-    console.error('Error iniciando servidor:', err);
+    console.error('🔴 Error fatal en main:', err);
+    console.error(err.stack);
   });
-}
-}
   
+  console.log('🔵 Script cargado, esperando que el event loop mantenga el proceso...');
+}}
