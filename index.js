@@ -4210,15 +4210,5 @@ if (require.main === module) {
     process.exit(1);
   });
 }
-
-module.exports = {
-  generarInventarioTexto,
-  buscarMasBarato,
-  buscarProductosRelacionados,
-  agregarAlCarritoDB,
-  verCarritoDB,
-  limpiarCarritoDB,
-  formatearCarrito,
-  buscarProductoEnHistorial,
-  detectarCategoriaEnMensaje,
-}};  
+}
+  
