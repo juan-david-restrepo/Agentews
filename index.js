@@ -917,10 +917,8 @@ function detectarConsultaInfo(mensaje) {
     /saber m[áa]s/i, /ver.*detalles/i, /ver.*especificac/i,
     /^el\b/i, /^la\b/i, /^\s*el\s+\w+/i, /^\s*la\s+\w+/i
   ];
-  if (patrones => patrones.some(p => p.test(msg))) {
-    for (const patron of patronesInfo) {
-      if (patron.test(msg)) return true;
-    }
+  if (patronesInfo.some(p => p.test(msg))) {
+    return true;
   }
 
   const palabrasVer = ['ver', 'mostrar', 'quisiera', 'quiero', 'información', 'info', 'detalles', 'saber', 'conocer'];
@@ -1725,9 +1723,12 @@ app.post('/webhook', async (req, res) => {
             mediaUrl: [result.imageUrl]
           });
         } else {
+          const errorMsg = result.message
+            ? result.message + '\n\n¿Te gustaría ver nuestro catálogo de sofás? Tenemos más de 15 modelos disponibles. 😊'
+            : 'Disculpa, tuve un problema procesando tu foto 😊\n\n¿Te gustaría ver nuestro catálogo de sofás? Tenemos más de 15 modelos disponibles. 😊';
           await twilioClient.messages.create({
             from: req.body.To, to: from,
-            body: 'Disculpa, tuve un problema procesando tu foto 😊\n\n¿Te gustaría ver nuestro catálogo de sofás? Tenemos más de 15 modelos disponibles. 😊'
+            body: errorMsg
           });
         }
       } catch (error) {

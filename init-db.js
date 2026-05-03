@@ -141,6 +141,30 @@ async function initDB() {
       `);
       console.log('✅ Columna candidatos_pendientes añadida');
     }
+    if (!nombresColsEstado.includes('subtipo_pendiente')) {
+      await connection.query(`
+        ALTER TABLE estado_usuario ADD COLUMN subtipo_pendiente JSON
+      `);
+      console.log('✅ Columna subtipo_pendiente añadida');
+    }
+    if (!nombresColsEstado.includes('comparacion_pendiente')) {
+      await connection.query(`
+        ALTER TABLE estado_usuario ADD COLUMN comparacion_pendiente JSON
+      `);
+      console.log('✅ Columna comparacion_pendiente añadida');
+    }
+    if (!nombresColsEstado.includes('comparacion_productos')) {
+      await connection.query(`
+        ALTER TABLE estado_usuario ADD COLUMN comparacion_productos JSON
+      `);
+      console.log('✅ Columna comparacion_productos añadida');
+    }
+    if (!nombresColsEstado.includes('presupuesto')) {
+      await connection.query(`
+        ALTER TABLE estado_usuario ADD COLUMN presupuesto VARCHAR(100)
+      `);
+      console.log('✅ Columna presupuesto añadida');
+    }
 
     console.log('\n🎉 Base de datos lista!\n');
     
