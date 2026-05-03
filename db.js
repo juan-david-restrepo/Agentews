@@ -1,6 +1,12 @@
 require('dotenv').config();
 const mysql = require('mysql2/promise');
 
+// ─────────────────────────────────────────────
+// CONFIGURACIÓN
+// ─────────────────────────────────────────────
+
+const TIMEOUT_INACTIVIDAD_MINUTOS = 45; // Aumentado de 10 a 45 min
+
 function parseJSONField(value) {
   if (!value) return null;
   if (typeof value === 'object') return value;
@@ -25,9 +31,13 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
+// ─────────────────────────────────────────────
+// USUARIO
+// ─────────────────────────────────────────────
+
 async function getOrCreateUsuario(telefono) {
   const telefonoLimpio = telefono.replace('whatsapp:', '');
-  
+
   const [usuarios] = await pool.query(
     'SELECT * FROM usuarios WHERE telefono = ?',
     [telefonoLimpio]
@@ -66,17 +76,19 @@ async function getOrCreateUsuario(telefono) {
   return usuario;
 }
 
+// ─────────────────────────────────────────────
+// CONVERSACIONES
+// ─────────────────────────────────────────────
+
 async function getHistorial(telefono, limite = 12) {
   const telefonoLimpio = telefono.replace('whatsapp:', '');
-  
+
   const [usuarios] = await pool.query(
     'SELECT id FROM usuarios WHERE telefono = ?',
     [telefonoLimpio]
   );
 
-  if (usuarios.length === 0) {
-    return [];
-  }
+  if (usuarios.length === 0) return [];
 
   const usuarioId = usuarios[0].id;
 
@@ -95,7 +107,7 @@ async function getHistorial(telefono, limite = 12) {
 
 async function addMensaje(telefono, role, contenido) {
   const telefonoLimpio = telefono.replace('whatsapp:', '');
-  
+
   const [usuarios] = await pool.query(
     'SELECT id FROM usuarios WHERE telefono = ?',
     [telefonoLimpio]
@@ -115,22 +127,20 @@ async function addMensaje(telefono, role, contenido) {
   }
 }
 
+// ─────────────────────────────────────────────
+// ESTADO DE USUARIO
+// ─────────────────────────────────────────────
+
 async function getEstado(telefono) {
   const telefonoLimpio = telefono.replace('whatsapp:', '');
-  
+
   const [usuarios] = await pool.query(
     'SELECT id FROM usuarios WHERE telefono = ?',
     [telefonoLimpio]
   );
 
   if (usuarios.length === 0) {
-    return {
-      categoria_actual: null,
-      producto_pendiente: null,
-      carrito: [],
-      transferido: false,
-      greeting_sent: false
-    };
+    return _estadoVacio();
   }
 
   const [estados] = await pool.query(
@@ -139,16 +149,7 @@ async function getEstado(telefono) {
   );
 
   if (estados.length === 0) {
-    return {
-      categoria_actual: null,
-      producto_pendiente: null,
-      carrito: [],
-      transferido: false,
-      greeting_sent: false,
-      agendando_cita: false,
-      paso_agenda: 0,
-      datos_agenda: null
-    };
+    return _estadoVacio();
   }
 
   const estado = estados[0];
@@ -166,13 +167,36 @@ async function getEstado(telefono) {
     candidatos_pendientes: parseJSONField(estado.candidatos_pendientes),
     subtipo_pendiente: parseJSONField(estado.subtipo_pendiente),
     comparacion_pendiente: parseJSONField(estado.comparacion_pendiente),
-    comparacion_productos: parseJSONField(estado.comparacion_productos)
+    comparacion_productos: parseJSONField(estado.comparacion_productos),
+    transferencia_medida_pendiente: parseJSONField(estado.transferencia_medida_pendiente),
+    presupuesto: estado.presupuesto || null
+  };
+}
+
+function _estadoVacio() {
+  return {
+    categoria_actual: null,
+    producto_pendiente: null,
+    ultimo_producto: null,
+    carrito: [],
+    transferido: false,
+    greeting_sent: false,
+    tiene_pedido: false,
+    agendando_cita: false,
+    paso_agenda: 0,
+    datos_agenda: null,
+    candidatos_pendientes: null,
+    subtipo_pendiente: null,
+    comparacion_pendiente: null,
+    comparacion_productos: null,
+    transferencia_medida_pendiente: null,
+    presupuesto: null
   };
 }
 
 async function updateEstado(telefono, datos) {
   const telefonoLimpio = telefono.replace('whatsapp:', '');
-  
+
   const [usuarios] = await pool.query(
     'SELECT id FROM usuarios WHERE telefono = ?',
     [telefonoLimpio]
@@ -187,69 +211,25 @@ async function updateEstado(telefono, datos) {
   const campos = [];
   const valores = [];
 
-  if (datos.categoria_actual !== undefined) {
-    campos.push('categoria_actual = ?');
-    valores.push(datos.categoria_actual);
-  }
+  const camposJSON = ['producto_pendiente', 'carrito', 'datos_agenda', 'candidatos_pendientes',
+    'subtipo_pendiente', 'comparacion_pendiente', 'comparacion_productos',
+    'ultimo_producto', 'transferencia_medida_pendiente'];
 
-  if (datos.producto_pendiente !== undefined) {
-    campos.push('producto_pendiente = ?');
-    valores.push(datos.producto_pendiente ? JSON.stringify(datos.producto_pendiente) : null);
-  }
+  const camposBool = ['transferido', 'greeting_sent', 'tiene_pedido', 'agendando_cita'];
 
-  if (datos.carrito !== undefined) {
-    campos.push('carrito = ?');
-    valores.push(JSON.stringify(datos.carrito));
-  }
+  const camposDirectos = ['categoria_actual', 'paso_agenda', 'presupuesto'];
 
-  if (datos.transferido !== undefined) {
-    campos.push('transferido = ?');
-    valores.push(datos.transferido);
-  }
-
-  if (datos.greeting_sent !== undefined) {
-    campos.push('greeting_sent = ?');
-    valores.push(datos.greeting_sent);
-  }
-
-  if (datos.tiene_pedido !== undefined) {
-    campos.push('tiene_pedido = ?');
-    valores.push(datos.tiene_pedido);
-  }
-
-  if (datos.agendando_cita !== undefined) {
-    campos.push('agendando_cita = ?');
-    valores.push(datos.agendando_cita);
-  }
-
-  if (datos.paso_agenda !== undefined) {
-    campos.push('paso_agenda = ?');
-    valores.push(datos.paso_agenda);
-  }
-
-  if (datos.datos_agenda !== undefined) {
-    campos.push('datos_agenda = ?');
-    valores.push(datos.datos_agenda ? JSON.stringify(datos.datos_agenda) : null);
-  }
-
-  if (datos.candidatos_pendientes !== undefined) {
-    campos.push('candidatos_pendientes = ?');
-    valores.push(datos.candidatos_pendientes ? JSON.stringify(datos.candidatos_pendientes) : null);
-  }
-
-  if (datos.subtipo_pendiente !== undefined) {
-    campos.push('subtipo_pendiente = ?');
-    valores.push(datos.subtipo_pendiente ? JSON.stringify(datos.subtipo_pendiente) : null);
-  }
-
-  if (datos.comparacion_pendiente !== undefined) {
-    campos.push('comparacion_pendiente = ?');
-    valores.push(datos.comparacion_pendiente ? JSON.stringify(datos.comparacion_pendiente) : null);
-  }
-
-  if (datos.comparacion_productos !== undefined) {
-    campos.push('comparacion_productos = ?');
-    valores.push(datos.comparacion_productos ? JSON.stringify(datos.comparacion_productos) : null);
+  for (const [key, val] of Object.entries(datos)) {
+    if (camposJSON.includes(key)) {
+      campos.push(`${key} = ?`);
+      valores.push(val !== null && val !== undefined ? JSON.stringify(val) : null);
+    } else if (camposBool.includes(key)) {
+      campos.push(`${key} = ?`);
+      valores.push(val ? 1 : 0);
+    } else if (camposDirectos.includes(key)) {
+      campos.push(`${key} = ?`);
+      valores.push(val !== undefined ? val : null);
+    }
   }
 
   if (campos.length === 0) return;
@@ -262,17 +242,21 @@ async function updateEstado(telefono, datos) {
   );
 }
 
+// ─────────────────────────────────────────────
+// CARRITO
+// ─────────────────────────────────────────────
+
 async function agregarAlCarrito(telefono, producto, precio, cantidad = 1) {
   const estado = await getEstado(telefono);
   const carrito = estado.carrito || [];
-  
+
   const itemExistente = carrito.find(item => item.producto === producto);
   if (itemExistente) {
     itemExistente.cantidad = (itemExistente.cantidad || 1) + cantidad;
   } else {
     carrito.push({ producto, precio, cantidad });
   }
-  
+
   await updateEstado(telefono, { carrito });
   return true;
 }
@@ -285,6 +269,10 @@ async function verCarrito(telefono) {
 async function limpiarCarrito(telefono) {
   await updateEstado(telefono, { carrito: [] });
 }
+
+// ─────────────────────────────────────────────
+// PRODUCTO PENDIENTE
+// ─────────────────────────────────────────────
 
 async function guardarProductoPendiente(telefono, producto, precio, cantidad = null) {
   await updateEstado(telefono, { producto_pendiente: { producto, precio, cantidad } });
@@ -299,6 +287,10 @@ async function clearProductoPendiente(telefono) {
   await updateEstado(telefono, { producto_pendiente: null });
 }
 
+// ─────────────────────────────────────────────
+// TRANSFERENCIA Y ESTADO
+// ─────────────────────────────────────────────
+
 async function setTransferenciaMedidaPendiente(telefono, producto) {
   await updateEstado(telefono, { transferencia_medida_pendiente: producto });
 }
@@ -310,19 +302,6 @@ async function getTransferenciaMedidaPendiente(telefono) {
 
 async function clearTransferenciaMedidaPendiente(telefono) {
   await updateEstado(telefono, { transferencia_medida_pendiente: null });
-}
-
-async function guardarCandidatosPendientes(telefono, candidatos, mensajeOriginal) {
-  await updateEstado(telefono, { candidatos_pendientes: { candidatos, mensajeOriginal, timestamp: Date.now() } });
-}
-
-async function getCandidatosPendientes(telefono) {
-  const estado = await getEstado(telefono);
-  return estado.candidatos_pendientes;
-}
-
-async function clearCandidatosPendientes(telefono) {
-  await updateEstado(telefono, { candidatos_pendientes: null });
 }
 
 async function estaTransferida(telefono) {
@@ -343,13 +322,19 @@ async function marcarSaludoEnviado(telefono) {
   await updateEstado(telefono, { greeting_sent: true });
 }
 
+// ─────────────────────────────────────────────
+// CATEGORÍA Y PRODUCTO ACTIVO
+// ─────────────────────────────────────────────
+
 async function getCategoriaActual(telefono) {
   const estado = await getEstado(telefono);
   return estado.categoria_actual;
 }
 
 async function setCategoriaActual(telefono, categoria) {
-  const catString = typeof categoria === 'string' ? categoria : (categoria?.nombre || categoria?.categoria || String(categoria) || null);
+  const catString = typeof categoria === 'string'
+    ? categoria
+    : (categoria?.nombre || categoria?.categoria || String(categoria) || null);
   await updateEstado(telefono, { categoria_actual: catString });
 }
 
@@ -362,70 +347,145 @@ async function setUltimoProducto(telefono, producto) {
   await updateEstado(telefono, { ultimo_producto: producto });
 }
 
+// ─────────────────────────────────────────────
+// CANDIDATOS Y SUBTIPO
+// ─────────────────────────────────────────────
+
+async function guardarCandidatosPendientes(telefono, candidatos, mensajeOriginal) {
+  await updateEstado(telefono, {
+    candidatos_pendientes: { candidatos, mensajeOriginal, timestamp: Date.now() }
+  });
+}
+
+async function getCandidatosPendientes(telefono) {
+  const estado = await getEstado(telefono);
+  return estado.candidatos_pendientes;
+}
+
+async function clearCandidatosPendientes(telefono) {
+  await updateEstado(telefono, { candidatos_pendientes: null });
+}
+
+async function setSubtipoPendiente(telefono, categoriaPadre) {
+  await updateEstado(telefono, {
+    subtipo_pendiente: { categoriaPadre, timestamp: Date.now() }
+  });
+}
+
+async function getSubtipoPendiente(telefono) {
+  const estado = await getEstado(telefono);
+  if (!estado.subtipo_pendiente) return null;
+  const MAX_AGE_MS = 15 * 60 * 1000; // 15 min (era 10)
+  if (Date.now() - estado.subtipo_pendiente.timestamp > MAX_AGE_MS) {
+    await clearSubtipoPendiente(telefono);
+    return null;
+  }
+  return estado.subtipo_pendiente;
+}
+
+async function clearSubtipoPendiente(telefono) {
+  await updateEstado(telefono, { subtipo_pendiente: null });
+}
+
+// ─────────────────────────────────────────────
+// COMPARACIÓN
+// ─────────────────────────────────────────────
+
+async function setComparacionPendiente(telefono, datos) {
+  await updateEstado(telefono, {
+    comparacion_pendiente: { ...datos, timestamp: Date.now() }
+  });
+}
+
+async function getComparacionPendiente(telefono) {
+  const estado = await getEstado(telefono);
+  if (!estado.comparacion_pendiente) return null;
+  const MAX_AGE_MS = 15 * 60 * 1000;
+  if (Date.now() - estado.comparacion_pendiente.timestamp > MAX_AGE_MS) {
+    await clearComparacionPendiente(telefono);
+    return null;
+  }
+  return estado.comparacion_pendiente;
+}
+
+async function clearComparacionPendiente(telefono) {
+  await updateEstado(telefono, { comparacion_pendiente: null });
+}
+
+async function setComparacionProductos(telefono, productos) {
+  await updateEstado(telefono, {
+    comparacion_productos: { items: productos, timestamp: Date.now() }
+  });
+}
+
+async function getComparacionProductos(telefono) {
+  const estado = await getEstado(telefono);
+  const comp = estado.comparacion_productos;
+  if (!comp) return null;
+  // Compatible con formato anterior (array directo) y nuevo (objeto con timestamp)
+  if (Array.isArray(comp)) return comp;
+  const MAX_AGE_MS = 15 * 60 * 1000;
+  if (Date.now() - (comp.timestamp || 0) > MAX_AGE_MS) {
+    await clearComparacionProductos(telefono);
+    return null;
+  }
+  return comp.items || null;
+}
+
+async function clearComparacionProductos(telefono) {
+  await updateEstado(telefono, { comparacion_productos: null });
+}
+
+// ─────────────────────────────────────────────
+// PEDIDOS
+// ─────────────────────────────────────────────
+
 async function guardarPedido(telefono, producto, precio, cantidad = 1) {
   const telefonoLimpio = telefono.replace('whatsapp:', '');
-  
+
   const [usuarios] = await pool.query(
     'SELECT id FROM usuarios WHERE telefono = ?',
     [telefonoLimpio]
   );
 
   if (usuarios.length === 0) return false;
-  
+
   await pool.query(
     'INSERT INTO pedidos (usuario_id, producto, precio, cantidad) VALUES (?, ?, ?, ?)',
     [usuarios[0].id, producto, precio, cantidad]
   );
-  
+
   return true;
 }
 
 async function getPedidos(telefono) {
   const telefonoLimpio = telefono.replace('whatsapp:', '');
-  
+
   const [usuarios] = await pool.query(
     'SELECT id FROM usuarios WHERE telefono = ?',
     [telefonoLimpio]
   );
 
   if (usuarios.length === 0) return [];
-  
+
   const [pedidos] = await pool.query(
     'SELECT producto, precio, cantidad, estado, created_at FROM pedidos WHERE usuario_id = ? ORDER BY created_at DESC',
     [usuarios[0].id]
   );
-  
+
   return pedidos;
-}
-
-async function limpiarConversaciones(telefono) {
-  const telefonoLimpio = telefono.replace('whatsapp:', '');
-  
-  const [usuarios] = await pool.query(
-    'SELECT id FROM usuarios WHERE telefono = ?',
-    [telefonoLimpio]
-  );
-
-  if (usuarios.length === 0) return false;
-  
-  await pool.query(
-    'DELETE FROM conversaciones WHERE usuario_id = ?',
-    [usuarios[0].id]
-  );
-  
-  return true;
 }
 
 async function tienePedido(telefono) {
   const telefonoLimpio = telefono.replace('whatsapp:', '');
-  
+
   const [usuarios] = await pool.query(
     'SELECT id FROM usuarios WHERE telefono = ?',
     [telefonoLimpio]
   );
 
   if (usuarios.length === 0) return false;
-  
+
   const [estados] = await pool.query(
     'SELECT tiene_pedido FROM estado_usuario WHERE usuario_id = ?',
     [usuarios[0].id]
@@ -439,74 +499,24 @@ async function marcarPedidoConfirmado(telefono) {
   await updateEstado(telefono, { tiene_pedido: true });
 }
 
-async function resetearEstadoSinPedido(telefono) {
+// ─────────────────────────────────────────────
+// AGENDACIÓN
+// ─────────────────────────────────────────────
+
+async function iniciarAgendacion(telefono) {
   await updateEstado(telefono, {
-    categoria_actual: null,
-    producto_pendiente: null,
-    carrito: [],
-    greeting_sent: false,
-    tiene_pedido: false,
-    agendando_cita: false,
-    paso_agenda: 0,
-    datos_agenda: null,
-    candidatos_pendientes: null,
-    subtipo_pendiente: null,
-    comparacion_pendiente: null,
-    comparacion_productos: null
+    agendando_cita: true,
+    paso_agenda: 1,
+    datos_agenda: { nombre: '', ubicacion: null, dia: '', hora: '', razon: '', esSabado: false }
   });
 }
 
-async function verificarYLimpiarInactividad(telefono, timeoutMinutos = 20) {
-  const telefonoLimpio = telefono.replace('whatsapp:', '');
-  
-  const [usuarios] = await pool.query(
-    'SELECT id, last_interaction FROM usuarios WHERE telefono = ?',
-    [telefonoLimpio]
-  );
-
-  if (usuarios.length === 0) return;
-  
-  const usuario = usuarios[0];
-  const ultimaInteraccion = new Date(usuario.last_interaction);
-  const ahora = new Date();
-  
-  const diffMinutos = (ahora - ultimaInteraccion) / (1000 * 60);
-  
-  if (diffMinutos >= timeoutMinutos) {
-    const tienePedidoConfirmado = await tienePedido(telefono);
-    
-    if (!tienePedidoConfirmado) {
-      await limpiarConversaciones(telefono);
-      await resetearEstadoSinPedido(telefono);
-      console.log(`🧹 Limpiando conversaciones inactivas para ${telefonoLimpio} (${diffMinutos.toFixed(1)} min sin compra)`);
-    } else {
-      console.log(`⏭️ Usuario ${telefonoLimpio} inactivo ${diffMinutos.toFixed(1)} min pero tiene pedidos - no se limpia`);
-    }
-  }
-}
-
-async function actualizarLastInteraction(telefono) {
-  const telefonoLimpio = telefono.replace('whatsapp:', '');
-  
-  const [usuarios] = await pool.query(
-    'SELECT id FROM usuarios WHERE telefono = ?',
-    [telefonoLimpio]
-  );
-
-  if (usuarios.length === 0) return;
-  
-  await pool.query(
-    'UPDATE usuarios SET last_interaction = NOW() WHERE id = ?',
-    [usuarios[0].id]
-  );
-}
-
-async function iniciarAgendacion(telefono) {
-  await updateEstado(telefono, { agendando_cita: true, paso_agenda: 1, datos_agenda: { nombre: '', ubicacion: null, dia: '', hora: '', razon: '', esSabado: false } });
-}
-
 async function cancelarAgendacion(telefono) {
-  await updateEstado(telefono, { agendando_cita: false, paso_agenda: 0, datos_agenda: null });
+  await updateEstado(telefono, {
+    agendando_cita: false,
+    paso_agenda: 0,
+    datos_agenda: null
+  });
 }
 
 async function getEstaAgendando(telefono) {
@@ -534,100 +544,131 @@ async function guardarDatosAgendacion(telefono, datos) {
 
 async function guardarCita(telefono, datos) {
   const telefonoLimpio = telefono.replace('whatsapp:', '');
-  
+
   const [usuarios] = await pool.query(
     'SELECT id FROM usuarios WHERE telefono = ?',
     [telefonoLimpio]
   );
 
   if (usuarios.length === 0) return false;
-  
+
   await pool.query(
     `INSERT INTO citas (usuario_id, telefono, nombre, dia, hora, razon, ubicacion) 
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [usuarios[0].id, telefonoLimpio, datos.nombre, datos.dia, datos.hora, datos.razon, datos.ubicacion]
   );
-  
+
   await cancelarAgendacion(telefono);
   return true;
 }
 
-async function limpiarConversacionesInactivas(timeoutMinutos = 10) {
+// ─────────────────────────────────────────────
+// INACTIVIDAD Y LIMPIEZA
+// ─────────────────────────────────────────────
+
+async function limpiarConversaciones(telefono) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+
+  const [usuarios] = await pool.query(
+    'SELECT id FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return false;
+
+  await pool.query(
+    'DELETE FROM conversaciones WHERE usuario_id = ?',
+    [usuarios[0].id]
+  );
+
+  return true;
+}
+
+async function resetearEstadoSinPedido(telefono) {
+  await updateEstado(telefono, {
+    categoria_actual: null,
+    producto_pendiente: null,
+    carrito: [],
+    greeting_sent: false,
+    tiene_pedido: false,
+    agendando_cita: false,
+    paso_agenda: 0,
+    datos_agenda: null,
+    candidatos_pendientes: null,
+    subtipo_pendiente: null,
+    comparacion_pendiente: null,
+    comparacion_productos: null,
+    transferencia_medida_pendiente: null
+  });
+}
+
+async function verificarYLimpiarInactividad(telefono, timeoutMinutos = TIMEOUT_INACTIVIDAD_MINUTOS) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+
+  const [usuarios] = await pool.query(
+    'SELECT id, last_interaction FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return;
+
+  const usuario = usuarios[0];
+  const ultimaInteraccion = new Date(usuario.last_interaction);
+  const ahora = new Date();
+  const diffMinutos = (ahora - ultimaInteraccion) / (1000 * 60);
+
+  if (diffMinutos >= timeoutMinutos) {
+    const tienePedidoConfirmado = await tienePedido(telefono);
+
+    if (!tienePedidoConfirmado) {
+      await limpiarConversaciones(telefono);
+      await resetearEstadoSinPedido(telefono);
+      console.log(`[DB] 🧹 Inactividad ${diffMinutos.toFixed(0)} min → limpiando ${telefonoLimpio}`);
+    } else {
+      console.log(`[DB] ⏭️ ${telefonoLimpio} inactivo ${diffMinutos.toFixed(0)} min pero tiene pedido confirmado`);
+    }
+  }
+}
+
+async function actualizarLastInteraction(telefono) {
+  const telefonoLimpio = telefono.replace('whatsapp:', '');
+
+  const [usuarios] = await pool.query(
+    'SELECT id FROM usuarios WHERE telefono = ?',
+    [telefonoLimpio]
+  );
+
+  if (usuarios.length === 0) return;
+
+  await pool.query(
+    'UPDATE usuarios SET last_interaction = NOW() WHERE id = ?',
+    [usuarios[0].id]
+  );
+}
+
+async function limpiarConversacionesInactivas(timeoutMinutos = TIMEOUT_INACTIVIDAD_MINUTOS) {
   try {
     const [usuarios] = await pool.query(
       `SELECT telefono FROM usuarios 
        WHERE last_interaction < NOW() - INTERVAL ? MINUTE`,
       [timeoutMinutos]
     );
-    
+
     for (const usuario of usuarios) {
       await verificarYLimpiarInactividad(usuario.telefono, timeoutMinutos);
     }
-    
+
     if (usuarios.length > 0) {
-      console.log(`🧹 Limpieza programada: ${usuarios.length} usuarios inactivos procesados`);
+      console.log(`[DB] 🧹 Limpieza programada: ${usuarios.length} usuarios inactivos`);
     }
   } catch (error) {
-    console.error('Error en limpieza programada:', error.message);
+    console.error('[DB] Error en limpieza programada:', error.message);
   }
 }
 
-async function setSubtipoPendiente(telefono, categoriaPadre) {
-  await updateEstado(telefono, { subtipo_pendiente: { categoriaPadre, timestamp: Date.now() } });
-}
-
-async function getSubtipoPendiente(telefono) {
-  const estado = await getEstado(telefono);
-  if (!estado.subtipo_pendiente) return null;
-  const MAX_AGE_MS = 10 * 60 * 1000;
-  if (Date.now() - estado.subtipo_pendiente.timestamp > MAX_AGE_MS) {
-    await clearSubtipoPendiente(telefono);
-    return null;
-  }
-  return estado.subtipo_pendiente;
-}
-
-async function clearSubtipoPendiente(telefono) {
-  await updateEstado(telefono, { subtipo_pendiente: null });
-}
-
-async function setComparacionPendiente(telefono, datos) {
-  await updateEstado(telefono, { comparacion_pendiente: { ...datos, timestamp: Date.now() } });
-}
-
-async function getComparacionPendiente(telefono) {
-  const estado = await getEstado(telefono);
-  if (!estado.comparacion_pendiente) return null;
-  const MAX_AGE_MS = 10 * 60 * 1000;
-  if (Date.now() - estado.comparacion_pendiente.timestamp > MAX_AGE_MS) {
-    await clearComparacionPendiente(telefono);
-    return null;
-  }
-  return estado.comparacion_pendiente;
-}
-
-async function clearComparacionPendiente(telefono) {
-  await updateEstado(telefono, { comparacion_pendiente: null });
-}
-
-async function setComparacionProductos(telefono, productos) {
-  await updateEstado(telefono, { comparacion_productos: productos, comparacion_productos_ts: Date.now() });
-}
-
-async function getComparacionProductos(telefono) {
-  const estado = await getEstado(telefono);
-  if (!estado.comparacion_productos) return null;
-  const MAX_AGE_MS = 10 * 60 * 1000;
-  if (Date.now() - (estado.comparacion_productos_ts || 0) > MAX_AGE_MS) {
-    await clearComparacionProductos(telefono);
-    return null;
-  }
-  return estado.comparacion_productos;
-}
-
-async function clearComparacionProductos(telefono) {
-  await updateEstado(telefono, { comparacion_productos: null });
-}
+// ─────────────────────────────────────────────
+// EXPORTS
+// ─────────────────────────────────────────────
 
 module.exports = {
   pool,
