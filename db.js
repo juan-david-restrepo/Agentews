@@ -722,5 +722,62 @@ module.exports = {
   clearComparacionPendiente,
   setComparacionProductos,
   getComparacionProductos,
-  clearComparacionProductos
+  clearComparacionProductos,
+  getInventarioFromDB
 };
+
+// ─────────────────────────────────────────────
+// INVENTARIO DESDE BD
+// ─────────────────────────────────────────────
+
+const SUBCATEGORIA_KEY_MAP = {
+  comedores:    'bases_comedores',
+  mesas_aux:    'mesas_auxiliares',
+  sillas_aux:   'sillas_auxiliares',
+  cajoneros:    'cajoneros_bifes',
+  sofa_camas:   'sofas_camas'
+};
+
+const NOMBRES_CATEGORIA = {
+  camas:            'Camas',
+  bases_comedores:  'Comedores',
+  sillas_comedor:   'Sillas de Comedor',
+  mesas_centro:     'Mesas de Centro',
+  mesas_noche:      'Mesas de Noche',
+  mesas_auxiliares: 'Mesas Auxiliares',
+  mesas_tv:         'Mesas de TV',
+  sillas_auxiliares:'Sillas Auxiliares',
+  sillas_barra:     'Sillas de Barra',
+  sofas:            'Sofás',
+  sofas_modulares:  'Sofás Modulares',
+  sofas_camas:      'Sofás Cama',
+  cajoneros_bifes:  'Cajoneros',
+  escritorios:      'Escritorios',
+  colchones:        'Colchones'
+};
+
+function formatearPrecioFromDB(n) {
+  return '$' + parseInt(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+async function getInventarioFromDB() {
+  const [rows] = await pool.query(
+    'SELECT nombre, precio, imagen, medidas, material, subcategoria FROM productos ORDER BY subcategoria, nombre'
+  );
+
+  const inventario = {};
+  for (const row of rows) {
+    const key = SUBCATEGORIA_KEY_MAP[row.subcategoria] || row.subcategoria;
+    if (!inventario[key]) {
+      inventario[key] = { nombre: NOMBRES_CATEGORIA[key] || key, productos: [] };
+    }
+    inventario[key].productos.push({
+      nombre:   row.nombre,
+      medidas:  row.medidas || '',
+      material: row.material || '',
+      precio:   formatearPrecioFromDB(row.precio),
+      imagen:   row.imagen || ''
+    });
+  }
+  return inventario;
+}

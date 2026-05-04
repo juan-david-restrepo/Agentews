@@ -1,12 +1,22 @@
 const knowledge = require('./knowledge.json');
 
+let _inventario = null;
+
+function setInventario(inv) {
+  _inventario = inv;
+}
+
+function _inv() {
+  return _inventario || _inv();
+}
+
 // ─────────────────────────────────────────────
 // INVENTARIO
 // ─────────────────────────────────────────────
 
 const generarInventarioTexto = () => {
   let texto = '\n\n=== INVENTARIO DE PRODUCTOS ===\n';
-  const categorias = Object.values(knowledge.inventario || {});
+  const categorias = Object.values(_inv());
   for (const categoria of categorias) {
     texto += `\n${categoria.nombre}:\n`;
     for (const producto of categoria.productos) {
@@ -21,7 +31,7 @@ const generarInventarioTexto = () => {
 // ─────────────────────────────────────────────
 
 function buscarMasBarato(categoria) {
-  const inventario = knowledge.inventario || {};
+  const inventario = _inv();
   const productos = inventario[categoria]?.productos;
   if (!productos || productos.length === 0) return null;
   const sorted = [...productos].sort((a, b) => {
@@ -33,7 +43,7 @@ function buscarMasBarato(categoria) {
 }
 
 function buscarMasBaratoGlobal() {
-  const inventario = knowledge.inventario || {};
+  const inventario = _inv();
   let masBarato = null;
   let precioMin = Infinity;
   for (const cat of Object.values(inventario)) {
@@ -49,7 +59,7 @@ function buscarMasBaratoGlobal() {
 }
 
 function buscarProductosRelacionados(categoria, limite = 3) {
-  const inventario = knowledge.inventario || {};
+  const inventario = _inv();
   const productos = inventario[categoria]?.productos;
   if (!productos || productos.length === 0) return [];
   return productos.slice(0, limite);
@@ -57,7 +67,7 @@ function buscarProductosRelacionados(categoria, limite = 3) {
 
 function buscarProductoEnHistorial(history, mensaje) {
   const mensajeLower = mensaje.toLowerCase();
-  const categorias = Object.values(knowledge.inventario || {});
+  const categorias = Object.values(_inv());
   for (const categoria of categorias) {
     for (const producto of categoria.productos) {
       const nombreLower = producto.nombre.toLowerCase();
@@ -162,7 +172,7 @@ function detectarObjecionPrecio(mensaje) {
 function generarRespuestaObjecion(categoriaActual, productoActual) {
   if (!categoriaActual) return null;
 
-  const inventario = knowledge.inventario || {};
+  const inventario = _inv();
   const cat = inventario[categoriaActual];
   if (!cat || !cat.productos || cat.productos.length === 0) return null;
 
@@ -255,7 +265,7 @@ function detectarPrecioInventado(texto) {
 
   // Verificar que esos precios existan en el inventario
   const preciosInventario = new Set();
-  for (const cat of Object.values(knowledge.inventario || {})) {
+  for (const cat of Object.values(_inv())) {
     for (const prod of (cat.productos || [])) {
       const precio = parseInt(String(prod.precio).replace(/[^0-9]/g, '')) || 0;
       if (precio > 0) preciosInventario.add(precio);
@@ -267,6 +277,7 @@ function detectarPrecioInventado(texto) {
 }
 
 module.exports = {
+  setInventario,
   generarInventarioTexto,
   buscarMasBarato,
   buscarMasBaratoGlobal,

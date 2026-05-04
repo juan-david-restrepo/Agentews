@@ -183,12 +183,29 @@ Mocks disponibles en `tests/mocks/`: Gemini, Twilio, Cloudinary, Replicate, DB.
 
 ---
 
+## Fuente de datos de productos
+
+Los productos ya **no vienen de `knowledge.json`** — vienen de la BD. Flujo:
+
+1. Al arrancar: `cargarInventario()` carga todos los productos de la tabla `productos` → variable `inventario` en `index.js`
+2. `utils.setInventario(inventario)` sincroniza `utils.js`
+3. Auto-refresco cada 30 min (`setInterval` en `startServer`)
+4. Endpoint `POST /refresh-inventario` para forzar recarga inmediata
+
+Lo que **sí** sigue usando `knowledge.json`:
+- `knowledge.catalogos` — links a PDFs por subcategoría
+- `knowledge.empresa` — info básica para el endpoint GET /webhook
+- `knowledge.inventario` en `utils.js` — solo como fallback si la BD falla al arrancar
+
+Tabla `productos` en BD: 207 productos, 15 subcategorías. Tabla `categorias`: 4 categorías top-level.
+
 ## Estado actual del proyecto (mayo 2026)
 
-- Flujo de ventas: funcional con bugs menores en detección
+- Flujo de ventas: funcional
 - Flujo de agenda: funcional
 - Imagen AI: funcional si hay créditos en Replicate
 - Comparación de productos: implementada, puede tener edge cases
 - Subtipo de sillas/mesas: implementado
 - Personalización: detectada y enviada a asesor
-- **Pendiente:** corregir los 4 bugs listados arriba
+- Inventario: migrado a BD, agente lee desde BD en tiempo real
+- **Bugs corregidos:** syntax error detectarConsultaInfo, columnas faltantes init-db.js, fallback imagen Replicate

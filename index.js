@@ -19,6 +19,25 @@ const { processRoomImage } = require('./image-processor');
 const utils = require('./utils');
 
 // ─────────────────────────────────────────────
+// INVENTARIO DESDE BD (caché en memoria, refresco cada 30 min)
+// ─────────────────────────────────────────────
+
+let inventario = inventario || {}; // fallback al JSON hasta que cargue la BD
+
+async function cargarInventario() {
+  try {
+    const nuevoInventario = await db.getInventarioFromDB();
+    if (nuevoInventario && Object.keys(nuevoInventario).length > 0) {
+      inventario = nuevoInventario;
+      utils.setInventario(inventario);
+      console.log('[INVENTARIO] ✅ Cargado desde BD:', Object.keys(inventario).length, 'categorías');
+    }
+  } catch (err) {
+    console.error('[INVENTARIO] ❌ Error cargando desde BD:', err.message);
+  }
+}
+
+// ─────────────────────────────────────────────
 // RATE LIMITING  (FIX #1)
 // Evita spam de mensajes que disparan múltiples llamadas a Gemini
 // ─────────────────────────────────────────────
@@ -381,7 +400,7 @@ function encontrarCoincidencias(mensaje, categoriaPref = null, categoriaBD = nul
   if (palabrasMsg.length > 0) mensajeLimpio = palabrasMsg.join(' ');
   if (mensajeLimpio.length < 3) return [];
 
-  const categorias = Object.values(knowledge.inventario || {});
+  const categorias = Object.values(inventario || {});
   const categoriaDetectada = categoriaPref || detectarCategoriaEnMensaje(mensaje);
   const categoriaPreferida = categoriaDetectada || categoriaBD;
 
@@ -430,7 +449,7 @@ function encontrarCoincidencias(mensaje, categoriaPref = null, categoriaBD = nul
         coincidencias.push({
           producto, score, nombre: producto.nombre, precio: producto.precio,
           categoria: cat.nombre,
-          categoriaKey: Object.keys(knowledge.inventario).find(k => knowledge.inventario[k] === cat),
+          categoriaKey: Object.keys(inventario).find(k => inventario[k] === cat),
           esCategoriaPreferida: esPreferida,
           medidas: producto.medidas, material: producto.material, imagen: producto.imagen
         });
@@ -438,12 +457,12 @@ function encontrarCoincidencias(mensaje, categoriaPref = null, categoriaBD = nul
     }
   };
 
-  if (categoriaPreferida && knowledge.inventario[categoriaPreferida]) {
-    buscarEnCategoria(knowledge.inventario[categoriaPreferida], true);
+  if (categoriaPreferida && inventario[categoriaPreferida]) {
+    buscarEnCategoria(inventario[categoriaPreferida], true);
   }
 
   for (const categoria of categorias) {
-    if (categoriaPreferida && categoria === knowledge.inventario[categoriaPreferida]) continue;
+    if (categoriaPreferida && categoria === inventario[categoriaPreferida]) continue;
     buscarEnCategoria(categoria, false);
   }
 
@@ -506,7 +525,7 @@ function buscarInfoProducto(nombreProducto, categoriaPref = null, categoriaBD = 
   const nombreBuscado = nombreProducto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
   const categoriaDetectada = categoriaPref || detectarCategoriaEnMensaje(nombreProducto);
   const categoriaPreferida = categoriaDetectada || categoriaBD;
-  const categorias = Object.values(knowledge.inventario || {});
+  const categorias = Object.values(inventario || {});
 
   let mejoresCoincidencias = [];
 
@@ -530,18 +549,18 @@ function buscarInfoProducto(nombreProducto, categoriaPref = null, categoriaBD = 
       }
 
       if (score > 0) {
-        const catKey = Object.keys(knowledge.inventario).find(k => knowledge.inventario[k] === cat);
+        const catKey = Object.keys(inventario).find(k => inventario[k] === cat);
         mejoresCoincidencias.push({ producto, score, esCategoriaPreferida: esPreferida, categoriaKey: catKey });
       }
     }
   };
 
-  if (categoriaPreferida && knowledge.inventario[categoriaPreferida]) {
-    buscarEnCategoria(knowledge.inventario[categoriaPreferida], true);
+  if (categoriaPreferida && inventario[categoriaPreferida]) {
+    buscarEnCategoria(inventario[categoriaPreferida], true);
   }
 
   for (const categoria of categorias) {
-    if (categoriaPreferida && categoria === knowledge.inventario[categoriaPreferida]) continue;
+    if (categoriaPreferida && categoria === inventario[categoriaPreferida]) continue;
     buscarEnCategoria(categoria, false);
   }
 
@@ -588,6 +607,107 @@ function buscarInfoProducto(nombreProducto, categoriaPref = null, categoriaBD = 
   };
 }
 
+// ─────────────────────────────────────────────
+// BÚSQUEDA FUZZY (tolerancia a errores de ortografía)
+// ─────────────────────────────────────────────
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => i === 0 ? j : j === 0 ? i : 0)
+  );
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function similitudPalabra(a, b) {
+  if (a === b) return 1;
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return 1;
+  return 1 - levenshtein(a, b) / maxLen;
+}
+
+const ARTICULOS_FUZZY = new Set([
+  'quiero', 'quisiera', 'gustaria', 'necesito', 'busco', 'dame', 'muestra',
+  'pero', 'como', 'que', 'para', 'por', 'con', 'sin', 'del', 'una',
+  'color', 'modelo', 'tipo', 'producto', 'mueble', 'favor', 'podrias'
+]);
+
+function buscarConFuzzy(mensaje, categoriaPref = null, catBD = null) {
+  const msg = mensaje.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  const palabrasMsg = msg.split(' ').filter(p => p.length >= 4 && !ARTICULOS_FUZZY.has(p));
+  if (palabrasMsg.length === 0) return null;
+
+  const categoriaPreferida = categoriaPref || catBD;
+  let mejorMatch = null;
+  let mejorSim = 0;
+
+  const evaluar = (key, cat, esPreferida) => {
+    if (!cat.productos) return;
+    for (const producto of cat.productos) {
+      const nombreLimpio = producto.nombre.toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ').trim();
+      const palabrasProd = nombreLimpio.split(' ').filter(p => p.length >= 3);
+
+      for (const pm of palabrasMsg) {
+        for (const pp of palabrasProd) {
+          if (pm.length < 4 || pp.length < 3) continue;
+          const sim = similitudPalabra(pm, pp);
+          const simAjustada = esPreferida ? Math.min(1, sim + 0.05) : sim;
+          if (simAjustada > mejorSim && simAjustada >= 0.60) {
+            mejorSim = simAjustada;
+            mejorMatch = { producto, categoriaKey: key, sim: simAjustada };
+          }
+        }
+      }
+    }
+  };
+
+  if (categoriaPreferida && inventario[categoriaPreferida]) {
+    evaluar(categoriaPreferida, inventario[categoriaPreferida], true);
+  }
+  for (const [key, cat] of Object.entries(inventario)) {
+    if (categoriaPreferida && key === categoriaPreferida) continue;
+    evaluar(key, cat, false);
+  }
+
+  if (!mejorMatch) return null;
+
+  return {
+    ...mejorMatch.producto,
+    categoriaKey: mejorMatch.categoriaKey,
+    confianza: mejorMatch.sim >= 0.82 ? 'alta' : 'media'
+  };
+}
+
+function respuestaFuzzy(fuzzy) {
+  const base = `${fuzzy.nombre}\n💰 Precio: ${fuzzy.precio}\n📏 Medidas: ${fuzzy.medidas || 'No disponible'}\n🪵 Material: ${fuzzy.material || 'No disponible'}`;
+  if (fuzzy.confianza === 'alta') {
+    return base + '\n\n¿Procedemos a añadirlo al carrito? 😊';
+  }
+  return `¿Te refieres al *${fuzzy.nombre}*?\n\n` + base + '\n\nSi es así dime "sí" para añadirlo al carrito, o dime el nombre exacto del producto que buscas 😊';
+}
+
+function respuestaContextualSinMatch(categoriaKey) {
+  if (!categoriaKey || !inventario[categoriaKey]) return null;
+  const cat = inventario[categoriaKey];
+  const top3 = cat.productos.slice(0, 3);
+  let msg = `No encontré ese producto exactamente. ¿Te referías a alguno de estos ${cat.nombre}?\n\n`;
+  top3.forEach((p, i) => { msg += `${i + 1}. *${p.nombre}* - ${p.precio}\n`; });
+  msg += '\nDime el número o el nombre del que te interesa 😊';
+  return { mensaje: msg, candidatos: top3.map(p => ({ ...p, categoria: categoriaKey })) };
+}
+
 function formatearMensajeAmbiguo(candidatos) {
   let msg = "Tenemos varios modelos similares. ¿A cuál te refieres?\n\n";
   candidatos.forEach((c, i) => {
@@ -613,6 +733,33 @@ function resolverCandidatoAmbiguo(mensaje, candidatos) {
     if (num >= 1 && num <= candidatos.length) return candidatos[num - 1];
   }
 
+  // Detectar palabras gen\u00e9ricas: las que aparecen en \u226540% de los candidatos
+  const contadorPalabras = {};
+  for (const c of candidatos) {
+    const n = c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').trim();
+    for (const p of n.split(' ').filter(w => w.length > 2)) {
+      contadorPalabras[p] = (contadorPalabras[p] || 0) + 1;
+    }
+  }
+  const umbralGenerico = Math.max(2, Math.floor(candidatos.length * 0.4));
+  const palabrasGenericas = new Set(
+    Object.entries(contadorPalabras).filter(([, n]) => n >= umbralGenerico).map(([p]) => p)
+  );
+
+  // Primero buscar el candidato cuyo nombre distintivo aparece en el mensaje
+  for (const c of candidatos) {
+    const nombreLimpio = c.nombre.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const palabrasDistintivas = nombreLimpio.split(' ').filter(p => p.length > 2 && !palabrasGenericas.has(p));
+    for (const palabra of palabrasDistintivas) {
+      if (msgLimpio.includes(palabra)) return c;
+    }
+  }
+
+  // Fallback: coincidencia con cualquier palabra (incluyendo gen\u00e9ricas)
   for (const c of candidatos) {
     const nombreLimpio = c.nombre.toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -637,7 +784,7 @@ function buscarPorDescripcion(descripcion, categoriaActual) {
     .replace(/\s+/g, ' ')
     .trim();
 
-  const categoria = knowledge.inventario[categoriaActual];
+  const categoria = inventario[categoriaActual];
   if (!categoria || !categoria.productos) return null;
 
   let mejorCoincidencia = null;
@@ -1056,7 +1203,7 @@ function buscarProductosPorCategoria(mensaje) {
     'cajoneros': 'cajoneros_bifes', 'cajones': 'cajoneros_bifes', 'bifes': 'cajoneros_bifes'
   };
 
-  const inventario = knowledge.inventario || {};
+  const inventario = inventario || {};
 
   for (const [palabra, clave] of Object.entries(mapeoCategorias)) {
     if (mensajeLimpio.includes(palabra)) {
@@ -1096,7 +1243,7 @@ function formatearProductosVenta(productos, limite = 5) {
 }
 
 function buscarImagenProducto(mensaje) {
-  const categorias = Object.values(knowledge.inventario || {});
+  const categorias = Object.values(inventario || {});
   const mensajeLower = mensaje.toLowerCase().replace(/[^a-záéíóúñ\s]/g, ' ');
   const stopWords = ['dos', 'ambos', 'ambas', 'las', 'los', 'del', 'una', 'unos', 'unas', 'que',
     'este', 'esta', 'ese', 'esa', 'otra', 'otro', 'todas', 'todos', 'cada',
@@ -1144,7 +1291,7 @@ function formatearNombreCategoria(nombre) {
 
 function buscarCatalogo(mensaje) {
   const catalogos = knowledge.catalogos || {};
-  const inventario = knowledge.inventario || {};
+  const inventario = inventario || {};
   const mensajeLower = mensaje.toLowerCase();
 
   const mapeoCategorias = {
@@ -1282,6 +1429,35 @@ async function callGeminiWithHistory(from, currentMessage) {
   return callGemini({ history, currentMessage });
 }
 
+async function callGeminiPitch(producto, mensajeUsuario) {
+  const url = `https://aiplatform.googleapis.com/v1/publishers/google/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
+
+  const mensaje = `El cliente pregunta: "${mensajeUsuario}"
+
+Datos exactos del producto (úsalos tal cual, no los cambies):
+📌 Nombre: ${producto.nombre}
+💰 Precio: ${producto.precio}
+🪵 Material: ${producto.material || ''}
+📏 Medidas: ${producto.medidas || 'Ajustable según necesidad del cliente'}
+
+Responde como Elena en máximo 3 líneas: destaca 1-2 cualidades del producto, incluye el precio EXACTO (${producto.precio}) y termina con una pregunta corta que invite al cliente a comprarlo.`;
+
+  const { fetchWithRetry } = require('./httpClient');
+  const resp = await fetchWithRetry(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: mensaje }] }],
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      generationConfig: { temperature: 0.7, maxOutputTokens: 250 }
+    })
+  }, 2, 10000);
+
+  if (!resp.ok) throw new Error(`Gemini pitch error: ${resp.status}`);
+  const data = await resp.json();
+  return data.candidates[0].content.parts[0].text;
+}
+
 // ─────────────────────────────────────────────
 // COMPARACIÓN
 // ─────────────────────────────────────────────
@@ -1291,7 +1467,7 @@ async function compararProductos(from, incomingMsg = null) {
   const categoriaActual = await db.getCategoriaActual(from);
   const itemsCarrito = await db.verCarrito(from);
   const productosMencionados = [];
-  const inventario = knowledge.inventario;
+  const inventario = inventario;
   const nombresEnCarrito = new Set(itemsCarrito.map(item => item.producto.toLowerCase()));
 
   if (incomingMsg) {
@@ -1413,7 +1589,7 @@ function extraerPreferencias(mensaje) {
 }
 
 function recomendarPorPreferencias(prefs) {
-  const inventario = knowledge.inventario;
+  const inventario = inventario;
   let candidatos = [];
 
   const espacioCategoria = {
@@ -2018,11 +2194,18 @@ Para cancelar escribe "cancelar"`;
         }
       } else {
         const pendientes = await db.getCandidatosPendientes(from);
-        const elegido = resolverCandidatoAmbiguo(incomingMsg, pendientes.candidatos);
+
+        // Intentar búsqueda directa en inventario completo primero —
+        // el usuario puede haber nombrado un producto específico o incluso uno distinto al listado
+        const busquedaDirecta = buscarProductoPorNombre(incomingMsg);
+        const elegido = (busquedaDirecta && !busquedaDirecta.ambiguo)
+          ? busquedaDirecta
+          : resolverCandidatoAmbiguo(incomingMsg, pendientes.candidatos);
+
         if (elegido) {
           await db.clearCandidatosPendientes(from);
-          await db.setCategoriaActual(from, elegido.categoria);
-          await db.setUltimoProducto(from, { nombre: elegido.nombre, precio: elegido.precio, categoria: elegido.categoria });
+          await db.setCategoriaActual(from, elegido.categoriaKey || elegido.categoria);
+          await db.setUltimoProducto(from, { nombre: elegido.nombre, precio: elegido.precio, categoria: elegido.categoriaKey || elegido.categoria });
           await db.guardarProductoPendiente(from, elegido.nombre, elegido.precio);
           response = `${elegido.nombre}\n💰 Precio: ${elegido.precio}\n📏 Medidas: ${elegido.medidas || 'No disponible'}\n🪵 Material: ${elegido.material || 'No disponible'}\n\n¿Procedemos a añadirlo al carrito? 😊`;
         } else {
@@ -2085,7 +2268,7 @@ Para cancelar escribe "cancelar"`;
     // ── MÁS BARATO EXPLÍCITO ──────────────────────────────────────
     else if (detectarMasBarato(incomingMsg)) {
       const categoria = await db.getCategoriaActual(from);
-      if (categoria && knowledge.inventario[categoria]) {
+      if (categoria && inventario[categoria]) {
         const masBarato = buscarMasBarato(categoria);
         if (masBarato) {
           response = `La opción más económica en ${formatearNombreCategoria(categoria)} es:\n\n📌 ${masBarato.nombre} - ${masBarato.precio}\n\n¿Te interesa? 😊`;
@@ -2146,7 +2329,7 @@ Para cancelar escribe "cancelar"`;
         response = formatearPreguntaSubtipo(categoriaDetectada, incomingMsg);
         await db.setSubtipoPendiente(from, categoriaDetectada);
       } else if (subtipo) {
-        const productosSubtipo = knowledge.inventario[subtipo]?.productos || [];
+        const productosSubtipo = inventario[subtipo]?.productos || [];
         if (productosSubtipo.length > 0) {
           await db.setCategoriaActual(from, subtipo);
           response = formatearProductosVenta(productosSubtipo);
@@ -2160,14 +2343,26 @@ Para cancelar escribe "cancelar"`;
         if (producto && !producto.ambiguo) {
           await db.setCategoriaActual(from, producto.categoria || categoriaDetectada || catBD);
           await db.setUltimoProducto(from, { nombre: producto.nombre, precio: producto.precio, categoria: producto.categoria });
-          response = `${producto.nombre} - ${producto.precio}\n\n¿Te interesa? 😊`;
+          await db.guardarProductoPendiente(from, producto.nombre, producto.precio);
+          try {
+            response = await callGeminiPitch(producto, incomingMsg);
+          } catch (e) {
+            console.error('[PITCH] Error Gemini:', e.message);
+            response = `*${producto.nombre}*\n💰 Precio: ${producto.precio}\n🪵 Material: ${producto.material || ''}\n📏 Medidas: ${producto.medidas || 'Ajustable'}\n\n¿Te interesa? 😊`;
+          }
         } else if (producto?.ambiguo && producto.candidatos) {
           await db.guardarCandidatosPendientes(from, producto.candidatos, incomingMsg);
           response = formatearMensajeAmbiguo(producto.candidatos);
         } else {
           const cat2 = categoriaDetectada || catBD;
-          if (cat2 && knowledge.inventario[cat2]) {
-            response = formatearProductosVenta(knowledge.inventario[cat2].productos);
+          const fuzzy = buscarConFuzzy(incomingMsg, categoriaDetectada, catBD);
+          if (fuzzy) {
+            await db.setCategoriaActual(from, fuzzy.categoriaKey);
+            await db.setUltimoProducto(from, { nombre: fuzzy.nombre, precio: fuzzy.precio, categoria: fuzzy.categoriaKey });
+            await db.guardarProductoPendiente(from, fuzzy.nombre, fuzzy.precio);
+            response = respuestaFuzzy(fuzzy);
+          } else if (cat2 && inventario[cat2]) {
+            response = formatearProductosVenta(inventario[cat2].productos);
             await db.setCategoriaActual(from, cat2);
           } else {
             await db.addMensaje(from, 'user', incomingMsg);
@@ -2187,7 +2382,7 @@ Para cancelar escribe "cancelar"`;
         response = formatearPreguntaSubtipo(categoriaDetectada, incomingMsg);
         await db.setSubtipoPendiente(from, categoriaDetectada);
       } else if (subtipo) {
-        const productosSubtipo = knowledge.inventario[subtipo]?.productos || [];
+        const productosSubtipo = inventario[subtipo]?.productos || [];
         if (productosSubtipo.length > 0) {
           await db.setCategoriaActual(from, subtipo);
           response = formatearProductosVenta(productosSubtipo);
@@ -2207,13 +2402,27 @@ Para cancelar escribe "cancelar"`;
           await db.guardarProductoPendiente(from, productoInfo.nombre, productoInfo.precio);
           response = `${productoInfo.nombre}\n💰 Precio: ${productoInfo.precio}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n\n¿Procedemos a añadirla al carrito? 😊`;
         } else {
-          const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
-          if (resultadoCategoria.productos?.length > 0) {
-            if (resultadoCategoria.categoria) await db.setCategoriaActual(from, resultadoCategoria.categoria);
-            response = formatearProductosVenta(resultadoCategoria.productos);
+          const fuzzy = buscarConFuzzy(incomingMsg, categoriaDetectada, catBD);
+          if (fuzzy) {
+            await db.setCategoriaActual(from, fuzzy.categoriaKey);
+            await db.setUltimoProducto(from, { nombre: fuzzy.nombre, precio: fuzzy.precio, categoria: fuzzy.categoriaKey });
+            await db.guardarProductoPendiente(from, fuzzy.nombre, fuzzy.precio);
+            response = respuestaFuzzy(fuzzy);
           } else {
-            await db.addMensaje(from, 'user', incomingMsg);
-            response = await callGemini({ history, currentMessage: incomingMsg });
+            const resultadoCategoria = buscarProductosPorCategoria(incomingMsg);
+            if (resultadoCategoria.productos?.length > 0) {
+              if (resultadoCategoria.categoria) await db.setCategoriaActual(from, resultadoCategoria.categoria);
+              response = formatearProductosVenta(resultadoCategoria.productos);
+            } else {
+              const contextual = respuestaContextualSinMatch(categoriaDetectada || catBD);
+              if (contextual) {
+                await db.guardarCandidatosPendientes(from, contextual.candidatos, incomingMsg);
+                response = contextual.mensaje;
+              } else {
+                await db.addMensaje(from, 'user', incomingMsg);
+                response = await callGemini({ history, currentMessage: incomingMsg });
+              }
+            }
           }
         }
       }
@@ -2283,10 +2492,10 @@ Para cancelar escribe "cancelar"`;
     else if (await db.getSubtipoPendiente(from)) {
       const contexto = await db.getSubtipoPendiente(from);
       const categoriaResuelta = resolverRespuestaSubtipo(incomingMsg, contexto.categoriaPadre);
-      if (categoriaResuelta && knowledge.inventario[categoriaResuelta]) {
+      if (categoriaResuelta && inventario[categoriaResuelta]) {
         await db.clearSubtipoPendiente(from);
         await db.setCategoriaActual(from, categoriaResuelta);
-        response = formatearProductosVenta(knowledge.inventario[categoriaResuelta].productos);
+        response = formatearProductosVenta(inventario[categoriaResuelta].productos);
         if (['sillas_comedor', 'sillas_auxiliares', 'sillas_barra'].includes(categoriaResuelta)) {
           response += "\n\n💡 Las sillas se venden por unidad y por separado de la base del comedor. 🪑";
         }
@@ -2474,8 +2683,8 @@ Para cancelar escribe "cancelar"`;
             // FIX #4: Si Gemini parece no saber, agregar fallback
             if (response && !respuestaGeminiEsConfiable(response)) {
               const catActual = await db.getCategoriaActual(from);
-              if (catActual && knowledge.inventario[catActual]) {
-                const productosFallback = knowledge.inventario[catActual].productos.slice(0, 3);
+              if (catActual && inventario[catActual]) {
+                const productosFallback = inventario[catActual].productos.slice(0, 3);
                 response += `\n\nMientras tanto, te muestro algunas opciones de ${formatearNombreCategoria(catActual)}:\n`;
                 productosFallback.forEach(p => {
                   response += `• ${p.nombre} - ${p.precio}\n`;
@@ -2524,6 +2733,11 @@ app.get('/webhook', (req, res) => {
   res.json({ status: 'ok', message: 'Elena - Vendedora DeCasa', empresa: knowledge.empresa });
 });
 
+app.post('/refresh-inventario', async (req, res) => {
+  await cargarInventario();
+  res.json({ status: 'ok', categorias: Object.keys(inventario).length });
+});
+
 app.get('/health', async (req, res) => {
   let activeUsers = 0;
   try {
@@ -2549,6 +2763,9 @@ async function startServer() {
   } catch (error) {
     console.error('[SERVER] ❌ Error conectando a la base de datos:', error.message);
   }
+
+  await cargarInventario();
+  setInterval(cargarInventario, 30 * 60 * 1000);
 
   const server = app.listen(PORT, () => {
     console.log(`[SERVER] ✅ Escuchando en puerto ${PORT}`);
