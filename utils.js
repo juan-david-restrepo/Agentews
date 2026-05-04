@@ -7,7 +7,7 @@ function setInventario(inv) {
 }
 
 function _inv() {
-  return _inventario || _inv();
+  return _inventario || {};
 }
 
 // ─────────────────────────────────────────────
