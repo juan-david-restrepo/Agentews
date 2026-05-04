@@ -197,6 +197,12 @@ const { detectarObjecionPrecio, generarRespuestaObjecion, respuestaGeminiEsConfi
 // CARRITO (helpers)
 // ─────────────────────────────────────────────
 
+// Extrae solo el primer número de un precio (maneja rangos como "$1.380.000 - $1.680.000")
+function parsearPrecio(precio) {
+  const m = String(precio || '').match(/\d[\d.]*/);
+  return m ? parseInt(m[0].replace(/\./g, '')) : 0;
+}
+
 const MAX_ITEMS_CARRITO = 10;
 
 async function agregarAlCarritoDB(from, producto, precio, cantidad = 1) {
@@ -224,7 +230,7 @@ async function formatearCarrito(from) {
 
   items.forEach((item, index) => {
     const cantidad = item.cantidad || 1;
-    const precioUnitario = parseInt(String(item.precio).replace(/[^0-9]/g, '')) || 0;
+    const precioUnitario = parsearPrecio(item.precio);
     const precioTotal = precioUnitario * cantidad;
     mensaje += `${index + 1}. ${item.producto} - ${item.precio}`;
     if (cantidad > 1) mensaje += ` (${cantidad} unidades)`;
@@ -719,6 +725,20 @@ function formatearMensajeAmbiguo(candidatos) {
   return msg;
 }
 
+function detectarNumeroLista(msg, max) {
+  const ordenes = [
+    /\b(1|uno?|primer[ao])\b/i,
+    /\b(2|dos|segund[ao])\b/i,
+    /\b(3|tres|tercer[ao])\b/i,
+    /\b(4|cuatro|cuart[ao])\b/i,
+    /\b(5|cinco|quint[ao])\b/i,
+  ];
+  for (let i = 0; i < Math.min(ordenes.length, max); i++) {
+    if (ordenes[i].test(msg)) return i;
+  }
+  return -1;
+}
+
 function resolverCandidatoAmbiguo(mensaje, candidatos) {
   const msgLimpio = mensaje.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -919,7 +939,8 @@ function esConsultaGenericaCategoria(mensaje) {
     new RegExp(`(que|qu[eé])\\s+(${categorias})\\s+(${verbos})`, 'i'),
     new RegExp(`(que|qu[eé])\\s+(tipos?\\s+de\\s+)?(${categorias})\\s+(${verbos})`, 'i'),
     // Patrones directos sin verbo explícito
-    new RegExp(`(ver|mostrar|conocer)\\s+(los?|las?)?\\s*(${categorias})`, 'i'),
+    new RegExp(`(ver|mostrar|conocer)\\s+(todos?\\s+los?|todos?\\s+las?|los?|las?)?\\s*(${categorias})`, 'i'),
+    new RegExp(`\\btodos?\\s+(los?|las?)\\s*(${categorias})`, 'i'),
     new RegExp(`(cu[aá]les?|qu[eé])\\s+(${categorias})\\s+(tienen|hay|manejan)`, 'i'),
   ];
   return patrones.some(p => p.test(msg));
@@ -1182,6 +1203,7 @@ function detectarIntentionAddCarrito(mensaje) {
     /proceder.*compra/i, /si.*confirmo/i, /\bcomprar\b/i, /\bllevar\b/i,
     /\bañadir\b/i, /\bagregar\b/i,
     /me\s+(lo|la)\s+(añad|agreg)/i, /lo\s+(añad|agreg)/i, /la\s+(añad|agreg)/i,
+    /agr[eé]g[ae](lo|la|le|me)\b/i,
     /si\s+(me|gustaria)/i
   ];
   return patrones.some(p => p.test(msg));
@@ -1197,6 +1219,7 @@ function buscarProductosPorCategoria(mensaje) {
     'silla barra': 'sillas_barra', 'sillas barra': 'sillas_barra', 'barra': 'sillas_barra',
     'silla de barra': 'sillas_barra', 'sillas de barra': 'sillas_barra',
     'silla comedor': 'sillas_comedor', 'sillas de comedor': 'sillas_comedor',
+    'silla aux': 'sillas_auxiliares', 'sillas aux': 'sillas_auxiliares',
     'silla auxiliar': 'sillas_auxiliares', 'sillas auxiliar': 'sillas_auxiliares',
     'sillon': 'sillas_auxiliares', 'sillón': 'sillas_auxiliares', 'sillones': 'sillas_auxiliares',
     'comedor': 'bases_comedores', 'comedores': 'bases_comedores',
@@ -1303,6 +1326,7 @@ function buscarCatalogo(mensaje) {
     'sofa cama': 'sofas_camas', 'sofacama': 'sofas_camas',
     'sofa modular': 'sofas', 'sofas modulares': 'sofas', 'modular': 'sofas',
     'sofa': 'sofas', 'sofas': 'sofas',
+    'silla aux': 'sillas_auxiliares', 'sillas aux': 'sillas_auxiliares',
     'silla auxiliar': 'sillas_auxiliares', 'sillon': 'sillas_auxiliares', 'sillón': 'sillas_auxiliares', 'sillones': 'sillas_auxiliares',
     'silla barra': 'sillas_barra', 'silla alta': 'sillas_barra',
     'silla comedor': 'sillas_comedor', 'silla': 'sillas_comedor', 'sillas': 'sillas_comedor',
@@ -1511,7 +1535,7 @@ async function compararProductos(from, incomingMsg = null) {
   if (productosRecientes.length >= 2) {
     let comparacion = "📊 *Comparación de productos:*\n\n";
     const productosConPrecio = productosRecientes.map(p => ({
-      ...p, precioNumerico: parseInt(String(p.precio).replace(/[^0-9]/g, '')) || 0
+      ...p, precioNumerico: parsearPrecio(p.precio)
     }));
     const ordenados = [...productosConPrecio].sort((a, b) => a.precioNumerico - b.precioNumerico);
     const masBarato = ordenados[0];
@@ -1612,7 +1636,7 @@ function recomendarPorPreferencias(prefs) {
     const cat = inventario[catKey];
     if (!cat?.productos) continue;
     for (const prod of cat.productos) {
-      const precioNum = parseInt(String(prod.precio).replace(/[^0-9]/g, '')) || 0;
+      const precioNum = parsearPrecio(prod.precio);
       if (precioNum === 0) continue;
 
       let score = 0;
@@ -1755,7 +1779,7 @@ async function enviarNotificacionPedido(telefono, productos, historial) {
 
   productos.forEach((item, index) => {
     const cantidad = item.cantidad || 1;
-    const precioUnitario = parseInt(String(item.precio).replace(/[^0-9]/g, '')) || 0;
+    const precioUnitario = parsearPrecio(item.precio);
     const precioTotal = precioUnitario * cantidad;
     listaProductos += `${index + 1}. ${item.producto} - ${item.precio}`;
     if (cantidad > 1) listaProductos += ` (${cantidad})`;
@@ -2041,7 +2065,7 @@ app.post('/webhook', async (req, res) => {
           let total = 0;
           itemsCarrito.forEach((item, i) => {
             const cant = item.cantidad || 1;
-            const precio = parseInt(String(item.precio).replace(/[^0-9]/g, '')) || 0;
+            const precio = parsearPrecio(item.precio);
             productosTxt += `${i + 1}. ${item.producto} - ${item.precio}`;
             if (cant > 1) productosTxt += ` (${cant} unidades)`;
             productosTxt += '\n';
@@ -2080,7 +2104,19 @@ app.post('/webhook', async (req, res) => {
       const paso = await db.getPasoAgendacion(from);
       const datos = await db.getDatosAgendacion(from);
 
-      if (detectarCancelarAgendacion(incomingMsg)) {
+      // Consulta de precio/producto intercalada: responder y recordar que la cita sigue pendiente
+      if (!detectarCancelarAgendacion(incomingMsg) && (detectarConsultaPrecio(incomingMsg) || detectarConsultaInfo(incomingMsg))) {
+        const categoriaDetectada = detectarCategoriaEnMensaje(incomingMsg);
+        const catBD = await db.getCategoriaActual(from);
+        const prod = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD);
+        const pasoActual = paso === 1 ? 'nombre' : paso === 2 ? 'sede' : paso === 3 ? 'día' : paso === 4 ? 'hora' : 'motivo';
+        if (prod && !prod.ambiguo) {
+          const info = buscarInfoProducto(prod.nombre, prod.categoria);
+          response = `${prod.nombre}\n💰 Precio: ${prod.precio}\n📏 Medidas: ${info?.medidas || 'Ajustable'}\n🪵 Material: ${info?.material || ''}\n\n_Estás agendando una cita — falta el ${pasoActual}. Continúa o escribe "cancelar"._`;
+        } else {
+          response = `Estás en proceso de agendar una cita. Escribe "cancelar" para salir o continúa con el ${pasoActual}. 😊`;
+        }
+      } else if (detectarCancelarAgendacion(incomingMsg)) {
         await db.cancelarAgendacion(from);
         response = `Has cancelado la agendación de cita.\n\n¿Hay algo más en lo que pueda ayudarte? 😊`;
       } else if (paso === 1) {
@@ -2227,12 +2263,16 @@ Para cancelar escribe "cancelar"`;
       } else {
         const pendientes = await db.getCandidatosPendientes(from);
 
+        // Selección por número ordinal ("la primera", "el 2", "tercero"…)
+        const indiceNumero = detectarNumeroLista(incomingMsg, pendientes.candidatos.length);
+        const elegidoPorNumero = indiceNumero >= 0 ? pendientes.candidatos[indiceNumero] : null;
+
         // Intentar búsqueda directa en inventario completo primero —
         // el usuario puede haber nombrado un producto específico o incluso uno distinto al listado
-        const busquedaDirecta = buscarProductoPorNombre(incomingMsg);
-        const elegido = (busquedaDirecta && !busquedaDirecta.ambiguo)
-          ? busquedaDirecta
-          : resolverCandidatoAmbiguo(incomingMsg, pendientes.candidatos);
+        const busquedaDirecta = elegidoPorNumero ? null : buscarProductoPorNombre(incomingMsg);
+        const elegido = elegidoPorNumero
+          || (busquedaDirecta && !busquedaDirecta.ambiguo ? busquedaDirecta : null)
+          || resolverCandidatoAmbiguo(incomingMsg, pendientes.candidatos);
 
         if (elegido) {
           await db.clearCandidatosPendientes(from);
@@ -2427,8 +2467,18 @@ Para cancelar escribe "cancelar"`;
       const subtipo = necesitaSubtipo(incomingMsg, categoriaDetectada);
 
       if (subtipo === 'PEDIR_SUBTIPO') {
-        response = formatearPreguntaSubtipo(categoriaDetectada, incomingMsg);
-        await db.setSubtipoPendiente(from, categoriaDetectada);
+        // Si el mensaje nombra un producto específico, buscarlo antes de pedir subtipo
+        const prodEspecifico = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD);
+        if (prodEspecifico && !prodEspecifico.ambiguo) {
+          const info = buscarInfoProducto(prodEspecifico.nombre, prodEspecifico.categoria);
+          await db.setCategoriaActual(from, prodEspecifico.categoria || categoriaDetectada);
+          await db.setUltimoProducto(from, { nombre: prodEspecifico.nombre, precio: prodEspecifico.precio, categoria: prodEspecifico.categoria, ts: Date.now() });
+          await db.guardarProductoPendiente(from, prodEspecifico.nombre, prodEspecifico.precio);
+          response = `${prodEspecifico.nombre}\n💰 Precio: ${prodEspecifico.precio}\n📏 Medidas: ${info?.medidas || 'No disponible'}\n🪵 Material: ${info?.material || 'No disponible'}\n\n¿Procedemos a añadirlo al carrito? 😊`;
+        } else {
+          response = formatearPreguntaSubtipo(categoriaDetectada, incomingMsg);
+          await db.setSubtipoPendiente(from, categoriaDetectada);
+        }
       } else if (subtipo) {
         const productosSubtipo = inventario[subtipo]?.productos || [];
         if (productosSubtipo.length > 0) {
@@ -2544,7 +2594,7 @@ Para cancelar escribe "cancelar"`;
         await db.clearSubtipoPendiente(from);
         await db.setCategoriaActual(from, categoriaResuelta);
         response = formatearProductosVenta(inventario[categoriaResuelta].productos);
-        if (['sillas_comedor', 'sillas_auxiliares', 'sillas_barra'].includes(categoriaResuelta)) {
+        if (['sillas_comedor', 'bases_comedores'].includes(categoriaResuelta)) {
           response += "\n\n💡 Las sillas se venden por unidad y por separado de la base del comedor. 🪑";
         }
       } else {
@@ -2612,7 +2662,7 @@ Para cancelar escribe "cancelar"`;
         let totalConfirmado = 0;
         itemsEnCarrito.forEach((item, i) => {
           const cant = item.cantidad || 1;
-          const precio = parseInt(String(item.precio).replace(/[^0-9]/g, '')) || 0;
+          const precio = parsearPrecio(item.precio);
           productosTxt += `${i + 1}. ${item.producto} - ${item.precio}`;
           if (cant > 1) productosTxt += ` (${cant} unidades)`;
           productosTxt += '\n';
@@ -2661,7 +2711,13 @@ Para cancelar escribe "cancelar"`;
         const catBD = await db.getCategoriaActual(from);
         let productoDetectado = null;
 
-        if (!esFraseCompraGenerica(incomingMsg)) {
+        // Si el usuario usa un demostrativo ("esa", "ese") y hay producto pendiente,
+        // ese pronombre apunta al pendiente — no buscar un nuevo producto en el mensaje
+        const usaDemostrativo = /\b(esa|ese|esto|esta|este)\b/i.test(incomingMsg);
+        const pendienteDem = usaDemostrativo ? await db.getProductoPendiente(from) : null;
+        if (pendienteDem?.producto) {
+          productoDetectado = { nombre: pendienteDem.producto, precio: pendienteDem.precio, categoria: catBD };
+        } else if (!esFraseCompraGenerica(incomingMsg)) {
           productoDetectado = buscarProductoPorNombre(incomingMsg, categoriaDetectada, catBD);
         }
 
