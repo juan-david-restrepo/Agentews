@@ -2289,6 +2289,8 @@ Para cancelar escribe "cancelar"`;
       if (producto) {
         imagenURL = producto.imagen;
         response = `Claro! Aquí tienes la ${producto.nombre} 😊`;
+        await db.setUltimoProducto(from, { nombre: producto.nombre, precio: producto.precio, categoria: producto.categoriaKey || null });
+        await db.guardarProductoPendiente(from, producto.nombre, producto.precio);
       } else {
         response = "Dime qué producto te interesa y te envío la foto 😊";
       }
@@ -2308,8 +2310,8 @@ Para cancelar escribe "cancelar"`;
         if (porCategoria.categoria && porCategoria.productos.length > 0) {
           await db.setCategoriaActual(from, porCategoria.categoria);
           response = formatearProductosVenta(porCategoria.productos);
-          if (porCategoria.categoria === 'bases_comedores') {
-            response += "\n\n💡 La base del comedor se vende sin sillas incluidas. Puedes elegir las sillas por separado. 🪑";
+          if (porCategoria.categoria === 'bases_comedores' || porCategoria.categoria === 'sillas_comedor') {
+            response += "\n\n💡 Las sillas se venden por unidad y por separado de la base del comedor. 🪑";
           }
         } else {
           response = "¿Qué categoría de muebles te interesa ver? 😊";
@@ -2382,7 +2384,7 @@ Para cancelar escribe "cancelar"`;
         if (productosSubtipo.length > 0) {
           await db.setCategoriaActual(from, subtipo);
           response = formatearProductosVenta(productosSubtipo);
-          if (['sillas_comedor', 'sillas_auxiliares', 'sillas_barra'].includes(subtipo)) {
+          if (subtipo === 'sillas_comedor' || subtipo === 'bases_comedores') {
             response += "\n\n💡 Las sillas se venden por unidad y por separado de la base del comedor. 🪑";
           }
         }
@@ -2474,8 +2476,8 @@ Para cancelar escribe "cancelar"`;
         } else if (porCategoria.productos?.length > 0) {
           if (porCategoria.categoria) await db.setCategoriaActual(from, porCategoria.categoria);
           response = formatearProductosVenta(porCategoria.productos);
-          if (porCategoria.categoria === 'bases_comedores') {
-            response += "\n\n💡 La base del comedor se vende sin sillas. Puedes elegir tus sillas favoritas por separado. 🪑";
+          if (porCategoria.categoria === 'bases_comedores' || porCategoria.categoria === 'sillas_comedor') {
+            response += "\n\n💡 Las sillas se venden por unidad y por separado de la base del comedor. 🪑";
           }
         } else {
           const categoriasDisponibles = Object.keys(knowledge.catalogos).map(c => formatearNombreCategoria(c)).join(', ');
@@ -2619,12 +2621,14 @@ Para cancelar escribe "cancelar"`;
         if (!productoDetectado) {
           const ultimoProd = await db.getUltimoProducto(from);
           if (ultimoProd?.nombre) {
-            const msg = incomingMsg.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const msgNorm = incomingMsg.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             const nombreLimpio = ultimoProd.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             const palabrasProd = nombreLimpio.split(' ').filter(p => p.length > 3);
-            const palabrasMsg = msg.split(' ').filter(p => p.length > 3);
+            const palabrasMsg = msgNorm.split(' ').filter(p => p.length > 3);
             const coincidencias = palabrasMsg.filter(pm => palabrasProd.some(pp => pp.includes(pm) || pm.includes(pp)));
-            if (coincidencias.length >= 1) {
+            const quiereAgregarAhora = detectarCompraExplicita(incomingMsg) || detectarIntentionAddCarrito(incomingMsg);
+            // Usar ultimoProd si hay coincidencia de palabras O si el mensaje es claramente una compra sin producto expl\u00edcito
+            if (coincidencias.length >= 1 || quiereAgregarAhora) {
               productoDetectado = { nombre: ultimoProd.nombre, precio: ultimoProd.precio, categoria: ultimoProd.categoria };
             }
           }
