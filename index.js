@@ -232,7 +232,7 @@ async function formatearCarrito(from) {
     total += precioTotal;
   });
 
-  mensaje += `\n─────────────────\n💰 Total: $${total.toLocaleString()}`;
+  mensaje += `\n─────────────────\n💰 Total: $${total.toLocaleString('es-CO')}`;
   return { mensaje, total, items };
 }
 
@@ -444,7 +444,7 @@ function encontrarCoincidencias(mensaje, categoriaPref = null, categoriaBD = nul
 
       // FIX: Dar bonus extra a la categoría preferida (antes solo reordenaba al final)
       if (score > 0) {
-        if (esPreferida) score += 40;
+        if (esPreferida && score >= 30) score += 20;
         coincidencias.push({
           producto, score, nombre: producto.nombre, precio: producto.precio,
           categoria: cat.nombre,
@@ -663,7 +663,7 @@ function buscarConFuzzy(mensaje, categoriaPref = null, catBD = null) {
           if (pm.length < 4 || pp.length < 3) continue;
           const sim = similitudPalabra(pm, pp);
           const simAjustada = esPreferida ? Math.min(1, sim + 0.05) : sim;
-          if (simAjustada > mejorSim && simAjustada >= 0.60) {
+          if (simAjustada > mejorSim && simAjustada >= 0.72) {
             mejorSim = simAjustada;
             mejorMatch = { producto, categoriaKey: key, sim: simAjustada };
           }
@@ -902,7 +902,8 @@ function esSoloSaludo(mensaje) {
   const contenidoPatterns = [
     /comedor|cama|sofa|silla|mesa|colch|mueble|catalog|precio|cuanto|costo|valor/i,
     /donde|ubic|tienda|direccion|horario|comprar|venta|pedir|quiero|necesito/i,
-    /manej|tienen|tiene|ver|mostrar|info|informacion/i
+    /manej|tienen|tiene|ver|mostrar|info|informacion/i,
+    /llevo|lleva|tomo|compro|agrego|añado|interesa|gusta|encanta/i
   ];
   if (contenidoPatterns.some(p => p.test(msg))) return false;
   return detectarSaludo(mensaje);
@@ -1954,11 +1955,19 @@ app.post('/webhook', async (req, res) => {
 
       if (producto) {
         if (nombreEnMensaje) {
-          await db.setUltimoProducto(from, { nombre: prodEnMensaje.nombre, precio: prodEnMensaje.precio, categoria: prodEnMensaje.categoria });
+          await db.setUltimoProducto(from, { nombre: prodEnMensaje.nombre, precio: prodEnMensaje.precio, categoria: prodEnMensaje.categoria, ts: Date.now() });
         }
         await db.setTransferenciaMedidaPendiente(from, { producto, solicitud: incomingMsg });
         response = `Entiendo que necesitas una personalización para ${producto}. ¿Te gustaría que te transfiera con un asesor especializado en diseño a medida? 😊`;
 
+        await db.addMensaje(from, 'assistant', response);
+        await db.actualizarLastInteraction(from);
+        const twiml = new MessagingResponse();
+        twiml.message(response);
+        return res.type('text/xml').send(twiml.toString());
+      } else {
+        // Personalización detectada pero sin contexto de producto → pedir cuál
+        response = `¿Para qué producto necesitas la personalización? Dime el nombre y con gusto te conecto con un asesor. 😊`;
         await db.addMensaje(from, 'assistant', response);
         await db.actualizarLastInteraction(from);
         const twiml = new MessagingResponse();
@@ -2076,8 +2085,8 @@ app.post('/webhook', async (req, res) => {
         response = `Has cancelado la agendación de cita.\n\n¿Hay algo más en lo que pueda ayudarte? 😊`;
       } else if (paso === 1) {
         const nombre = incomingMsg.trim();
-        if (nombre.length < 2) {
-          response = `Por favor ingresa tu nombre completo.\n\nPara cancelar escribe "cancelar"`;
+        if (!/^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s]{2,}$/.test(nombre) || nombre.trim().split(/\s+/).every(w => /^\d+$/.test(w))) {
+          response = `Por favor ingresa tu nombre completo (solo letras).\n\nPara cancelar escribe "cancelar"`;
         } else {
           datos.nombre = nombre;
           await db.guardarDatosAgendacion(from, datos);
@@ -2140,6 +2149,7 @@ Para cancelar escribe "cancelar"`;
         const confirm = incomingMsg.toLowerCase().trim();
         if (confirm === 'sí' || confirm === 'si' || confirm === 'confirmar') {
           await db.guardarCita(from, datos);
+          await db.cancelarAgendacion(from); // resetear estado de agenda tras cita exitosa
           const telefonoClean = from.replace('whatsapp:', '');
           response = `¡Cita agendada exitosamente!\n\n📅 *DETALLES*\n👤 ${datos.nombre} | 📅 ${datos.dia} | 🕐 ${datos.hora}\n📍 ${formatearNombreUbicacion(datos.ubicacion)}\n\n¡Te esperamos! 😊`;
           const msgTelegram = `📅 *NUEVA CITA*\n👤 ${datos.nombre} (${telefonoClean})\n📅 ${datos.dia} | 🕐 ${datos.hora}\n📍 ${formatearNombreUbicacion(datos.ubicacion)}\n📝 ${datos.razon}`;
@@ -2152,7 +2162,14 @@ Para cancelar escribe "cancelar"`;
 
     // ── COMPARACIÓN PENDIENTE ─────────────────────────────────────
     else if (await db.getComparacionPendiente(from)) {
-      if (detectarRespuestaComparacion(incomingMsg)) {
+      const compPendiente = await db.getComparacionPendiente(from);
+      const TIMEOUT_COMP_MS = 15 * 60 * 1000;
+      const estaVencida = compPendiente?.timestamp && (Date.now() - compPendiente.timestamp > TIMEOUT_COMP_MS);
+      if (estaVencida) {
+        await db.clearComparacionPendiente(from);
+        await db.clearComparacionProductos(from);
+        response = "Parece que pasó un tiempo desde nuestra comparación. ¿Quieres que volvamos a comparar los productos o te ayudo con otra cosa? 😊";
+      } else if (detectarRespuestaComparacion(incomingMsg)) {
         const prefs = extraerPreferencias(incomingMsg);
         const recomendaciones = recomendarPorPreferencias(prefs);
         await db.clearComparacionPendiente(from);
@@ -2220,7 +2237,7 @@ Para cancelar escribe "cancelar"`;
         if (elegido) {
           await db.clearCandidatosPendientes(from);
           await db.setCategoriaActual(from, elegido.categoriaKey || elegido.categoria);
-          await db.setUltimoProducto(from, { nombre: elegido.nombre, precio: elegido.precio, categoria: elegido.categoriaKey || elegido.categoria });
+          await db.setUltimoProducto(from, { nombre: elegido.nombre, precio: elegido.precio, categoria: elegido.categoriaKey || elegido.categoria, ts: Date.now() });
           await db.guardarProductoPendiente(from, elegido.nombre, elegido.precio);
           response = `${elegido.nombre}\n💰 Precio: ${elegido.precio}\n📏 Medidas: ${elegido.medidas || 'No disponible'}\n🪵 Material: ${elegido.material || 'No disponible'}\n\n¿Procedemos a añadirlo al carrito? 😊`;
         } else {
@@ -2244,10 +2261,17 @@ Para cancelar escribe "cancelar"`;
     else if (await db.estaTransferida(from)) {
       const telefono = from.replace('whatsapp:', '');
       console.log(`[TRANSFER] Cliente transferido ${telefono} dice: ${incomingMsg}`);
+      // Confirmar recepción al usuario antes de notificar al asesor
+      const twimlTransfer = new MessagingResponse();
+      twimlTransfer.message('✅ Tu mensaje fue recibido. El asesor te responderá pronto. 😊');
+      res.type('text/xml').send(twimlTransfer.toString());
+      // Notificar a Telegram en background (no bloquea la respuesta al usuario)
       if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-        await enviarNotificacionTelegram(telefono, incomingMsg, []);
+        enviarNotificacionTelegram(telefono, incomingMsg, []).catch(e =>
+          console.error('[TRANSFER] Error notificando Telegram:', e.message)
+        );
       }
-      return res.status(200).send('');
+      return;
     }
 
     // FIX #3: OBJECIÓN DE PRECIO ──────────────────────────────────
@@ -2301,7 +2325,7 @@ Para cancelar escribe "cancelar"`;
       if (producto) {
         imagenURL = producto.imagen;
         response = `Claro! Aquí tienes la ${producto.nombre} 😊`;
-        await db.setUltimoProducto(from, { nombre: producto.nombre, precio: producto.precio, categoria: producto.categoriaKey || null });
+        await db.setUltimoProducto(from, { nombre: producto.nombre, precio: producto.precio, categoria: producto.categoriaKey || null, ts: Date.now() });
         await db.guardarProductoPendiente(from, producto.nombre, producto.precio);
       } else {
         response = "Dime qué producto te interesa y te envío la foto 😊";
@@ -2366,7 +2390,7 @@ Para cancelar escribe "cancelar"`;
 
         if (producto && !producto.ambiguo) {
           await db.setCategoriaActual(from, producto.categoria || categoriaDetectada || catBD);
-          await db.setUltimoProducto(from, { nombre: producto.nombre, precio: producto.precio, categoria: producto.categoria });
+          await db.setUltimoProducto(from, { nombre: producto.nombre, precio: producto.precio, categoria: producto.categoria, ts: Date.now() });
           await db.guardarProductoPendiente(from, producto.nombre, producto.precio);
           try {
             response = await callGeminiPitch(producto, incomingMsg);
@@ -2382,7 +2406,7 @@ Para cancelar escribe "cancelar"`;
           const fuzzy = buscarConFuzzy(incomingMsg, categoriaDetectada, catBD);
           if (fuzzy) {
             await db.setCategoriaActual(from, fuzzy.categoriaKey);
-            await db.setUltimoProducto(from, { nombre: fuzzy.nombre, precio: fuzzy.precio, categoria: fuzzy.categoriaKey });
+            await db.setUltimoProducto(from, { nombre: fuzzy.nombre, precio: fuzzy.precio, categoria: fuzzy.categoriaKey, ts: Date.now() });
             await db.guardarProductoPendiente(from, fuzzy.nombre, fuzzy.precio);
             response = respuestaFuzzy(fuzzy);
           } else if (cat2 && inventario[cat2]) {
@@ -2422,14 +2446,14 @@ Para cancelar escribe "cancelar"`;
           await db.guardarCandidatosPendientes(from, productoInfo.candidatos, incomingMsg);
           response = formatearMensajeAmbiguo(productoInfo.candidatos);
         } else if (productoInfo) {
-          await db.setUltimoProducto(from, { nombre: productoInfo.nombre, precio: productoInfo.precio });
+          await db.setUltimoProducto(from, { nombre: productoInfo.nombre, precio: productoInfo.precio, ts: Date.now() });
           await db.guardarProductoPendiente(from, productoInfo.nombre, productoInfo.precio);
           response = `${productoInfo.nombre}\n💰 Precio: ${productoInfo.precio}\n📏 Medidas: ${productoInfo.medidas}\n🪵 Material: ${productoInfo.material}\n\n¿Procedemos a añadirla al carrito? 😊`;
         } else {
           const fuzzy = buscarConFuzzy(incomingMsg, categoriaDetectada, catBD);
           if (fuzzy) {
             await db.setCategoriaActual(from, fuzzy.categoriaKey);
-            await db.setUltimoProducto(from, { nombre: fuzzy.nombre, precio: fuzzy.precio, categoria: fuzzy.categoriaKey });
+            await db.setUltimoProducto(from, { nombre: fuzzy.nombre, precio: fuzzy.precio, categoria: fuzzy.categoriaKey, ts: Date.now() });
             await db.guardarProductoPendiente(from, fuzzy.nombre, fuzzy.precio);
             response = respuestaFuzzy(fuzzy);
           } else {
@@ -2524,7 +2548,9 @@ Para cancelar escribe "cancelar"`;
           response += "\n\n💡 Las sillas se venden por unidad y por separado de la base del comedor. 🪑";
         }
       } else {
-        await db.clearSubtipoPendiente(from);
+        // Respuesta no reconocida → volver a preguntar sin perder el contexto
+        response = formatearPreguntaSubtipo(contexto.categoriaPadre, incomingMsg) ||
+          `No entendí. ¿Prefieres ${contexto.categoriaPadre === 'sillas_comedor' ? 'sillas de comedor, auxiliares o de barra' : 'mesa de centro, auxiliar, de noche o de TV'}? 😊`;
       }
     }
 
@@ -2593,17 +2619,25 @@ Para cancelar escribe "cancelar"`;
           totalConfirmado += precio * cant;
         });
 
-        response = `📦 ¡Pedido confirmado!\n\n🛒 Tu pedido:\n${productosTxt}─────────────────\n💰 Total: $${totalConfirmado.toLocaleString()}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto. 🎉${generarMensajeInstagram()}`;
-
-        for (const item of itemsEnCarrito) {
-          await db.guardarPedido(telefono, item.producto, item.precio, item.cantidad || 1);
+        let pedidoOk = true;
+        try {
+          for (const item of itemsEnCarrito) {
+            await db.guardarPedido(telefono, item.producto, item.precio, item.cantidad || 1);
+          }
+        } catch (e) {
+          console.error('[PEDIDO] Error guardando pedido:', e.message);
+          pedidoOk = false;
         }
-        await db.marcarPedidoConfirmado(from);
-        await enviarNotificacionPedido(telefono, itemsEnCarrito, history);
-        await db.limpiarConversaciones(from);
-        await db.clearProductoPendiente(from);
-        await db.setCategoriaActual(from, null);
-        await db.limpiarCarrito(from);
+
+        if (!pedidoOk) {
+          response = "Hubo un problema al registrar tu pedido. Por favor intenta de nuevo o contacta a un asesor. 😊";
+        } else {
+          response = `📦 ¡Pedido confirmado!\n\n🛒 Tu pedido:\n${productosTxt}─────────────────\n💰 Total: $${totalConfirmado.toLocaleString('es-CO')}\n\n¡Gracias por tu compra!\nUn asesor te contactará pronto. 🎉${generarMensajeInstagram()}`;
+          await db.resetearEstadoSinPedido(from);
+          await db.marcarPedidoConfirmado(from);
+          await enviarNotificacionPedido(telefono, itemsEnCarrito, history);
+          await db.limpiarConversaciones(from);
+        }
 
       } else if (esConfirmacionSimple && pendiente) {
         // Confirmar producto pendiente → agregar al carrito
@@ -2653,8 +2687,10 @@ Para cancelar escribe "cancelar"`;
             const palabrasMsg = msgNorm.split(' ').filter(p => p.length > 3);
             const coincidencias = palabrasMsg.filter(pm => palabrasProd.some(pp => pp.includes(pm) || pm.includes(pp)));
             const quiereAgregarAhora = detectarCompraExplicita(incomingMsg) || detectarIntentionAddCarrito(incomingMsg);
-            // Usar ultimoProd si hay coincidencia de palabras O si el mensaje es claramente una compra sin producto expl\u00edcito
-            if (coincidencias.length >= 1 || quiereAgregarAhora) {
+            const ageMs = Date.now() - (ultimoProd.ts || 0);
+            const STALE_MS = 20 * 60 * 1000; // 20 min: pronombres como "ese"/"comprarlo" solo v\u00e1lidos si el producto es reciente
+            // Usar ultimoProd si: hay coincidencia de palabras (siempre v\u00e1lida) O compra intencional con producto fresco
+            if (coincidencias.length >= 1 || (quiereAgregarAhora && ageMs < STALE_MS)) {
               productoDetectado = { nombre: ultimoProd.nombre, precio: ultimoProd.precio, categoria: ultimoProd.categoria };
             }
           }
@@ -2669,7 +2705,7 @@ Para cancelar escribe "cancelar"`;
           if (catActual) await db.setCategoriaActual(from, catActual);
 
           const productoInfo = buscarInfoProducto(productoDetectado.nombre, catActual);
-          await db.setUltimoProducto(from, { nombre: productoDetectado.nombre, precio: productoDetectado.precio, categoria: catActual });
+          await db.setUltimoProducto(from, { nombre: productoDetectado.nombre, precio: productoDetectado.precio, categoria: catActual, ts: Date.now() });
 
           const cantidadDetectada = detectarCantidad(incomingMsg);
           await db.guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio, cantidadDetectada);
@@ -2680,7 +2716,7 @@ Para cancelar escribe "cancelar"`;
           // Producto encontrado pero sin intención de compra explícita → mostrar info/pitch (ej: "me gusta la conica")
           const catActual = productoDetectado.categoria || catBD;
           if (catActual) await db.setCategoriaActual(from, catActual);
-          await db.setUltimoProducto(from, { nombre: productoDetectado.nombre, precio: productoDetectado.precio, categoria: catActual });
+          await db.setUltimoProducto(from, { nombre: productoDetectado.nombre, precio: productoDetectado.precio, categoria: catActual, ts: Date.now() });
           await db.guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
           try {
             response = await callGeminiPitch(productoDetectado, incomingMsg);
