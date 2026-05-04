@@ -107,7 +107,7 @@ function detectarCategoriaEnMensaje(mensaje) {
   if (tieneSilla && tieneSala) return 'sillas_auxiliares';
   if (tieneSilla && tieneBarra) return 'sillas_barra';
 
-  if (msg.includes('silla auxiliar') || msg.includes('sillon') || msg.includes('sillón')) return 'sillas_auxiliares';
+  if (msg.includes('silla auxiliar') || msg.includes('sillon') || msg.includes('sillón') || msg.includes('sillones')) return 'sillas_auxiliares';
   if (msg.includes('silla barra') || msg.includes('silla de barra')) return 'sillas_barra';
   if (msg.includes('silla comedor') || msg.includes('silla de comedor')) return 'sillas_comedor';
 

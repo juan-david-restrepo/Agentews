@@ -330,22 +330,20 @@ function necesitaSubtipo(mensaje, categoria) {
   }
 
   if (categoria === 'sillas_comedor' || categoria === null) {
-    if (msg.includes('auxiliar') || msg.includes('rededora') || msg.includes('para sala')) return 'sillas_auxiliares';
+    if (msg.includes('auxiliar') || msg.includes('rededora') || msg.includes('para sala') ||
+        msg.includes('sillon') || msg.includes('sillón') || msg.includes('sillones')) return 'sillas_auxiliares';
     if (msg.includes('barra') || msg.includes('alto') || msg.includes('mesón') || msg.includes('meson')) return 'sillas_barra';
-    const tieneSilla = msg.includes('silla') || msg.includes('sillas');
-    if (tieneSilla && (msg === 'silla' || msg === 'sillas' || msg.includes('quiero una silla') || msg.includes('busco una silla'))) {
-      return 'PEDIR_SUBTIPO';
-    }
+    if (msg.includes('comedor') || msg.includes('para comer') || msg.includes('comida')) return 'sillas_comedor';
+    // Cualquier mención de "silla/sillas" sin subtipo especificado → pedir aclaración
+    if (msg.includes('silla') || msg.includes('sillas')) return 'PEDIR_SUBTIPO';
   }
   if (categoria === 'mesas_centro' || categoria === null) {
     if (msg.includes('centro') || msg.includes('sala')) return 'mesas_centro';
     if (msg.includes('auxiliar')) return 'mesas_auxiliares';
     if (msg.includes('noche')) return 'mesas_noche';
     if (msg.includes('tv') || msg.includes('televisor') || msg.includes('televisión')) return 'mesas_tv';
-    const tieneMesa = msg.includes('mesa') || msg.includes('mesas');
-    if (tieneMesa && (msg === 'mesa' || msg === 'mesas' || msg.includes('quiero una mesa') || msg.includes('busco una mesa'))) {
-      return 'PEDIR_SUBTIPO';
-    }
+    // Cualquier mención de "mesa/mesas" sin subtipo especificado → pedir aclaración
+    if (msg.includes('mesa') || msg.includes('mesas')) return 'PEDIR_SUBTIPO';
   }
   return null;
 }
@@ -375,7 +373,8 @@ function resolverRespuestaSubtipo(mensaje, categoriaPadre) {
   const msg = mensaje.toLowerCase().trim();
   if (categoriaPadre === 'sillas_comedor') {
     if (msg.includes('comedor') || msg.includes('diario')) return 'sillas_comedor';
-    if (msg.includes('auxiliar') || msg.includes('rededora') || msg.includes('sala')) return 'sillas_auxiliares';
+    if (msg.includes('auxiliar') || msg.includes('rededora') || msg.includes('sala') ||
+        msg.includes('sillon') || msg.includes('sillón') || msg.includes('sillones')) return 'sillas_auxiliares';
     if (msg.includes('barra') || msg.includes('alto') || msg.includes('cocina')) return 'sillas_barra';
   }
   if (categoriaPadre === 'mesas_centro') {
@@ -911,10 +910,16 @@ function esSoloSaludo(mensaje) {
 
 function esConsultaGenericaCategoria(mensaje) {
   const msg = mensaje.trim().toLowerCase();
+  const categorias = 'sillas|sillones|mesas|comedores|camas|sofas|sofás|colchones|bases|escritorios|cajoneros';
+  const verbos = 'tienen|manejan|hay|ofrecen|venden|tienen disponibles|muestran';
   const patrones = [
-    /^(me\s+gustar[ií]a\s+saber\s+(que|qu[eé])|quiero\s+saber\s+(que|qu[eé]))\s+(sillas|mesas|comedores|camas|sofas|sof[aá]s|colchones|bases|escritorios|cajoneros)\s+(tienen|manejan|hay|ofrecen)/i,
-    /^(que|qu[eé])\s+(sillas|mesas|comedores|camas|sofas|sof[aá]s|colchones|bases|escritorios|cajoneros)\s+(tienen|manejan|hay|ofrecen)/i,
-    /^(que|qu[eé])\s+(tipos?\s+de\s+)?(sillas|mesas|comedores|camas|sofas|sof[aá]s|colchones|bases|escritorios|cajoneros)\s+(tienen|manejan|hay|ofrecen)/i
+    // Con o sin saludo al inicio
+    new RegExp(`(me\\s+gustar[ií]a\\s+saber\\s+(que|qu[eé])|quiero\\s+saber\\s+(que|qu[eé]))\\s+(${categorias})\\s+(${verbos})`, 'i'),
+    new RegExp(`(que|qu[eé])\\s+(${categorias})\\s+(${verbos})`, 'i'),
+    new RegExp(`(que|qu[eé])\\s+(tipos?\\s+de\\s+)?(${categorias})\\s+(${verbos})`, 'i'),
+    // Patrones directos sin verbo explícito
+    new RegExp(`(ver|mostrar|conocer)\\s+(los?|las?)?\\s*(${categorias})`, 'i'),
+    new RegExp(`(cu[aá]les?|qu[eé])\\s+(${categorias})\\s+(tienen|hay|manejan)`, 'i'),
   ];
   return patrones.some(p => p.test(msg));
 }
@@ -1191,6 +1196,7 @@ function buscarProductosPorCategoria(mensaje) {
     'silla de barra': 'sillas_barra', 'sillas de barra': 'sillas_barra',
     'silla comedor': 'sillas_comedor', 'sillas de comedor': 'sillas_comedor',
     'silla auxiliar': 'sillas_auxiliares', 'sillas auxiliar': 'sillas_auxiliares',
+    'sillon': 'sillas_auxiliares', 'sillón': 'sillas_auxiliares', 'sillones': 'sillas_auxiliares',
     'comedor': 'bases_comedores', 'comedores': 'bases_comedores',
     'base': 'bases_comedores', 'bases': 'bases_comedores',
     'mesa noche': 'mesas_noche', 'mesa de noche': 'mesas_noche',
@@ -1295,7 +1301,7 @@ function buscarCatalogo(mensaje) {
     'sofa cama': 'sofas_camas', 'sofacama': 'sofas_camas',
     'sofa modular': 'sofas', 'sofas modulares': 'sofas', 'modular': 'sofas',
     'sofa': 'sofas', 'sofas': 'sofas',
-    'silla auxiliar': 'sillas_auxiliares', 'sillon': 'sillas_auxiliares',
+    'silla auxiliar': 'sillas_auxiliares', 'sillon': 'sillas_auxiliares', 'sillón': 'sillas_auxiliares', 'sillones': 'sillas_auxiliares',
     'silla barra': 'sillas_barra', 'silla alta': 'sillas_barra',
     'silla comedor': 'sillas_comedor', 'silla': 'sillas_comedor', 'sillas': 'sillas_comedor',
     'comedor': 'bases_comedores', 'comedores': 'bases_comedores', 'base': 'bases_comedores', 'bases': 'bases_comedores',
