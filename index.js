@@ -22,7 +22,7 @@ const utils = require('./utils');
 // INVENTARIO DESDE BD (caché en memoria, refresco cada 30 min)
 // ─────────────────────────────────────────────
 
-let inventario = inventario || {}; // fallback al JSON hasta que cargue la BD
+let inventario = knowledge.inventario || {}; // fallback al JSON hasta que cargue la BD
 
 async function cargarInventario() {
   try {
@@ -1203,8 +1203,6 @@ function buscarProductosPorCategoria(mensaje) {
     'cajoneros': 'cajoneros_bifes', 'cajones': 'cajoneros_bifes', 'bifes': 'cajoneros_bifes'
   };
 
-  const inventario = inventario || {};
-
   for (const [palabra, clave] of Object.entries(mapeoCategorias)) {
     if (mensajeLimpio.includes(palabra)) {
       const categoria = inventario[clave];
@@ -1291,7 +1289,6 @@ function formatearNombreCategoria(nombre) {
 
 function buscarCatalogo(mensaje) {
   const catalogos = knowledge.catalogos || {};
-  const inventario = inventario || {};
   const mensajeLower = mensaje.toLowerCase();
 
   const mapeoCategorias = {
@@ -1467,7 +1464,6 @@ async function compararProductos(from, incomingMsg = null) {
   const categoriaActual = await db.getCategoriaActual(from);
   const itemsCarrito = await db.verCarrito(from);
   const productosMencionados = [];
-  const inventario = inventario;
   const nombresEnCarrito = new Set(itemsCarrito.map(item => item.producto.toLowerCase()));
 
   if (incomingMsg) {
@@ -1589,7 +1585,6 @@ function extraerPreferencias(mensaje) {
 }
 
 function recomendarPorPreferencias(prefs) {
-  const inventario = inventario;
   let candidatos = [];
 
   const espacioCategoria = {
