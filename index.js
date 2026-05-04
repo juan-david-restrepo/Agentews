@@ -1073,7 +1073,8 @@ function detectarConsultaInfo(mensaje) {
     return true;
   }
 
-  const palabrasVer = ['ver', 'mostrar', 'quisiera', 'quiero', 'información', 'info', 'detalles', 'saber', 'conocer'];
+  const palabrasVer = ['ver', 'mostrar', 'quisiera', 'quiero', 'información', 'info', 'detalles', 'saber', 'conocer',
+    'gusta', 'gustan', 'interesa', 'interesado', 'interesada', 'encanta', 'llama la atencion', 'que tal', 'qué tal', 'como es', 'cómo es'];
   const tienePalabraVer = palabrasVer.some(p => msg.includes(p));
   const tieneCategoria = msg.includes('silla') || msg.includes('comedor') || msg.includes('base') ||
     msg.includes('cama') || msg.includes('mesa') || msg.includes('sof') ||
@@ -2320,9 +2321,23 @@ Para cancelar escribe "cancelar"`;
         const porCategoria = buscarProductosPorCategoria(incomingMsg);
         if (porCategoria.categoria && porCategoria.productos.length > 0) {
           await db.setCategoriaActual(from, porCategoria.categoria);
-          response = formatearProductosVenta(porCategoria.productos);
-          if (porCategoria.categoria === 'bases_comedores' || porCategoria.categoria === 'sillas_comedor') {
-            response += "\n\n💡 Las sillas se venden por unidad y por separado de la base del comedor. 🪑";
+
+          // "ver" / "mostrar" → catálogo PDF si existe; si no, lista de texto
+          const msgLow = incomingMsg.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+          const quiereVerCatalogo = /\bver\b|\bmostrar\b|\benviar\b|\bmandar\b|\bensenar\b|\benseñar\b/.test(msgLow);
+          const urlCatalogo = knowledge.catalogos?.[porCategoria.categoria];
+
+          if (quiereVerCatalogo && urlCatalogo) {
+            imagenURL = urlCatalogo;
+            response = `Claro! Aquí tienes el catálogo de ${formatearNombreCategoria(porCategoria.categoria)} 😊`;
+          } else {
+            response = formatearProductosVenta(porCategoria.productos);
+            if (porCategoria.categoria === 'bases_comedores' || porCategoria.categoria === 'sillas_comedor') {
+              response += "\n\n💡 Las sillas se venden por unidad y por separado de la base del comedor. 🪑";
+            }
+            if (quiereVerCatalogo && !urlCatalogo) {
+              response += `\n\n📄 Esta categoría no tiene catálogo PDF disponible.`;
+            }
           }
         } else {
           response = "¿Qué categoría de muebles te interesa ver? 😊";
@@ -2660,6 +2675,18 @@ Para cancelar escribe "cancelar"`;
           await db.guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio, cantidadDetectada);
 
           response = `${productoDetectado.nombre}\n💰 Precio: ${productoDetectado.precio}\n📏 Medidas: ${productoInfo?.medidas || 'No disponible'}\n🪵 Material: ${productoInfo?.material || 'No disponible'}\n\n¿Confirmas agregar al carrito? Responde "sí" para confirmar 😊`;
+
+        } else if (!response && productoDetectado && !quiereAgregar) {
+          // Producto encontrado pero sin intención de compra explícita → mostrar info/pitch (ej: "me gusta la conica")
+          const catActual = productoDetectado.categoria || catBD;
+          if (catActual) await db.setCategoriaActual(from, catActual);
+          await db.setUltimoProducto(from, { nombre: productoDetectado.nombre, precio: productoDetectado.precio, categoria: catActual });
+          await db.guardarProductoPendiente(from, productoDetectado.nombre, productoDetectado.precio);
+          try {
+            response = await callGeminiPitch(productoDetectado, incomingMsg);
+          } catch (e) {
+            response = `*${productoDetectado.nombre}*\n💰 Precio: ${productoDetectado.precio}\n\n¿Te interesa añadirlo al carrito? 😊`;
+          }
 
         } else if (!response && !productoDetectado && quiereAgregar) {
           if (pendiente?.producto) {
