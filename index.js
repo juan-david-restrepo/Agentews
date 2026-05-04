@@ -1829,6 +1829,8 @@ app.post('/webhook', async (req, res) => {
       res.type('text/xml').send(twiml.toString());
       return;
     }
+    // Saludo + contenido → procesar el contenido y prepend saludo corto al final
+    const prefijarSaludo = esSaludo && !esSoloSaludo(incomingMsg);
 
     // Limpiar estado de transferencia si el usuario escribe de nuevo
     const estaTransferidoAhora = await db.estaTransferida(from);
@@ -2213,13 +2215,6 @@ Para cancelar escribe "cancelar"`;
     else if (detectarAgendar(incomingMsg)) {
       await db.iniciarAgendacion(from);
       response = `📅 *AGENDAR CITA*\n\nCon gusto te ayudo a agendar una visita.\n\nPrimero, ¿cuál es tu nombre?\n\nPara cancelar escribe "cancelar"`;
-    }
-
-    // ── SALUDO CON CONTENIDO ──────────────────────────────────────
-    else if (esSaludo) {
-      await db.addMensaje(from, 'user', incomingMsg);
-      if (!(await db.haEnviadoSaludo(from))) await db.marcarSaludoEnviado(from);
-      response = SALUDO_INICIAL;
     }
 
     // ── UBICACIÓN ─────────────────────────────────────────────────
@@ -2696,6 +2691,11 @@ Para cancelar escribe "cancelar"`;
     // Respuesta fallback si algo falla
     if (!response || response === 'undefined' || response === 'null') {
       response = SALUDO_INICIAL;
+    }
+
+    // Saludo + contenido: anteponer saludo corto a la respuesta real
+    if (prefijarSaludo && response !== SALUDO_INICIAL) {
+      response = `¡Hola! 👋 Con gusto te ayudo.\n\n${response}`;
     }
 
     await db.addMensaje(from, 'assistant', response);
