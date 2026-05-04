@@ -1941,9 +1941,20 @@ app.post('/webhook', async (req, res) => {
     if (!debeTransferir && (detectarMedidaPersonalizada(incomingMsg) || detectarPersonalizacion(incomingMsg))) {
       const productoPendiente = await db.getProductoPendiente(from);
       const ultimoProd = await db.getUltimoProducto(from);
-      const producto = productoPendiente?.producto || ultimoProd?.nombre;
+
+      // Prioridad: producto mencionado en el mensaje actual > pendiente > ultimoProd
+      const catMsgActual = detectarCategoriaEnMensaje(incomingMsg);
+      const catBDActual = await db.getCategoriaActual(from);
+      const prodEnMensaje = !esFraseCompraGenerica(incomingMsg)
+        ? buscarProductoPorNombre(incomingMsg, catMsgActual, catBDActual)
+        : null;
+      const nombreEnMensaje = (prodEnMensaje && !prodEnMensaje.ambiguo) ? prodEnMensaje.nombre : null;
+      const producto = nombreEnMensaje || productoPendiente?.producto || ultimoProd?.nombre;
 
       if (producto) {
+        if (nombreEnMensaje) {
+          await db.setUltimoProducto(from, { nombre: prodEnMensaje.nombre, precio: prodEnMensaje.precio, categoria: prodEnMensaje.categoria });
+        }
         await db.setTransferenciaMedidaPendiente(from, { producto, solicitud: incomingMsg });
         response = `Entiendo que necesitas una personalización para ${producto}. ¿Te gustaría que te transfiera con un asesor especializado en diseño a medida? 😊`;
 
