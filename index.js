@@ -318,7 +318,7 @@ INSTRUCCIONES OBLIGATORIAS:
 3. Cuando el cliente mencione un presupuesto o diga "barato/económico" → usa buscar_por_presupuesto
 4. Cuando el cliente quiera ver su carrito o citas → usa consultar_estado
 5. Para fotos de productos → usa enviar_foto (puedes llamarla dos veces para comparar)
-6. Para catálogos PDF → usa enviar_catalogo
+6. Para catálogos PDF → usa enviar_catalogo y muestra la URL tal cual (sin markdown), para que WhatsApp la haga tappable
 7. Para agendar visita → recopila nombre, sede (1-5), día, hora, motivo; luego llama agendar_cita
 8. Si el cliente pide hablar con un humano o no puedes resolver algo → usa transferir_asesor
 9. SOLO llama agregar_al_carrito cuando el cliente CONFIRME explícitamente que quiere comprar
@@ -795,12 +795,11 @@ async function callOpenAI(from, userMessage, historial) {
         console.log(`[TOOL] ${toolCall.function.name}(${JSON.stringify(toolArgs).substring(0, 80)})`);
         const resultado = await ejecutarHerramienta(toolCall.function.name, toolArgs, from, historial);
 
-        // Coleccionar todas las imágenes (permite enviar múltiples para comparaciones)
+        // Coleccionar imágenes de productos (permite comparaciones con múltiples fotos)
+        // Los catálogos PDF NO se envían como attachment — Google Drive no sirve como CDN
+        // directo y WhatsApp falla silenciosamente. La URL va en el texto de la respuesta.
         if (toolCall.function.name === 'enviar_foto' && resultado.exito && resultado.imagenUrl) {
           imagenesParaEnviar.push({ url: resultado.imagenUrl, nombre: resultado.nombre });
-        }
-        if (toolCall.function.name === 'enviar_catalogo' && resultado.exito && resultado.url) {
-          imagenesParaEnviar.push({ url: resultado.url, nombre: resultado.categoria, esCatalogo: true });
         }
 
         messages.push({
