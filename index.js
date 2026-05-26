@@ -679,7 +679,8 @@ async function ejecutarHerramienta(nombre, args, from, historial) {
       }
       // Actualizar último producto visto
       await db.setUltimoProducto(from, { nombre: resultado.nombre, ts: Date.now() });
-      return { exito: true, nombre: resultado.nombre, imagenUrl: resultado.imagen };
+      // No devolver el URL al modelo: evita que lo escriba en el texto como markdown
+      return { exito: true, nombre: resultado.nombre, _imagenUrl: resultado.imagen, mensaje: `Foto de ${resultado.nombre} enviada al cliente.` };
     }
 
     case 'enviar_catalogo': {
@@ -798,8 +799,8 @@ async function callOpenAI(from, userMessage, historial) {
         // Coleccionar imágenes de productos (permite comparaciones con múltiples fotos)
         // Los catálogos PDF NO se envían como attachment — Google Drive no sirve como CDN
         // directo y WhatsApp falla silenciosamente. La URL va en el texto de la respuesta.
-        if (toolCall.function.name === 'enviar_foto' && resultado.exito && resultado.imagenUrl) {
-          imagenesParaEnviar.push({ url: resultado.imagenUrl, nombre: resultado.nombre });
+        if (toolCall.function.name === 'enviar_foto' && resultado.exito && resultado._imagenUrl) {
+          imagenesParaEnviar.push({ url: resultado._imagenUrl, nombre: resultado.nombre });
         }
 
         messages.push({
@@ -946,8 +947,8 @@ NUNCA digas que no puedes identificar productos. Clasifica el tipo y muestra el 
                 try { args = JSON.parse(tc.function.arguments); } catch {}
                 console.log(`[VISION-TOOL] ${tc.function.name}(${JSON.stringify(args).substring(0, 80)})`);
                 const toolRes = await ejecutarHerramienta(tc.function.name, args, from, historial);
-                if (tc.function.name === 'enviar_foto' && toolRes.exito && toolRes.imagenUrl) {
-                  imgs.push({ url: toolRes.imagenUrl, nombre: toolRes.nombre });
+                if (tc.function.name === 'enviar_foto' && toolRes.exito && toolRes._imagenUrl) {
+                  imgs.push({ url: toolRes._imagenUrl, nombre: toolRes.nombre });
                 }
                 msgs.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(toolRes) });
               }
@@ -962,13 +963,10 @@ NUNCA digas que no puedes identificar productos. Clasifica el tipo y muestra el 
           await db.addMensaje(from, 'assistant', respuesta);
           await db.actualizarLastInteraction(from);
 
-          if (imgs.length > 0) {
-            await twilioClient.messages.create({ from: toNumber, to: from, body: respuesta, mediaUrl: [imgs[0].url] });
-            for (let i = 1; i < imgs.length; i++) {
-              await twilioClient.messages.create({ from: toNumber, to: from, body: `📸 ${imgs[i].nombre}`, mediaUrl: [imgs[i].url] });
-            }
-          } else {
-            await twilioClient.messages.create({ from: toNumber, to: from, body: respuesta });
+          // Texto primero, luego imágenes por separado (más confiable en WhatsApp)
+          await twilioClient.messages.create({ from: toNumber, to: from, body: respuesta });
+          for (const img of imgs) {
+            await twilioClient.messages.create({ from: toNumber, to: from, body: `📸 ${img.nombre}`, mediaUrl: [img.url] });
           }
         }
 
@@ -1035,19 +1033,14 @@ NUNCA digas que no puedes identificar productos. Clasifica el tipo y muestra el 
 
     console.log(`[RESP] ${from}: ${texto.substring(0, 100)}...`);
 
-    // Enviar respuesta principal (con primera imagen si hay)
+    // Texto siempre vía TwiML (sin mediaUrl — imágenes por REST API son más confiables)
     const twiml = new MessagingResponse();
-    if (imagenesParaEnviar.length > 0) {
-      twiml.message({ body: texto, mediaUrl: [imagenesParaEnviar[0].url] });
-    } else {
-      twiml.message(texto);
-    }
+    twiml.message(texto);
     res.type('text/xml').send(twiml.toString());
 
-    // Enviar imágenes adicionales (comparaciones de 2+ productos) en background
-    if (imagenesParaEnviar.length > 1 && toNumber) {
-      for (let i = 1; i < imagenesParaEnviar.length; i++) {
-        const img = imagenesParaEnviar[i];
+    // Todas las imágenes vía Twilio REST API directa (más confiable que TwiML mediaUrl)
+    if (imagenesParaEnviar.length > 0 && toNumber) {
+      for (const img of imagenesParaEnviar) {
         const caption = img.esCatalogo ? '' : `📸 ${img.nombre}`;
         await enviarMensajeAdicional(from, toNumber, caption, img.url);
       }
