@@ -858,35 +858,113 @@ app.post('/webhook', async (req, res) => {
     await db.verificarYLimpiarInactividad(from);
     await db.getOrCreateUsuario(from);
 
-    // ── IMAGEN RECIBIDA DEL CLIENTE (foto de sala) ─────────────────
+    // ── IMAGEN RECIBIDA DEL CLIENTE ─────────────────────────────────
     if (mediaUrl && mediaType?.startsWith('image/')) {
-      console.log('[IMG] Imagen recibida, procesando...');
+      // Visualización de sala: solo si el cliente lo pide explícitamente
+      const esVisualizacion = !!incomingMsg &&
+        /\b(sala|cuarto|habitaci[oó]n|ambiente|como\s+quedar[íi]a|visualiz|pon\s+(el|la)|quiero\s+ver\s+como)/i.test(incomingMsg);
+
       const twiml = new MessagingResponse();
-      twiml.message('⏳ ¡Recibí tu foto! Procesando para mostrarte cómo quedaría el mueble... 🛋️');
+      twiml.message(esVisualizacion
+        ? '⏳ Procesando tu foto para mostrarte cómo quedaría el mueble... 🛋️'
+        : '🔍 Recibí tu imagen, analizándola...');
       res.type('text/xml').send(twiml.toString());
 
-      // Usar el último producto visto para contextualizar la imagen
       try {
-        const estado = await db.getEstado(from);
-        const ultimoProd = estado.ultimo_producto;
-        const sofaInfo = ultimoProd ? { nombre: ultimoProd.nombre } : null;
-
-        const result = await processRoomImage(mediaUrl, sofaInfo);
         const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-        if (result.success) {
-          await twilioClient.messages.create({
-            from: toNumber, to: from,
-            body: `¡Así quedaría${ultimoProd ? ` el ${ultimoProd.nombre}` : ' el mueble'} en tu espacio! 😊\n¿Te gusta cómo se ve? ¿Lo agregamos al carrito?`,
-            mediaUrl: [result.imageUrl]
-          });
+
+        if (esVisualizacion) {
+          // ── Replicate: superponer mueble en foto de sala ──────────
+          const estado = await db.getEstado(from);
+          const ultimoProd = estado.ultimo_producto;
+          const sofaInfo = ultimoProd ? { nombre: ultimoProd.nombre } : null;
+          const result = await processRoomImage(mediaUrl, sofaInfo);
+          if (result.success) {
+            await twilioClient.messages.create({
+              from: toNumber, to: from,
+              body: `¡Así quedaría${ultimoProd ? ` el ${ultimoProd.nombre}` : ' el mueble'} en tu espacio! 😊\n¿Te gusta? ¿Lo agregamos al carrito?`,
+              mediaUrl: [result.imageUrl]
+            });
+          } else {
+            await twilioClient.messages.create({
+              from: toNumber, to: from,
+              body: result.message || '¡Recibí tu foto! Por ahora no pude procesarla. ¿Qué tipo de mueble buscas? 😊'
+            });
+          }
+
         } else {
+          // ── OpenAI Vision: identificar producto en la imagen ──────
+          const { downloadFromTwilio } = require('./image-processor');
+          const imageBuffer = await downloadFromTwilio(mediaUrl);
+          const base64 = imageBuffer.toString('base64');
+          const mime = (mediaType || 'image/jpeg').split(';')[0];
+          const pregunta = incomingMsg || '¿Qué mueble es este? ¿Tienen algo parecido y cuánto cuesta?';
+
+          const historial = await db.getHistorial(from, 6);
+          const msgs = [
+            { role: 'system', content: SYSTEM_PROMPT },
+            ...historial.map(m => ({ role: m.role, content: m.content })),
+            {
+              role: 'user',
+              content: [
+                { type: 'image_url', image_url: { url: `data:${mime};base64,${base64}`, detail: 'low' } },
+                { type: 'text', text: pregunta }
+              ]
+            }
+          ];
+
+          let respuesta = '';
+          const imgs = [];
+
+          const r1 = await openai.chat.completions.create({
+            model: MODEL, messages: msgs, tools: TOOLS, tool_choice: 'auto',
+            temperature: 0.7, max_tokens: 800
+          });
+          const c1 = r1.choices[0];
+
+          if (c1.finish_reason === 'tool_calls' && c1.message.tool_calls) {
+            msgs.push({ role: 'assistant', content: c1.message.content || null, tool_calls: c1.message.tool_calls });
+            for (const tc of c1.message.tool_calls) {
+              let args = {};
+              try { args = JSON.parse(tc.function.arguments); } catch {}
+              console.log(`[VISION-TOOL] ${tc.function.name}(${JSON.stringify(args).substring(0, 80)})`);
+              const toolRes = await ejecutarHerramienta(tc.function.name, args, from, historial);
+              if (tc.function.name === 'enviar_foto' && toolRes.exito && toolRes.imagenUrl) {
+                imgs.push({ url: toolRes.imagenUrl, nombre: toolRes.nombre });
+              }
+              msgs.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(toolRes) });
+            }
+            const r2 = await openai.chat.completions.create({
+              model: MODEL, messages: msgs, temperature: 0.7, max_tokens: 600
+            });
+            respuesta = r2.choices[0].message.content || '¿Puedo ayudarte con algo más? 😊';
+          } else {
+            respuesta = c1.message.content || '¿Puedo ayudarte con algo más? 😊';
+          }
+
+          await db.addMensaje(from, 'user', pregunta);
+          await db.addMensaje(from, 'assistant', respuesta);
+          await db.actualizarLastInteraction(from);
+
+          if (imgs.length > 0) {
+            await twilioClient.messages.create({ from: toNumber, to: from, body: respuesta, mediaUrl: [imgs[0].url] });
+            for (let i = 1; i < imgs.length; i++) {
+              await twilioClient.messages.create({ from: toNumber, to: from, body: `📸 ${imgs[i].nombre}`, mediaUrl: [imgs[i].url] });
+            }
+          } else {
+            await twilioClient.messages.create({ from: toNumber, to: from, body: respuesta });
+          }
+        }
+
+      } catch (err) {
+        console.error('[IMG] Error:', err.message);
+        try {
+          const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
           await twilioClient.messages.create({
             from: toNumber, to: from,
-            body: result.message || '¡Recibí tu foto! Por ahora no pude procesarla, pero puedo mostrarte nuestro catálogo. ¿Qué tipo de mueble buscas? 😊'
+            body: '¡Recibí tu imagen! No pude procesarla en este momento. ¿Me describes el mueble que buscas? 😊'
           });
-        }
-      } catch (err) {
-        console.error('[IMG] Error procesando imagen:', err.message);
+        } catch {}
       }
       return;
     }
