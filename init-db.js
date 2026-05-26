@@ -3,21 +3,19 @@ const mysql = require('mysql2/promise');
 
 async function initDB() {
   let connection;
-  
+
   try {
+    const dbName = process.env.DB_NAME || 'decasa_bot';
+
     connection = await mysql.createConnection({
       host: process.env.DB_HOST || 'localhost',
       user: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || '',
-      port: process.env.DB_PORT || 3306
+      port: process.env.DB_PORT || 3306,
+      database: dbName
     });
 
-    const dbName = process.env.DB_NAME || 'decasa_bot';
-
-    await connection.query(`CREATE DATABASE IF NOT EXISTS ${dbName}`);
-    console.log(`✅ Base de datos '${dbName}' creada o verificada`);
-
-    await connection.query(`USE ${dbName}`);
+    console.log(`✅ Conectado a base de datos '${dbName}'`);
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS usuarios (
