@@ -906,10 +906,12 @@ app.post('/webhook', async (req, res) => {
           const systemVision = SYSTEM_PROMPT + `
 
 INSTRUCCIÓN PARA IMÁGENES: Cuando el cliente envía una foto de un mueble:
-1. Describe las características VISUALES que ves (tipo de mueble, color, forma, tapizado/madera, estilo).
-2. Llama INMEDIATAMENTE buscar_productos con esas características para encontrar opciones similares.
-3. Muestra las coincidencias con precio y foto.
-NUNCA digas que no puedes identificar productos. Describe lo que ves y busca en el catálogo.`;
+1. Describe las características VISUALES (tipo, color, forma, tapizado/madera, estilo).
+2. Llama buscar_productos con esas características.
+3. Para cada resultado que tenga foto disponible, llama enviar_foto INMEDIATAMENTE (sin pedir permiso).
+4. Presenta precio, material y medidas de cada opción.
+NUNCA preguntes "¿quieres ver la foto?" — envíala directamente.
+NUNCA digas que no puedes identificar productos. Describe y busca.`;
 
           const msgs = [
             { role: 'system', content: systemVision },
@@ -926,31 +928,32 @@ NUNCA digas que no puedes identificar productos. Describe lo que ves y busca en 
           let respuesta = '';
           const imgs = [];
 
-          const r1 = await openai.chat.completions.create({
-            model: MODEL, messages: msgs, tools: TOOLS, tool_choice: 'auto',
-            temperature: 0.7, max_tokens: 800
-          });
-          const c1 = r1.choices[0];
-
-          if (c1.finish_reason === 'tool_calls' && c1.message.tool_calls) {
-            msgs.push({ role: 'assistant', content: c1.message.content || null, tool_calls: c1.message.tool_calls });
-            for (const tc of c1.message.tool_calls) {
-              let args = {};
-              try { args = JSON.parse(tc.function.arguments); } catch {}
-              console.log(`[VISION-TOOL] ${tc.function.name}(${JSON.stringify(args).substring(0, 80)})`);
-              const toolRes = await ejecutarHerramienta(tc.function.name, args, from, historial);
-              if (tc.function.name === 'enviar_foto' && toolRes.exito && toolRes.imagenUrl) {
-                imgs.push({ url: toolRes.imagenUrl, nombre: toolRes.nombre });
-              }
-              msgs.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(toolRes) });
-            }
-            const r2 = await openai.chat.completions.create({
-              model: MODEL, messages: msgs, temperature: 0.7, max_tokens: 600
+          // Loop de herramientas (hasta 5 rondas): permite buscar Y enviar fotos en el mismo turno
+          for (let ronda = 0; ronda < 5; ronda++) {
+            const rv = await openai.chat.completions.create({
+              model: MODEL, messages: msgs, tools: TOOLS, tool_choice: 'auto',
+              temperature: 0.7, max_tokens: 800
             });
-            respuesta = r2.choices[0].message.content || '¿Puedo ayudarte con algo más? 😊';
-          } else {
-            respuesta = c1.message.content || '¿Puedo ayudarte con algo más? 😊';
+            const cv = rv.choices[0];
+
+            if (cv.finish_reason === 'tool_calls' && cv.message.tool_calls) {
+              msgs.push({ role: 'assistant', content: cv.message.content || null, tool_calls: cv.message.tool_calls });
+              for (const tc of cv.message.tool_calls) {
+                let args = {};
+                try { args = JSON.parse(tc.function.arguments); } catch {}
+                console.log(`[VISION-TOOL] ${tc.function.name}(${JSON.stringify(args).substring(0, 80)})`);
+                const toolRes = await ejecutarHerramienta(tc.function.name, args, from, historial);
+                if (tc.function.name === 'enviar_foto' && toolRes.exito && toolRes.imagenUrl) {
+                  imgs.push({ url: toolRes.imagenUrl, nombre: toolRes.nombre });
+                }
+                msgs.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(toolRes) });
+              }
+            } else {
+              respuesta = cv.message.content || '¿Puedo ayudarte con algo más? 😊';
+              break;
+            }
           }
+          if (!respuesta) respuesta = '¿Puedo ayudarte con algo más? 😊';
 
           await db.addMensaje(from, 'user', contextoUsuario);
           await db.addMensaje(from, 'assistant', respuesta);
