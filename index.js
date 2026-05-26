@@ -893,22 +893,32 @@ app.post('/webhook', async (req, res) => {
           }
 
         } else {
-          // ── OpenAI Vision: identificar producto en la imagen ──────
+          // ── OpenAI Vision: describir mueble y buscar similares ────
           const { downloadFromTwilio } = require('./image-processor');
           const imageBuffer = await downloadFromTwilio(mediaUrl);
           const base64 = imageBuffer.toString('base64');
           const mime = (mediaType || 'image/jpeg').split(';')[0];
-          const pregunta = incomingMsg || '¿Qué mueble es este? ¿Tienen algo parecido y cuánto cuesta?';
+          const contextoUsuario = incomingMsg || 'El cliente envió una foto de un mueble.';
 
           const historial = await db.getHistorial(from, 6);
+
+          // Instrucción extra para vision: evita el rechazo de "no puedo identificar"
+          const systemVision = SYSTEM_PROMPT + `
+
+INSTRUCCIÓN PARA IMÁGENES: Cuando el cliente envía una foto de un mueble:
+1. Describe las características VISUALES que ves (tipo de mueble, color, forma, tapizado/madera, estilo).
+2. Llama INMEDIATAMENTE buscar_productos con esas características para encontrar opciones similares.
+3. Muestra las coincidencias con precio y foto.
+NUNCA digas que no puedes identificar productos. Describe lo que ves y busca en el catálogo.`;
+
           const msgs = [
-            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'system', content: systemVision },
             ...historial.map(m => ({ role: m.role, content: m.content })),
             {
               role: 'user',
               content: [
                 { type: 'image_url', image_url: { url: `data:${mime};base64,${base64}`, detail: 'low' } },
-                { type: 'text', text: pregunta }
+                { type: 'text', text: contextoUsuario + '\n\nDescribe las características visuales del mueble en la foto y busca opciones similares en nuestro catálogo con sus precios.' }
               ]
             }
           ];
