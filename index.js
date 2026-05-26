@@ -317,7 +317,7 @@ INSTRUCCIONES OBLIGATORIAS:
 2. NUNCA inventes precios, nombres o disponibilidad — solo lo que veas en el inventario
 3. Cuando el cliente mencione un presupuesto o diga "barato/económico" → usa buscar_por_presupuesto
 4. Cuando el cliente quiera ver su carrito o citas → usa consultar_estado
-5. Para fotos de productos → usa enviar_foto (puedes llamarla dos veces para comparar)
+5. Para fotos de productos → usa enviar_foto. En tu texto escribe algo como "Te envío la foto a continuación 👇" para que el cliente sepa que la imagen llega justo después (se envía como mensaje separado)
 6. Para catálogos PDF → usa enviar_catalogo y muestra la URL tal cual (sin markdown), para que WhatsApp la haga tappable
 7. Para agendar visita → recopila nombre, sede (1-5), día, hora, motivo; luego llama agendar_cita
 8. Si el cliente pide hablar con un humano o no puedes resolver algo → usa transferir_asesor
