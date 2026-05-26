@@ -906,12 +906,15 @@ app.post('/webhook', async (req, res) => {
           const systemVision = SYSTEM_PROMPT + `
 
 INSTRUCCIÓN PARA IMÁGENES: Cuando el cliente envía una foto de un mueble:
-1. Describe las características VISUALES (tipo, color, forma, tapizado/madera, estilo).
-2. Llama buscar_productos con esas características.
-3. Para cada resultado que tenga foto disponible, llama enviar_foto INMEDIATAMENTE (sin pedir permiso).
-4. Presenta precio, material y medidas de cada opción.
+1. Identifica el TIPO de mueble (silla de comedor, sofá, cama, mesa, etc.) y la CATEGORÍA del catálogo.
+2. Llama buscar_productos DOS VECES:
+   a) Primera con la categoría exacta y limite:10 para obtener TODOS los productos de esa línea.
+   b) Segunda (opcional) con descripción visual si hay características muy específicas.
+3. Presenta los productos encontrados con precio, material y medidas.
+4. Para los primeros 2-3 resultados con foto, llama enviar_foto INMEDIATAMENTE sin pedir permiso.
+5. Dile al cliente: "Estas son todas nuestras opciones de [tipo]. ¿Alguna te llama la atención?"
 NUNCA preguntes "¿quieres ver la foto?" — envíala directamente.
-NUNCA digas que no puedes identificar productos. Describe y busca.`;
+NUNCA digas que no puedes identificar productos. Clasifica el tipo y muestra el catálogo completo de esa categoría.`;
 
           const msgs = [
             { role: 'system', content: systemVision },
