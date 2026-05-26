@@ -1,10 +1,27 @@
 'use strict';
 
+function alertarTelegramCrash(tipo, err) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+  fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: `🚨 <b>${tipo} — Elena DeCasa</b>\n<code>${String(err?.message || err).substring(0, 400)}</code>`,
+      parse_mode: 'HTML'
+    })
+  }).catch(() => {});
+}
+
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] ERROR NO CAPTURADO:', err);
+  alertarTelegramCrash('ERROR CRÍTICO NO CAPTURADO', err);
 });
 process.on('unhandledRejection', (err) => {
   console.error('[FATAL] PROMESA RECHAZADA:', err);
+  alertarTelegramCrash('PROMESA RECHAZADA', err);
 });
 
 require('dotenv').config();
@@ -992,7 +1009,6 @@ NUNCA digas que no puedes identificar productos. Clasifica el tipo y muestra el 
       twiml.message(SALUDO_INICIAL);
       await db.addMensaje(from, 'user', incomingMsg);
       await db.addMensaje(from, 'assistant', SALUDO_INICIAL);
-      await db.actualizarLastInteraction(from);
       return res.type('text/xml').send(twiml.toString());
     }
 
