@@ -952,7 +952,7 @@ NUNCA digas que no puedes identificar productos. Describe lo que ves y busca en 
             respuesta = c1.message.content || '¿Puedo ayudarte con algo más? 😊';
           }
 
-          await db.addMensaje(from, 'user', pregunta);
+          await db.addMensaje(from, 'user', contextoUsuario);
           await db.addMensaje(from, 'assistant', respuesta);
           await db.actualizarLastInteraction(from);
 
